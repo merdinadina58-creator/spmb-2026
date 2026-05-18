@@ -1809,31 +1809,61 @@ export default function Home() {
   const [setupLoading, setSetupLoading] = useState(false)
   const [setupError, setSetupError] = useState('')
 
-  // Check auth on mount
+  // Check auth on mount with timeout protection
   useEffect(() => {
+    let cancelled = false
+
     const checkAuth = async () => {
       try {
-        const setupRes = await fetch('/api/auth/setup')
+        // Add timeout protection - if API takes too long, show login anyway
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 8000)
+
+        const setupRes = await fetch('/api/auth/setup', { signal: controller.signal })
+        clearTimeout(timeoutId)
+
+        if (!setupRes.ok) {
+          // API error - show login form directly
+          if (!cancelled) setAuthLoading(false)
+          return
+        }
+
         const setupData = await setupRes.json()
         if (setupData.needsSetup) {
-          setNeedsSetup(true)
-          setAuthLoading(false)
+          if (!cancelled) {
+            setNeedsSetup(true)
+            setAuthLoading(false)
+          }
           return
         }
 
         const meRes = await fetch('/api/auth/me')
-        const meData = await meRes.json()
-        if (meData.authenticated) {
-          setIsAuthenticated(true)
-          setAuthUser(meData.user)
+        if (meRes.ok) {
+          const meData = await meRes.json()
+          if (meData.authenticated && !cancelled) {
+            setIsAuthenticated(true)
+            setAuthUser(meData.user)
+          }
         }
       } catch {
-        // If API fails, show login
+        // If API fails (network error, timeout, etc), show login form
+        // Don't leave user stuck on loading screen
       } finally {
-        setAuthLoading(false)
+        if (!cancelled) setAuthLoading(false)
       }
     }
+
     checkAuth()
+
+    // Safety timeout: force auth loading off after 10 seconds no matter what
+    const safetyTimeout = setTimeout(() => {
+      if (!cancelled) setAuthLoading(false)
+    }, 10000)
+
+    return () => {
+      cancelled = true
+      clearTimeout(safetyTimeout)
+    }
   }, [])
 
   // ==================== MAIN APP STATE (must be before conditional returns) ====================
@@ -2067,16 +2097,16 @@ export default function Home() {
   }, [toast])
 
   useEffect(() => {
-    fetchRegistrations()
-  }, [fetchRegistrations])
+    if (isAuthenticated) fetchRegistrations()
+  }, [fetchRegistrations, isAuthenticated])
 
   useEffect(() => {
-    fetchStats()
-  }, [fetchStats])
+    if (isAuthenticated) fetchStats()
+  }, [fetchStats, isAuthenticated])
 
   useEffect(() => {
-    fetchSettings()
-  }, [fetchSettings])
+    if (isAuthenticated) fetchSettings()
+  }, [fetchSettings, isAuthenticated])
 
   // ==================== CONDITIONAL RENDERS ====================
   // Auth loading screen
@@ -2087,7 +2117,8 @@ export default function Home() {
           <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-emerald-600/20 flex items-center justify-center animate-pulse">
             <ShieldCheck className="w-8 h-8 text-emerald-400" />
           </div>
-          <p className="text-emerald-200 text-sm">Memuat sistem...</p>
+          <p className="text-emerald-200 text-sm mb-3">Memuat sistem...</p>
+          <p className="text-emerald-200/40 text-xs">Jika halaman tidak memuat, coba refresh</p>
         </div>
       </div>
     )

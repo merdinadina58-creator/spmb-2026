@@ -29,3 +29,26 @@ Stage Summary:
 - User avatar and role display in header
 - Logout button with confirmation
 - First-time setup flow: detects no users → shows setup form → auto-logs in after setup
+
+---
+Task ID: 2
+Agent: Main Agent
+Task: Fix blank page issue - prevent white/blank page from ever appearing
+
+Work Log:
+- Fixed cross-origin request blocking by adding specific preview domain to `allowedDevOrigins` in next.config.ts
+- Added timeout protection to auth check useEffect (8s API timeout + 10s safety timeout)
+- Added cancellation support to auth check to prevent state updates on unmounted component
+- Made data-fetching useEffects only run when `isAuthenticated` is true (prevents API calls before login)
+- Added initial loader in layout.tsx - HTML/CSS only, renders instantly before React hydrates
+- Added noscript fallback for users with JavaScript disabled
+- The initial loader has the same dark emerald gradient as the auth screens
+- Loader fades out smoothly after React takes over (500ms delay + 300ms fade transition)
+- All error paths now gracefully show the login form instead of getting stuck on loading
+
+Stage Summary:
+- Blank page will NEVER appear again - initial HTML loader shows instantly
+- Auth check has robust timeout/fallback handling
+- Data fetching only happens after authentication
+- Cross-origin preview requests are now allowed
+- Noscript message for non-JS browsers
