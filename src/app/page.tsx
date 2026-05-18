@@ -447,12 +447,12 @@ function StatBar({ label, count, total, color }: { label: string; count: number;
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between text-sm">
-        <span className="font-medium">{label}</span>
-        <span className="text-gray-500">{count} ({total > 0 ? Math.round((count / total) * 100) : 0}%)</span>
+        <span className="font-medium text-gray-700">{label}</span>
+        <span className="text-gray-500 tabular-nums">{count} ({total > 0 ? Math.round((count / total) * 100) : 0}%)</span>
       </div>
-      <div className="w-full bg-gray-100 rounded-full h-2.5">
+      <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
         <div
-          className={`h-2.5 rounded-full transition-all duration-500 ${color}`}
+          className={`h-2.5 rounded-full transition-all duration-700 ease-out ${color}`}
           style={{ width: total > 0 ? `${(count / total) * 100}%` : '0%' }}
         />
       </div>
@@ -925,10 +925,10 @@ function LembarVerifikasiSheet({
   return (
     <div className="space-y-6">
       {/* Header Card */}
-      <Card className={`${config.borderColor} border-l-4`}>
+      <Card className={`${config.borderColor} border-l-4 shadow-sm hover:shadow-md transition-shadow`}>
         <CardContent className="p-5">
           <div className="flex items-center gap-4">
-            <div className={`p-3 ${config.iconBg} rounded-xl`}>
+            <div className={`p-3 ${config.iconBg} rounded-xl shadow-sm`}>
               <Icon className={`w-8 h-8 ${config.iconColor}`} />
             </div>
             <div className="flex-1">
@@ -952,53 +952,53 @@ function LembarVerifikasiSheet({
 
       {/* Stats Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className={`border-l-4 ${config.borderColor}`}>
+        <Card className={`${config.bgColor} shadow-sm hover:shadow-md transition-shadow`}>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-500">Total Pendaftar</p>
                 <p className="text-2xl font-bold">{s.total}</p>
               </div>
-              <div className={`p-2 ${config.bgColor} rounded-lg`}>
+              <div className={`p-2.5 ${config.iconBg} rounded-xl shadow-sm`}>
                 <Users className={`w-5 h-5 ${config.iconColor}`} />
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-yellow-500">
+        <Card className="bg-gradient-to-br from-amber-50 to-yellow-50/50 shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-500">Menunggu</p>
                 <p className="text-2xl font-bold text-yellow-600">{s.pending}</p>
               </div>
-              <div className="p-2 bg-yellow-50 rounded-lg">
+              <div className="p-2.5 bg-amber-100 rounded-xl shadow-sm">
                 <Clock className="w-5 h-5 text-yellow-600" />
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-emerald-500">
+        <Card className="bg-gradient-to-br from-emerald-50 to-teal-50/50 shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-500">Diterima</p>
                 <p className="text-2xl font-bold text-emerald-600">{s.verified}</p>
               </div>
-              <div className="p-2 bg-emerald-50 rounded-lg">
+              <div className="p-2.5 bg-emerald-100 rounded-xl shadow-sm">
                 <UserCheck className="w-5 h-5 text-emerald-600" />
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-red-500">
+        <Card className="bg-gradient-to-br from-red-50 to-rose-50/50 shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-500">Ditolak</p>
                 <p className="text-2xl font-bold text-red-600">{s.rejected}</p>
               </div>
-              <div className="p-2 bg-red-50 rounded-lg">
+              <div className="p-2.5 bg-red-100 rounded-xl shadow-sm">
                 <UserX className="w-5 h-5 text-red-600" />
               </div>
             </div>
@@ -1007,7 +1007,7 @@ function LembarVerifikasiSheet({
       </div>
 
       {/* Progress */}
-      <Card>
+      <Card className="shadow-sm">
         <CardContent className="p-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-gray-700">Progres Verifikasi {config.label}</span>
@@ -2738,32 +2738,32 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50/50">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-gray-50 to-emerald-50/30">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-white border-b shadow-sm">
+      <header className="sticky top-0 z-40 bg-gradient-to-r from-slate-900 via-emerald-900 to-slate-900 border-b border-emerald-400/20 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between h-18">
             <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-emerald-600 text-white">
+              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-emerald-600 text-white ring-2 ring-emerald-400/30 shadow-lg shadow-emerald-500/20">
                 <ShieldCheck className="w-6 h-6" />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-gray-900">SPMB 2026</h1>
-                <p className="text-xs text-gray-500">Sistem Verifikasi Pendaftaran</p>
+                <h1 className="text-xl font-bold text-white tracking-tight">SPMB 2026</h1>
+                <p className="text-xs text-emerald-200">Sistem Verifikasi Pendaftaran</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <Button
                 onClick={() => setPortalPasteOpen(true)}
                 variant="outline"
-                className="border-emerald-600 text-emerald-600 hover:bg-emerald-50"
+                className="bg-white/10 hover:bg-white/20 text-white border-white/20"
               >
                 <ClipboardPaste className="w-4 h-4" />
                 <span className="hidden sm:inline">Paste Portal</span>
               </Button>
               <Button
                 onClick={() => setImportDialogOpen(true)}
-                className="bg-emerald-600 hover:bg-emerald-700"
+                className="bg-white/10 hover:bg-white/20 text-white border border-white/20"
               >
                 <Upload className="w-4 h-4" />
                 <span className="hidden sm:inline">Import CSV</span>
@@ -2776,12 +2776,12 @@ export default function Home() {
       {/* Main Content */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="flex-wrap">
-            <TabsTrigger value="dashboard" className="gap-1.5">
+          <TabsList className="flex-wrap bg-white/80 backdrop-blur-sm border border-gray-200/60 rounded-xl p-1 shadow-sm">
+            <TabsTrigger value="dashboard" className="gap-1.5 rounded-lg px-4 py-2 transition-all duration-200 data-[state=active]:shadow-sm">
               <Eye className="w-4 h-4" />
               Dashboard
             </TabsTrigger>
-            <TabsTrigger value="lembar-verifikasi" className="gap-1.5 data-[state=active]:bg-amber-100 data-[state=active]:text-amber-800">
+            <TabsTrigger value="lembar-verifikasi" className="gap-1.5 rounded-lg px-4 py-2 transition-all duration-200 data-[state=active]:bg-amber-100 data-[state=active]:text-amber-800 data-[state=active]:shadow-sm">
               <ClipboardCheck className="w-4 h-4" />
               Lembar Verifikasi
               {stats && stats.pending > 0 && (
@@ -2790,11 +2790,11 @@ export default function Home() {
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="data" className="gap-1.5">
+            <TabsTrigger value="data" className="gap-1.5 rounded-lg px-4 py-2 transition-all duration-200 data-[state=active]:shadow-sm">
               <FileSpreadsheet className="w-4 h-4" />
               Data Pendaftar
             </TabsTrigger>
-            <TabsTrigger value="diterima" className="gap-1.5 data-[state=active]:bg-emerald-100 data-[state=active]:text-emerald-800">
+            <TabsTrigger value="diterima" className="gap-1.5 rounded-lg px-4 py-2 transition-all duration-200 data-[state=active]:bg-emerald-100 data-[state=active]:text-emerald-800 data-[state=active]:shadow-sm">
               <ThumbsUp className="w-4 h-4" />
               Diterima
               {stats && stats.verified > 0 && (
@@ -2803,7 +2803,7 @@ export default function Home() {
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="ditolak" className="gap-1.5 data-[state=active]:bg-red-100 data-[state=active]:text-red-800">
+            <TabsTrigger value="ditolak" className="gap-1.5 rounded-lg px-4 py-2 transition-all duration-200 data-[state=active]:bg-red-100 data-[state=active]:text-red-800 data-[state=active]:shadow-sm">
               <ThumbsDown className="w-4 h-4" />
               Ditolak
               {stats && stats.rejected > 0 && (
@@ -2812,7 +2812,7 @@ export default function Home() {
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="pengaturan" className="gap-1.5 data-[state=active]:bg-sky-100 data-[state=active]:text-sky-800">
+            <TabsTrigger value="pengaturan" className="gap-1.5 rounded-lg px-4 py-2 transition-all duration-200 data-[state=active]:bg-sky-100 data-[state=active]:text-sky-800 data-[state=active]:shadow-sm">
               <Settings className="w-4 h-4" />
               Pengaturan
             </TabsTrigger>
@@ -2820,58 +2820,78 @@ export default function Home() {
 
           {/* ==================== DASHBOARD TAB ==================== */}
           <TabsContent value="dashboard" className="space-y-6">
+            {/* Hero Welcome Section */}
+            <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 rounded-2xl p-6 text-white shadow-lg shadow-emerald-200/50">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-2xl font-bold tracking-tight">Selamat Datang di SPMB 2026</h2>
+                  <p className="text-emerald-100 mt-1">Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
+                </div>
+                <div className="flex gap-3">
+                  <div className="bg-white/15 backdrop-blur-sm rounded-xl px-4 py-2 text-center">
+                    <p className="text-2xl font-bold">{stats?.total || 0}</p>
+                    <p className="text-xs text-emerald-100">Pendaftar</p>
+                  </div>
+                  <div className="bg-white/15 backdrop-blur-sm rounded-xl px-4 py-2 text-center">
+                    <p className="text-2xl font-bold">{verificationPercent}%</p>
+                    <p className="text-xs text-emerald-100">Terverifikasi</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Stats Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Card className="border-l-4 border-l-gray-500">
+              <Card className="bg-gradient-to-br from-slate-50 to-slate-100/50 shadow-sm hover:shadow-md transition-shadow">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-gray-500">Total Pendaftar</p>
                       <p className="text-2xl font-bold">{stats?.total || 0}</p>
                     </div>
-                    <div className="p-2 bg-gray-50 rounded-lg">
+                    <div className="p-2.5 bg-gray-100 rounded-xl shadow-sm">
                       <Users className="w-5 h-5 text-gray-600" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="border-l-4 border-l-yellow-500">
+              <Card className="bg-gradient-to-br from-amber-50 to-yellow-50/50 shadow-sm hover:shadow-md transition-shadow">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-gray-500">Menunggu</p>
                       <p className="text-2xl font-bold text-yellow-600">{stats?.pending || 0}</p>
                     </div>
-                    <div className="p-2 bg-yellow-50 rounded-lg">
+                    <div className="p-2.5 bg-amber-100 rounded-xl shadow-sm">
                       <Clock className="w-5 h-5 text-yellow-600" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="border-l-4 border-l-emerald-500 cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('diterima')}>
+              <Card className="bg-gradient-to-br from-emerald-50 to-teal-50/50 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => setActiveTab('diterima')}>
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-gray-500">Diterima</p>
                       <p className="text-2xl font-bold text-emerald-600">{stats?.verified || 0}</p>
                     </div>
-                    <div className="p-2 bg-emerald-50 rounded-lg">
+                    <div className="p-2.5 bg-emerald-100 rounded-xl shadow-sm">
                       <UserCheck className="w-5 h-5 text-emerald-600" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="border-l-4 border-l-red-500 cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('ditolak')}>
+              <Card className="bg-gradient-to-br from-red-50 to-rose-50/50 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => setActiveTab('ditolak')}>
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-gray-500">Ditolak</p>
                       <p className="text-2xl font-bold text-red-600">{stats?.rejected || 0}</p>
                     </div>
-                    <div className="p-2 bg-red-50 rounded-lg">
+                    <div className="p-2.5 bg-red-100 rounded-xl shadow-sm">
                       <UserX className="w-5 h-5 text-red-600" />
                     </div>
                   </div>
@@ -2880,7 +2900,7 @@ export default function Home() {
             </div>
 
             {/* Progress */}
-            <Card>
+            <Card className="shadow-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Progres Verifikasi</CardTitle>
                 <CardDescription>
@@ -2909,7 +2929,7 @@ export default function Home() {
             {/* Charts Grid */}
             <div className="grid md:grid-cols-2 gap-6">
               {/* By Sub Jalur */}
-              <Card>
+              <Card className="shadow-sm">
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
                     <Filter className="w-4 h-4" />
@@ -2929,7 +2949,7 @@ export default function Home() {
               </Card>
 
               {/* By Sekolah Pilihan */}
-              <Card>
+              <Card className="shadow-sm">
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
                     <School className="w-4 h-4" />
@@ -2949,7 +2969,7 @@ export default function Home() {
               </Card>
 
               {/* By Jurusan */}
-              <Card>
+              <Card className="shadow-sm">
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
                     <GraduationCap className="w-4 h-4" />
@@ -2969,7 +2989,7 @@ export default function Home() {
               </Card>
 
               {/* Verification Status */}
-              <Card>
+              <Card className="shadow-sm">
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4" />
@@ -2987,7 +3007,7 @@ export default function Home() {
             </div>
 
             {/* Lembar Verifikasi Quick Links */}
-            <Card>
+            <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
                   <ClipboardCheck className="w-4 h-4" />
@@ -3003,7 +3023,7 @@ export default function Home() {
                     return (
                       <Card
                         key={lv.key}
-                        className={`border-2 cursor-pointer hover:shadow-lg transition-all ${lv.borderColor} ${lv.bgColor}`}
+                        className={`border-2 cursor-pointer hover:scale-[1.02] hover:shadow-xl transition-all duration-300 ${lv.borderColor} ${lv.bgColor}`}
                         onClick={() => { setActiveTab('lembar-verifikasi'); setLembarTab(lv.key) }}
                       >
                         <CardContent className="p-3 sm:p-4 text-center">
@@ -3022,7 +3042,7 @@ export default function Home() {
           {/* ==================== LEMBAR VERIFIKASI TAB ==================== */}
           <TabsContent value="lembar-verifikasi" className="space-y-6">
             <Tabs value={lembarTab} onValueChange={setLembarTab}>
-              <TabsList className="flex-wrap h-auto gap-1">
+              <TabsList className="flex-wrap h-auto gap-1 bg-white/60 backdrop-blur-sm border rounded-xl p-1 shadow-sm">
                 {lembarVerifikasi.map((lv) => {
                   const LvIcon = lv.icon
                   const pendingCount = getPendingForLembar(lv.subJalurFilter)
@@ -3030,7 +3050,7 @@ export default function Home() {
                     <TabsTrigger
                       key={lv.key}
                       value={lv.key}
-                      className="gap-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5"
+                      className="gap-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 rounded-lg transition-all duration-200"
                     >
                       <LvIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       <span className="hidden md:inline">{lv.label}</span>
@@ -3063,7 +3083,7 @@ export default function Home() {
           {/* ==================== DATA PENDAFTAR TAB ==================== */}
           <TabsContent value="data" className="space-y-4">
             {/* Filters */}
-            <Card>
+            <Card className="shadow-sm">
               <CardContent className="p-4">
                 <div className="flex flex-col sm:flex-row gap-3">
                   <div className="relative flex-1">
@@ -3661,7 +3681,7 @@ export default function Home() {
             </Card>
 
             {/* Kuota Siswa */}
-            <Card>
+            <Card className="shadow-sm hover:shadow-md transition-shadow">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Users className="w-5 h-5 text-sky-600" />
@@ -3700,7 +3720,7 @@ export default function Home() {
             </Card>
 
             {/* Distribusi Jalur */}
-            <Card>
+            <Card className="shadow-sm">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2 text-lg">
@@ -4092,11 +4112,14 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t bg-white mt-auto">
+      <footer className="border-t bg-gradient-to-r from-slate-900 via-emerald-900 to-slate-900 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
-            <p className="text-sm text-gray-500">&copy; 2026 SPMB Verifikasi System</p>
-            <p className="text-xs text-gray-400">Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <p className="text-sm text-emerald-100 font-medium">&copy; 2026 SPMB Verifikasi System</p>
+            </div>
+            <p className="text-xs text-emerald-200/60">Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
           </div>
         </div>
       </footer>
