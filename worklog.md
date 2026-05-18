@@ -76,3 +76,34 @@ Stage Summary:
 - Server works correctly when running (all APIs return correct responses)
 - 502 error was caused by server not running, not code bugs
 - Server stays alive when actively receiving requests (tested 60+ seconds)
+---
+Task ID: 2
+Agent: Main Agent
+Task: Create Perangkingan (Ranking) feature for SPMB 2026
+
+Work Log:
+- Created `/src/app/api/ranking/route.ts` API endpoint with:
+  - Sorting by Jarak (nearest to farthest), Nilai (highest to lowest), Skor Komposit (highest to lowest)
+  - Filtering by Jalur, Sekolah, Jurusan, and Status
+  - Indonesian number format parser (handles "1.383,854", "83.286", "77,228" formats)
+  - Per-jalur ranking (_jalurRank) alongside global ranking (_ranking)
+  - Kuota per jalur calculation from settings
+  - Records without data sorted to bottom (not top)
+- Added ranking state variables to page.tsx (rankingJalur, rankingSekolah, rankingTampilan, etc.)
+- Added fetchRanking callback and useEffect
+- Added "Perangkingan" tab with Trophy icon between "Data Pendaftar" and "Diterima"
+- Ranking tab UI includes:
+  - Gradient amber header
+  - Kuota per jalur info cards
+  - 5-column filter panel (Urutan, Jalur, Sekolah, Jurusan, Status)
+  - Quick view cards: Domisili Jarak Terdekat + Prestasi Nilai Tertinggi
+  - Full ranking table with No, Jalur rank, Nama, Sekolah, Jurusan, Jarak, Nilai, Skor, Status
+  - Visual indicators: gold/silver/bronze for top 3, green for within kuota
+- Fixed Indonesian number parser to correctly handle "83.286" as 83.286 (not 83286)
+
+Stage Summary:
+- API endpoint: /api/ranking with jarak/nilai/komposit sorting
+- Per-jalur ranking working correctly (J#1, J#2, etc.)
+- Kuota visualization with green highlight for within-kuota ranks
+- Quick view cards for Domisili and Prestasi
+- All filters working (jalur, sekolah, jurusan, status)
