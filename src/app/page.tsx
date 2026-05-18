@@ -1856,6 +1856,7 @@ export default function Home() {
   const [portalRawText, setPortalRawText] = useState('')
   const [portalParsedData, setPortalParsedData] = useState<Record<string, string> | null>(null)
   const [portalParsing, setPortalParsing] = useState(false)
+  const [portalSelectedJalur, setPortalSelectedJalur] = useState('') // jalur config nama selected in paste portal
 
   // Pengaturan state
   const [kuota, setKuota] = useState(0)
@@ -1928,16 +1929,40 @@ export default function Home() {
     const noRegMatch = text.match(/No\.\s*Registrasi\s*:\s*(\S+)/i)
     if (noRegMatch) result['noRegistrasi'] = noRegMatch[1]
 
-    // Sub Jalur - detect from the text (Domisili, Afirmasi, Prestasi, etc.)
-    const subJalurOptions = ['Domisili', 'Afirmasi', 'Keluarga Tidak Mampu', 'Disabilitas', 'Prestasi Non Akademik', 'Prestasi', 'Mutasi', 'Anak Guru']
-    // Afirmasi = Keluarga Tidak Mampu, so map it
-    const afirmasiMap: Record<string, string> = { 'Afirmasi': 'Keluarga Tidak Mampu' }
-    for (const jalur of subJalurOptions) {
-      // Check if the jalur name appears as a standalone line (section header)
+    // Sub Jalur - detect from the text using dynamic jalur from Pengaturan
+    // Build detection list from jalurConfigs (active jalur names + their subJalur mappings)
+    const activeJalurNames = jalurConfigs.filter(j => j.aktif).map(j => j.nama)
+    // Also include common aliases that might appear in portal text
+    const portalAliases: Record<string, string> = {
+      'Afirmasi': 'Afirmasi (KTM)',
+      'Keluarga Tidak Mampu': 'Afirmasi (KTM)',
+      'KTM': 'Afirmasi (KTM)',
+      'Penyandang Disabilitas': 'Disabilitas',
+      'Mutasi Orang tua/ Wali': 'Mutasi',
+      'Perpindahan Orang Tua': 'Mutasi',
+      'Prestasi Akademik': 'Prestasi Nilai Rapor',
+      'Prestasi Nonakademik': 'Prestasi Non Akademik',
+      'Non Akademik': 'Prestasi Non Akademik',
+      'Terdampak Bencana Alam': 'Terdampak Bencana Alam',
+    }
+    // Combine: active jalur names + their known aliases (only if alias maps to an active jalur)
+    const allDetectableNames = new Set<string>()
+    for (const name of activeJalurNames) {
+      allDetectableNames.add(name)
+    }
+    for (const [alias, targetJalur] of Object.entries(portalAliases)) {
+      if (activeJalurNames.includes(targetJalur)) {
+        allDetectableNames.add(alias)
+      }
+    }
+    // Try to detect jalur name from pasted text
+    for (const jalur of allDetectableNames) {
       for (const line of lines) {
         if (line === jalur || line.toLowerCase() === jalur.toLowerCase()) {
-          // Afirmasi = Keluarga Tidak Mampu
-          result['subJalur'] = afirmasiMap[jalur] || jalur
+          // Map alias to actual jalur config name, then to subJalur filter
+          const jalurConfigName = portalAliases[jalur] || jalur
+          result['subJalur'] = getJalurSubFilter(jalurConfigName)
+          result['_detectedJalurNama'] = jalurConfigName // store the jalur config name for dropdown
           break
         }
       }
@@ -2079,6 +2104,15 @@ export default function Home() {
     try {
       const parsed = parsePortalText(portalRawText)
       setPortalParsedData(parsed)
+      // Initialize selected jalur from detected jalur or first active jalur
+      const detectedJalur = parsed['_detectedJalurNama'] || ''
+      if (detectedJalur) {
+        setPortalSelectedJalur(detectedJalur)
+      } else {
+        // Default to first active jalur
+        const firstActive = jalurConfigs.find(j => j.aktif)
+        setPortalSelectedJalur(firstActive?.nama || '')
+      }
     } catch {
       toast({ title: 'Gagal', description: 'Tidak dapat memparse teks portal', variant: 'destructive' })
     } finally {
@@ -2090,10 +2124,18 @@ export default function Home() {
     if (!portalParsedData) return
     setImporting(true)
     try {
+      // Use the selected jalur from dropdown (overrides auto-detected subJalur)
+      const saveData = { ...portalParsedData }
+      if (portalSelectedJalur) {
+        saveData['subJalur'] = getJalurSubFilter(portalSelectedJalur)
+      }
+      // Remove internal temp fields before sending
+      delete saveData['_detectedJalurNama']
+
       const res = await fetch('/api/registrations/portal-paste', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(portalParsedData),
+        body: JSON.stringify(saveData),
       })
       const data = await res.json()
       if (data.success) {
@@ -2117,6 +2159,7 @@ export default function Home() {
         setPortalPasteOpen(false)
         setPortalRawText('')
         setPortalParsedData(null)
+        setPortalSelectedJalur('')
         fetchRegistrations()
         fetchStats()
       } else {
@@ -4126,7 +4169,7 @@ export default function Home() {
       {/* ==================== PORTAL PASTE DIALOG ==================== */}
       <Dialog open={portalPasteOpen} onOpenChange={(open) => {
         setPortalPasteOpen(open)
-        if (!open) { setPortalRawText(''); setPortalParsedData(null) }
+        if (!open) { setPortalRawText(''); setPortalParsedData(null); setPortalSelectedJalur('') }
       }}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -4192,16 +4235,57 @@ export default function Home() {
                         <div className="p-2 bg-emerald-100 rounded-lg">
                           <Users className="w-6 h-6 text-emerald-600" />
                         </div>
-                        <div>
+                        <div className="flex-1">
                           <p className="text-lg font-bold text-gray-900">{portalParsedData.nama || '-'}</p>
-                          <div className="flex items-center gap-2 mt-1">
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
                             <Badge variant="outline" className="font-mono">No. Reg: {portalParsedData.noRegistrasi || '-'}</Badge>
-                            {portalParsedData.subJalur && (
-                              <Badge variant="outline" className={SUB_JALUR_COLORS[portalParsedData.subJalur] || 'bg-gray-100 text-gray-800'}>
-                                {portalParsedData.subJalur}
-                              </Badge>
-                            )}
                           </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Jalur Pendaftaran Selector */}
+                  <Card className="border-2 border-amber-200 bg-gradient-to-br from-amber-50 to-white">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-amber-100 rounded-lg">
+                          <ClipboardCheck className="w-5 h-5 text-amber-600" />
+                        </div>
+                        <div className="flex-1">
+                          <label className="text-sm font-semibold text-amber-800 block mb-1">
+                            Jalur Pendaftaran
+                          </label>
+                          <Select value={portalSelectedJalur} onValueChange={setPortalSelectedJalur}>
+                            <SelectTrigger className="w-full bg-white">
+                              <SelectValue placeholder="Pilih jalur pendaftaran..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {jalurConfigs.filter(j => j.aktif).map(jalur => (
+                                <SelectItem key={jalur.id} value={jalur.nama}>
+                                  <div className="flex items-center gap-2">
+                                    {(() => {
+                                      const Icon = getJalurIcon(jalur.nama)
+                                      return <Icon className="w-4 h-4" />
+                                    })()}
+                                    <span>{jalur.nama}</span>
+                                    <span className="text-xs text-gray-400">→ {getJalurSubFilter(jalur.nama)}</span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {portalSelectedJalur && (
+                            <div className="flex items-center gap-1.5 mt-1.5">
+                              <span className="text-xs text-gray-500">Data akan masuk ke Lembar Verifikasi:</span>
+                              <Badge variant="outline" className={SUB_JALUR_COLORS[getJalurSubFilter(portalSelectedJalur)] || 'bg-gray-100 text-gray-800'}>
+                                {getJalurSubFilter(portalSelectedJalur)}
+                              </Badge>
+                            </div>
+                          )}
+                          {!portalSelectedJalur && (
+                            <p className="text-xs text-red-500 mt-1">⚠️ Pilih jalur pendaftaran sebelum menyimpan</p>
+                          )}
                         </div>
                       </div>
                     </CardContent>
@@ -4366,7 +4450,7 @@ export default function Home() {
                 <Button variant="outline" onClick={() => { setPortalParsedData(null); setPortalRawText('') }}>
                   Batal
                 </Button>
-                <Button onClick={handlePortalSave} disabled={importing} className="bg-emerald-600 hover:bg-emerald-700">
+                <Button onClick={handlePortalSave} disabled={importing || !portalSelectedJalur} className="bg-emerald-600 hover:bg-emerald-700">
                   {importing ? (<><Loader2 className="w-4 h-4 animate-spin" /> Menyimpan...</>) : (<><Check className="w-4 h-4" /> Simpan Data</>)}
                 </Button>
               </>

@@ -49,3 +49,31 @@ Stage Summary:
 - Uses agent-browser for headless browser automation
 - Same deduplication logic as existing Paste Portal feature
 - UI integrated into the Pengaturan tab
+
+---
+Task ID: 3
+Agent: Main
+Task: Make Paste Portal dynamically follow jalur from Pengaturan settings
+
+Work Log:
+- Analyzed current Paste Portal subJalur detection: hardcoded list of 8 jalur names
+- Replaced hardcoded `subJalurOptions` in `parsePortalText` with dynamic detection from `jalurConfigs` state
+- Added portal alias mapping: 'Afirmasi' → 'Afirmasi (KTM)', 'KTM' → 'Afirmasi (KTM)', 'Penyandang Disabilitas' → 'Disabilitas', etc.
+- Only includes aliases that map to active jalur in Pengaturan
+- Uses `getJalurSubFilter()` to correctly map jalur config names to subJalur values used in Registration data
+- Added `portalSelectedJalur` state for the jalur selector dropdown
+- Added Jalur Pendaftaran selector card in Paste Portal preview dialog:
+  - Dropdown with all active jalur from Pengaturan (with icons and subJalur mapping shown)
+  - Auto-selects detected jalur from pasted text
+  - Shows which Lembar Verifikasi tab the data will appear in
+  - Save button disabled if no jalur selected
+- Updated `handlePortalSave` to use selected jalur (overrides auto-detected)
+- Added cleanup of internal `_detectedJalurNama` temp field before saving to API
+- Reset `portalSelectedJalur` when dialog closes or data is saved
+- Lint passes, no errors
+
+Stage Summary:
+- Paste Portal now dynamically uses jalur from Pengaturan settings
+- Users can confirm/change the jalur before saving via dropdown
+- Data is correctly mapped to the corresponding Lembar Verifikasi tab
+- Custom jalur added in Pengaturan are automatically available in Paste Portal
