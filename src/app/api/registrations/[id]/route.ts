@@ -43,6 +43,29 @@ export async function PATCH(
       'terbitKK',
       'lamaKK',
       'skorNilaiRaport',
+      'skorJarak',
+      'noRegistrasi',
+      'nama',
+      'nisn',
+      'subJalur',
+      'npsnSekolahPilihan',
+      'namaSekolahPilihan',
+      'jurusan',
+      'npsnSekolahAsal',
+      'namaSekolahAsal',
+      'nik',
+      'tanggalLahir',
+      'alamat',
+      'alamatLengkap',
+      'noTelpSiswa',
+      'noTelpOrangtua',
+      'latitude',
+      'longitude',
+      'lokasiJarak',
+      'nilaiRataRata',
+      'skor',
+      'nilaiRapor',
+      'dokumen',
     ] as const;
 
     const updateData: Record<string, string | null> = {};
@@ -85,5 +108,26 @@ export async function PATCH(
   } catch (error) {
     console.error('Error updating registration:', error);
     return NextResponse.json({ error: 'Failed to update registration' }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+
+    const existing = await db.registration.findUnique({ where: { id } });
+    if (!existing) {
+      return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
+    }
+
+    await db.registration.delete({ where: { id } });
+
+    return NextResponse.json({ success: true, message: 'Registration deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting registration:', error);
+    return NextResponse.json({ error: 'Failed to delete registration' }, { status: 500 });
   }
 }

@@ -83,6 +83,8 @@ import {
   IdCard,
   Pencil,
   CalendarClock,
+  Printer,
+  AlertCircle,
 } from 'lucide-react'
 
 interface Registration {
@@ -552,6 +554,17 @@ function LembarVerifikasiSheet({
   const [editingCell, setEditingCell] = useState<string | null>(null)
   const [editingValue, setEditingValue] = useState('')
 
+  // Edit dialog state
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [editTarget, setEditTarget] = useState<Registration | null>(null)
+  const [editForm, setEditForm] = useState<Record<string, string>>({})
+  const [saving, setSaving] = useState(false)
+
+  // Delete dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<Registration | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
   const handleFieldUpdate = async (regId: string, field: string, value: string) => {
     try {
       const res = await fetch(`/api/registrations/${regId}`, {
@@ -643,6 +656,100 @@ function LembarVerifikasiSheet({
   const cancelEdit = () => {
     setEditingCell(null)
     setEditingValue('')
+  }
+
+  // Edit dialog functions
+  const openEditDialog = (reg: Registration) => {
+    setEditTarget(reg)
+    setEditForm({
+      noRegistrasi: reg.noRegistrasi || '',
+      nama: reg.nama || '',
+      nisn: reg.nisn || '',
+      subJalur: reg.subJalur || '',
+      nik: reg.nik || '',
+      tanggalLahir: reg.tanggalLahir || '',
+      alamat: reg.alamat || '',
+      alamatLengkap: reg.alamatLengkap || '',
+      noTelpSiswa: reg.noTelpSiswa || '',
+      noTelpOrangtua: reg.noTelpOrangtua || '',
+      npsnSekolahPilihan: reg.npsnSekolahPilihan || '',
+      namaSekolahPilihan: reg.namaSekolahPilihan || '',
+      jurusan: reg.jurusan || '',
+      npsnSekolahAsal: reg.npsnSekolahAsal || '',
+      namaSekolahAsal: reg.namaSekolahAsal || '',
+      skorJarak: reg.skorJarak || '',
+      skorNilaiRaport: reg.skorNilaiRaport || '',
+      kekuranganVerifikasi: reg.kekuranganVerifikasi || '',
+      tanggalVerif: reg.tanggalVerif || '',
+      jamVerif: reg.jamVerif || '',
+      terbitKK: reg.terbitKK || '',
+      latitude: reg.latitude || '',
+      longitude: reg.longitude || '',
+      lokasiJarak: reg.lokasiJarak || '',
+      nilaiRataRata: reg.nilaiRataRata || '',
+    })
+    setEditDialogOpen(true)
+  }
+
+  const handleSaveEdit = async () => {
+    if (!editTarget) return
+    setSaving(true)
+    try {
+      // Auto-calculate lamaKK when terbitKK is provided
+      const updateData = { ...editForm }
+      if (updateData.terbitKK) {
+        const calculatedLama = hitungLamaKK(updateData.terbitKK)
+        if (calculatedLama) updateData['lamaKK'] = calculatedLama
+      }
+
+      const res = await fetch(`/api/registrations/${editTarget.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateData),
+      })
+      const result = await res.json()
+      if (result.success) {
+        toast({ title: 'Berhasil', description: `Data ${editTarget.nama} berhasil diperbarui` })
+        setEditDialogOpen(false)
+        setEditTarget(null)
+        fetchData()
+      } else {
+        toast({ title: 'Gagal', description: result.error || 'Gagal menyimpan', variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Gagal', description: 'Terjadi kesalahan', variant: 'destructive' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Delete dialog functions
+  const openDeleteDialog = (reg: Registration) => {
+    setDeleteTarget(reg)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/registrations/${deleteTarget.id}`, {
+        method: 'DELETE',
+      })
+      const result = await res.json()
+      if (result.success) {
+        toast({ title: 'Berhasil', description: `Data ${deleteTarget.nama} berhasil dihapus` })
+        setDeleteDialogOpen(false)
+        setDeleteTarget(null)
+        fetchData()
+      } else {
+        toast({ title: 'Gagal', description: result.error || 'Gagal menghapus', variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Gagal', description: 'Terjadi kesalahan', variant: 'destructive' })
+    } finally {
+      setDeleting(false)
+    }
   }
 
   const fetchData = useCallback(async () => {
@@ -1185,8 +1292,14 @@ function LembarVerifikasiSheet({
                       {/* Aksi */}
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => onViewDetail(reg)}>
+                          <Button variant="ghost" size="sm" onClick={() => onViewDetail(reg)} title="Lihat Detail">
                             <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="text-blue-600 hover:text-white hover:bg-blue-600" title="Edit Data" onClick={() => openEditDialog(reg)}>
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="text-red-600 hover:text-white hover:bg-red-600" title="Hapus Data" onClick={() => openDeleteDialog(reg)}>
+                            <Trash2 className="w-4 h-4" />
                           </Button>
                           {reg.verificationStatus !== 'VERIFIED' && (
                             <Button
@@ -1403,6 +1516,223 @@ function LembarVerifikasiSheet({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="w-5 h-5 text-blue-600" /> Edit Data Pendaftar
+            </DialogTitle>
+            <DialogDescription>
+              Edit data pendaftar <span className="font-semibold">{editTarget?.nama}</span> ({editTarget?.noRegistrasi})
+            </DialogDescription>
+          </DialogHeader>
+          {editTarget && (
+            <div className="space-y-6">
+              {/* Data Pendaftar */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
+                  <Users className="w-4 h-4 text-gray-500" /> Data Pendaftar
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">No. Registrasi</label>
+                    <Input value={editForm.noRegistrasi || ''} onChange={e => setEditForm({...editForm, noRegistrasi: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Nama</label>
+                    <Input value={editForm.nama || ''} onChange={e => setEditForm({...editForm, nama: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">NISN</label>
+                    <Input value={editForm.nisn || ''} onChange={e => setEditForm({...editForm, nisn: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Sub Jalur</label>
+                    <Select value={editForm.subJalur || ''} onValueChange={v => setEditForm({...editForm, subJalur: v})}>
+                      <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih Sub Jalur" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Domisili">Domisili</SelectItem>
+                        <SelectItem value="Keluarga Tidak Mampu">Keluarga Tidak Mampu</SelectItem>
+                        <SelectItem value="Mutasi">Mutasi</SelectItem>
+                        <SelectItem value="Prestasi">Prestasi</SelectItem>
+                        <SelectItem value="Prestasi Non Akademik">Prestasi Non Akademik</SelectItem>
+                        <SelectItem value="Anak Guru">Anak Guru</SelectItem>
+                        <SelectItem value="Zonasi">Zonasi</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">NIK</label>
+                    <Input value={editForm.nik || ''} onChange={e => setEditForm({...editForm, nik: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Tanggal Lahir</label>
+                    <Input type="date" value={editForm.tanggalLahir || ''} onChange={e => setEditForm({...editForm, tanggalLahir: e.target.value})} className="mt-1" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="text-xs text-gray-500 font-medium">Alamat</label>
+                    <Input value={editForm.alamat || ''} onChange={e => setEditForm({...editForm, alamat: e.target.value})} className="mt-1" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="text-xs text-gray-500 font-medium">Alamat Lengkap</label>
+                    <Textarea value={editForm.alamatLengkap || ''} onChange={e => setEditForm({...editForm, alamatLengkap: e.target.value})} className="mt-1" rows={2} />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">No. Telp Siswa</label>
+                    <Input value={editForm.noTelpSiswa || ''} onChange={e => setEditForm({...editForm, noTelpSiswa: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">No. Telp Orangtua</label>
+                    <Input value={editForm.noTelpOrangtua || ''} onChange={e => setEditForm({...editForm, noTelpOrangtua: e.target.value})} className="mt-1" />
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Data Sekolah */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
+                  <School className="w-4 h-4 text-gray-500" /> Data Sekolah
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">NPSN Sekolah Pilihan</label>
+                    <Input value={editForm.npsnSekolahPilihan || ''} onChange={e => setEditForm({...editForm, npsnSekolahPilihan: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Nama Sekolah Pilihan</label>
+                    <Input value={editForm.namaSekolahPilihan || ''} onChange={e => setEditForm({...editForm, namaSekolahPilihan: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Jurusan</label>
+                    <Input value={editForm.jurusan || ''} onChange={e => setEditForm({...editForm, jurusan: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">NPSN Sekolah Asal</label>
+                    <Input value={editForm.npsnSekolahAsal || ''} onChange={e => setEditForm({...editForm, npsnSekolahAsal: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Nama Sekolah Asal</label>
+                    <Input value={editForm.namaSekolahAsal || ''} onChange={e => setEditForm({...editForm, namaSekolahAsal: e.target.value})} className="mt-1" />
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Data Verifikasi */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
+                  <ClipboardCheck className="w-4 h-4 text-gray-500" /> Data Verifikasi
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Skor Jarak</label>
+                    <Input value={editForm.skorJarak || ''} onChange={e => setEditForm({...editForm, skorJarak: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Skor Nilai Raport</label>
+                    <Input value={editForm.skorNilaiRaport || ''} onChange={e => setEditForm({...editForm, skorNilaiRaport: e.target.value})} className="mt-1" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="text-xs text-gray-500 font-medium">Kekurangan Verifikasi</label>
+                    <div className="mt-1">
+                      <Select value={editForm.kekuranganVerifikasi || ''} onValueChange={v => setEditForm({...editForm, kekuranganVerifikasi: v === '__none__' ? '' : v})}>
+                        <SelectTrigger><SelectValue placeholder="Pilih kekurangan verifikasi" /></SelectTrigger>
+                        <SelectContent className="max-h-64">
+                          <SelectItem value="__none__">- Tidak Ada -</SelectItem>
+                          {KEKURANGAN_VERIFIKASI_OPTIONS.map(opt => (
+                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Tanggal Verifikasi</label>
+                    <Input type="date" value={editForm.tanggalVerif || ''} onChange={e => setEditForm({...editForm, tanggalVerif: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Jam Verifikasi</label>
+                    <Input type="time" value={editForm.jamVerif || ''} onChange={e => setEditForm({...editForm, jamVerif: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Terbit KK</label>
+                    <Input type="date" value={editForm.terbitKK || ''} onChange={e => setEditForm({...editForm, terbitKK: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Lama KK</label>
+                    <Input value={editForm.terbitKK ? hitungLamaKK(editForm.terbitKK) : ''} readOnly className="mt-1 bg-gray-50" />
+                    <p className="text-xs text-gray-400 mt-1">Dihitung otomatis dari Terbit KK</p>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Data Lokasi & Nilai */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4 text-gray-500" /> Lokasi & Nilai
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Latitude</label>
+                    <Input value={editForm.latitude || ''} onChange={e => setEditForm({...editForm, latitude: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Longitude</label>
+                    <Input value={editForm.longitude || ''} onChange={e => setEditForm({...editForm, longitude: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Lokasi Jarak</label>
+                    <Input value={editForm.lokasiJarak || ''} onChange={e => setEditForm({...editForm, lokasiJarak: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Nilai Rata-Rata</label>
+                    <Input value={editForm.nilaiRataRata || ''} onChange={e => setEditForm({...editForm, nilaiRataRata: e.target.value})} className="mt-1" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Batal</Button>
+            <Button onClick={handleSaveEdit} disabled={saving} className="bg-blue-600 hover:bg-blue-700">
+              {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Menyimpan...</> : <><Pencil className="w-4 h-4" /> Simpan</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="w-5 h-5 text-red-600" /> Hapus Data Pendaftar
+            </DialogTitle>
+            <DialogDescription>
+              Apakah Anda yakin ingin menghapus data pendaftar <span className="font-semibold">{deleteTarget?.nama}</span>? Tindakan ini tidak dapat dibatalkan.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+            <div className="flex gap-2">
+              <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 shrink-0" />
+              <p className="text-sm text-red-700">Data yang sudah dihapus tidak dapat dikembalikan. Pastikan Anda yakin sebelum melanjutkan.</p>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Batal</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting ? <><Loader2 className="w-4 h-4 animate-spin" /> Menghapus...</> : <><Trash2 className="w-4 h-4" /> Hapus</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -1454,6 +1784,22 @@ export default function Home() {
 
   // Lembar verifikasi sub-tab
   const [lembarTab, setLembarTab] = useState('domisili')
+
+  // Edit dialog state (Home component)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [editTarget, setEditTarget] = useState<Registration | null>(null)
+  const [editForm, setEditForm] = useState<Record<string, string>>({})
+  const [saving, setSaving] = useState(false)
+
+  // Delete dialog state (Home component)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<Registration | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
+  // Report filter state
+  const [diterimaFilterJalur, setDiterimaFilterJalur] = useState('all')
+  const [diterimaFilterSekolah, setDiterimaFilterSekolah] = useState('all')
+  const [ditolakFilterJalur, setDitolakFilterJalur] = useState('all')
 
   // Portal paste state
   const [portalPasteOpen, setPortalPasteOpen] = useState(false)
@@ -1958,6 +2304,127 @@ export default function Home() {
     setDetailDialogOpen(true)
   }
 
+  // Edit dialog functions (Home component)
+  const openEditDialog = (reg: Registration) => {
+    setEditTarget(reg)
+    setEditForm({
+      noRegistrasi: reg.noRegistrasi || '',
+      nama: reg.nama || '',
+      nisn: reg.nisn || '',
+      subJalur: reg.subJalur || '',
+      nik: reg.nik || '',
+      tanggalLahir: reg.tanggalLahir || '',
+      alamat: reg.alamat || '',
+      alamatLengkap: reg.alamatLengkap || '',
+      noTelpSiswa: reg.noTelpSiswa || '',
+      noTelpOrangtua: reg.noTelpOrangtua || '',
+      npsnSekolahPilihan: reg.npsnSekolahPilihan || '',
+      namaSekolahPilihan: reg.namaSekolahPilihan || '',
+      jurusan: reg.jurusan || '',
+      npsnSekolahAsal: reg.npsnSekolahAsal || '',
+      namaSekolahAsal: reg.namaSekolahAsal || '',
+      skorJarak: reg.skorJarak || '',
+      skorNilaiRaport: reg.skorNilaiRaport || '',
+      kekuranganVerifikasi: reg.kekuranganVerifikasi || '',
+      tanggalVerif: reg.tanggalVerif || '',
+      jamVerif: reg.jamVerif || '',
+      terbitKK: reg.terbitKK || '',
+      latitude: reg.latitude || '',
+      longitude: reg.longitude || '',
+      lokasiJarak: reg.lokasiJarak || '',
+      nilaiRataRata: reg.nilaiRataRata || '',
+    })
+    setEditDialogOpen(true)
+  }
+
+  const handleSaveEdit = async () => {
+    if (!editTarget) return
+    setSaving(true)
+    try {
+      const updateData = { ...editForm }
+      if (updateData.terbitKK) {
+        const calculatedLama = hitungLamaKK(updateData.terbitKK)
+        if (calculatedLama) updateData['lamaKK'] = calculatedLama
+      }
+      const res = await fetch(`/api/registrations/${editTarget.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateData),
+      })
+      const result = await res.json()
+      if (result.success) {
+        toast({ title: 'Berhasil', description: `Data ${editTarget.nama} berhasil diperbarui` })
+        setEditDialogOpen(false)
+        setEditTarget(null)
+        fetchRegistrations()
+        fetchStats()
+      } else {
+        toast({ title: 'Gagal', description: result.error || 'Gagal menyimpan', variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Gagal', description: 'Terjadi kesalahan', variant: 'destructive' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Delete dialog functions (Home component)
+  const openDeleteDialog = (reg: Registration) => {
+    setDeleteTarget(reg)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/registrations/${deleteTarget.id}`, {
+        method: 'DELETE',
+      })
+      const result = await res.json()
+      if (result.success) {
+        toast({ title: 'Berhasil', description: `Data ${deleteTarget.nama} berhasil dihapus` })
+        setDeleteDialogOpen(false)
+        setDeleteTarget(null)
+        fetchRegistrations()
+        fetchStats()
+      } else {
+        toast({ title: 'Gagal', description: result.error || 'Gagal menghapus', variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Gagal', description: 'Terjadi kesalahan', variant: 'destructive' })
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  // Print report function
+  const handlePrintReport = (type: 'diterima' | 'ditolak') => {
+    const list = type === 'diterima' ? stats?.verifiedList || [] : stats?.rejectedList || []
+    const title = type === 'diterima' ? 'LAPORAN PESERTA DITERIMA' : 'LAPORAN PESERTA DITOLAK'
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) return
+    const rows = list.map((reg, idx) => `
+      <tr>
+        <td style="padding:6px 8px;border:1px solid #ddd;text-align:center">${idx + 1}</td>
+        <td style="padding:6px 8px;border:1px solid #ddd">${reg.noRegistrasi}</td>
+        <td style="padding:6px 8px;border:1px solid #ddd">${reg.nama}</td>
+        <td style="padding:6px 8px;border:1px solid #ddd">${reg.nisn}</td>
+        <td style="padding:6px 8px;border:1px solid #ddd">${reg.subJalur}</td>
+        <td style="padding:6px 8px;border:1px solid #ddd">${reg.namaSekolahPilihan}</td>
+        <td style="padding:6px 8px;border:1px solid #ddd">${reg.jurusan}</td>
+        <td style="padding:6px 8px;border:1px solid #ddd">${reg.tanggalVerif || '-'}</td>
+        ${type === 'ditolak' ? `<td style="padding:6px 8px;border:1px solid #ddd">${reg.verificationNote || '-'}</td>` : ''}
+      </tr>
+    `).join('')
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>${title}</title>
+      <style>body{font-family:Arial,sans-serif;margin:20px}table{width:100%;border-collapse:collapse}th{background:#f5f5f5;padding:8px;border:1px solid #ddd;text-align:left}h1{text-align:center;font-size:18px}h2{text-align:center;font-size:14px;color:#666}</style></head>
+      <body><h1>${title}</h1><h2>SPMB 2026</h2><p style="text-align:center;color:#888">Dicetak pada: ${new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+      <table><thead><tr><th>No</th><th>No. Registrasi</th><th>Nama</th><th>NISN</th><th>Sub Jalur</th><th>Sekolah Pilihan</th><th>Jurusan</th><th>Tanggal Verif</th>${type === 'ditolak' ? '<th>Alasan Penolakan</th>' : ''}</tr></thead><tbody>${rows}</tbody></table></body></html>`)
+    printWindow.document.close()
+    printWindow.print()
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50/50">
       {/* Header */}
@@ -2444,8 +2911,14 @@ export default function Home() {
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-1">
-                                <Button variant="ghost" size="sm" onClick={() => { setDetailTarget(reg); setDetailDialogOpen(true) }}>
+                                <Button variant="ghost" size="sm" onClick={() => { setDetailTarget(reg); setDetailDialogOpen(true) }} title="Lihat Detail">
                                   <Eye className="w-4 h-4" />
+                                </Button>
+                                <Button variant="ghost" size="sm" className="text-blue-600 hover:text-white hover:bg-blue-600" title="Edit Data" onClick={() => openEditDialog(reg)}>
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                                <Button variant="ghost" size="sm" className="text-red-600 hover:text-white hover:bg-red-600" title="Hapus Data" onClick={() => openDeleteDialog(reg)}>
+                                  <Trash2 className="w-4 h-4" />
                                 </Button>
                                 {reg.verificationStatus !== 'VERIFIED' && (
                                   <Button
@@ -2512,97 +2985,142 @@ export default function Home() {
 
           {/* ==================== DITERIMA TAB ==================== */}
           <TabsContent value="diterima" className="space-y-6">
-            {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="border-l-4 border-l-emerald-500 bg-gradient-to-br from-emerald-50 to-white">
-                <CardContent className="p-5">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-emerald-100 rounded-xl">
-                      <UserCheck className="w-8 h-8 text-emerald-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-emerald-600 font-medium">Total Diterima</p>
-                      <p className="text-3xl font-bold text-emerald-700">{stats?.verified || 0}</p>
-                      <p className="text-xs text-emerald-500">dari {stats?.total || 0} pendaftar ({verifiedPercent}%)</p>
-                    </div>
+            {/* Elegant Header */}
+            <Card className="overflow-hidden border-0 shadow-lg">
+              <div className="bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-600 p-6 text-white">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-2xl font-bold tracking-wide">LAPORAN PESERTA DITERIMA</h2>
+                    <p className="text-emerald-100 mt-1 text-sm">SPMB 2026 — Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
                   </div>
-                </CardContent>
-              </Card>
-              <Card className="border-l-4 border-l-emerald-400">
-                <CardContent className="p-5">
-                  <CardTitle className="text-sm mb-3">Per Sub Jalur</CardTitle>
-                  <div className="space-y-2">
+                  <Button variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-white/30" onClick={() => handlePrintReport('diterima')}>
+                    <Printer className="w-4 h-4 mr-2" /> Cetak Laporan
+                  </Button>
+                </div>
+              </div>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-emerald-50 rounded-xl p-4 text-center border border-emerald-100">
+                    <p className="text-3xl font-bold text-emerald-700">{stats?.verified || 0}</p>
+                    <p className="text-xs text-emerald-600 font-medium mt-1">Total Diterima</p>
+                  </div>
+                  <div className="bg-emerald-50 rounded-xl p-4 text-center border border-emerald-100">
+                    <p className="text-3xl font-bold text-emerald-700">{stats?.total || 0}</p>
+                    <p className="text-xs text-emerald-600 font-medium mt-1">Total Pendaftar</p>
+                  </div>
+                  <div className="bg-emerald-50 rounded-xl p-4 text-center border border-emerald-100">
+                    <p className="text-3xl font-bold text-emerald-700">{verifiedPercent}%</p>
+                    <p className="text-xs text-emerald-600 font-medium mt-1">Persentase Diterima</p>
+                  </div>
+                  <div className="bg-emerald-50 rounded-xl p-4 text-center border border-emerald-100">
+                    <p className="text-3xl font-bold text-emerald-700">{stats?.verifiedBySubJalur?.length || 0}</p>
+                    <p className="text-xs text-emerald-600 font-medium mt-1">Jalur Aktif</p>
+                  </div>
+                </div>
+
+                {/* Per Jalur Breakdown with Progress Bars */}
+                <div className="mt-6">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Distribusi Per Sub Jalur</h3>
+                  <div className="space-y-2.5">
                     {stats?.verifiedBySubJalur.map((item) => (
-                      <div key={item.name} className="flex justify-between text-sm">
-                        <span className="text-gray-600">{item.name}</span>
-                        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">{item.count}</Badge>
+                      <div key={item.name} className="flex items-center gap-3">
+                        <Badge variant="outline" className={`${SUB_JALUR_COLORS[item.name] || 'bg-gray-100 text-gray-800'} min-w-[130px] justify-center text-xs`}>
+                          {item.name}
+                        </Badge>
+                        <div className="flex-1 bg-gray-100 rounded-full h-5 relative overflow-hidden">
+                          <div
+                            className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                            style={{ width: stats?.verified ? `${(item.count / stats.verified) * 100}%` : '0%' }}
+                          />
+                        </div>
+                        <span className="text-sm font-semibold text-gray-700 min-w-[40px] text-right">{item.count}</span>
                       </div>
                     ))}
                     {(!stats?.verifiedBySubJalur || stats.verifiedBySubJalur.length === 0) && (
-                      <p className="text-xs text-gray-400">Belum ada data</p>
+                      <p className="text-xs text-gray-400 text-center py-2">Belum ada data</p>
                     )}
                   </div>
-                </CardContent>
-              </Card>
-              <Card className="border-l-4 border-l-emerald-400">
-                <CardContent className="p-5">
-                  <CardTitle className="text-sm mb-3">Per Sekolah & Jurusan</CardTitle>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-xs text-gray-400 mb-1.5 font-medium uppercase tracking-wide">Sekolah Pilihan</p>
-                      {stats?.verifiedBySekolah.map((item) => (
-                        <div key={item.name} className="flex justify-between text-sm mb-1">
-                          <span className="text-gray-600 truncate mr-2">{item.name}</span>
-                          <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 shrink-0">{item.count}</Badge>
-                        </div>
-                      ))}
-                    </div>
-                    <Separator />
-                    <div>
-                      <p className="text-xs text-gray-400 mb-1.5 font-medium uppercase tracking-wide">Jurusan</p>
-                      {stats?.verifiedByJurusan.map((item) => (
-                        <div key={item.name} className="flex justify-between text-sm mb-1">
-                          <span className="text-gray-600">{item.name}</span>
-                          <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">{item.count}</Badge>
-                        </div>
-                      ))}
-                    </div>
-                    {(!stats?.verifiedBySekolah || stats.verifiedBySekolah.length === 0) && (
-                      <p className="text-xs text-gray-400">Belum ada data</p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                </div>
+              </CardContent>
+            </Card>
 
-            {/* Verified List Table */}
+            {/* Filter Bar */}
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+              <CardContent className="p-4">
+                <div className="flex flex-col sm:flex-row gap-3 items-center">
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Filter className="w-4 h-4" /> Filter:
+                  </div>
+                  <Select value={diterimaFilterJalur} onValueChange={setDiterimaFilterJalur}>
+                    <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Sub Jalur" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Jalur</SelectItem>
+                      <SelectItem value="Domisili">Domisili</SelectItem>
+                      <SelectItem value="Keluarga Tidak Mampu">Keluarga Tidak Mampu</SelectItem>
+                      <SelectItem value="Mutasi">Mutasi</SelectItem>
+                      <SelectItem value="Prestasi">Prestasi</SelectItem>
+                      <SelectItem value="Prestasi Non Akademik">Prestasi Non Akademik</SelectItem>
+                      <SelectItem value="Anak Guru">Anak Guru</SelectItem>
+                      <SelectItem value="Zonasi">Zonasi</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={diterimaFilterSekolah} onValueChange={setDiterimaFilterSekolah}>
+                    <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Sekolah Pilihan" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Sekolah</SelectItem>
+                      {stats?.verifiedBySekolah.map((item) => (
+                        <SelectItem key={item.name} value={item.name}>{item.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="sm:ml-auto text-sm text-gray-500">
+                    Menampilkan {(() => {
+                      const list = stats?.verifiedList || []
+                      const filtered = list.filter(r =>
+                        (diterimaFilterJalur === 'all' || r.subJalur === diterimaFilterJalur) &&
+                        (diterimaFilterSekolah === 'all' || r.namaSekolahPilihan === diterimaFilterSekolah)
+                      )
+                      return filtered.length
+                    })()} dari {stats?.verified || 0} peserta
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Table */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-lg">
                   <ListChecks className="w-5 h-5 text-emerald-600" />
-                  Daftar Pendaftar Diterima
+                  Daftar Peserta Diterima
                 </CardTitle>
-                <CardDescription>Pendaftar yang telah diverifikasi dan diterima di SPMB 2026</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-emerald-50/80">
-                        <TableHead>No. Reg</TableHead>
+                        <TableHead className="w-12 text-center">No</TableHead>
+                        <TableHead>No. Registrasi</TableHead>
                         <TableHead>Nama</TableHead>
                         <TableHead className="hidden md:table-cell">NISN</TableHead>
                         <TableHead>Sub Jalur</TableHead>
                         <TableHead className="hidden lg:table-cell">Sekolah Pilihan</TableHead>
                         <TableHead className="hidden lg:table-cell">Jurusan</TableHead>
-                        <TableHead className="hidden sm:table-cell">Waktu Verifikasi</TableHead>
+                        <TableHead className="hidden sm:table-cell">Tanggal Verif</TableHead>
                         <TableHead className="text-right">Aksi</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {stats?.verifiedList && stats.verifiedList.length > 0 ? (
-                        stats.verifiedList.map((reg) => (
+                      {(() => {
+                        const list = stats?.verifiedList || []
+                        const filtered = list.filter(r =>
+                          (diterimaFilterJalur === 'all' || r.subJalur === diterimaFilterJalur) &&
+                          (diterimaFilterSekolah === 'all' || r.namaSekolahPilihan === diterimaFilterSekolah)
+                        )
+                        return filtered.length > 0 ? filtered.map((reg, idx) => (
                           <TableRow key={reg.id} className="hover:bg-emerald-50/30">
+                            <TableCell className="text-center text-sm text-gray-500">{idx + 1}</TableCell>
                             <TableCell className="font-mono text-sm">{reg.noRegistrasi}</TableCell>
                             <TableCell className="font-medium">{reg.nama}</TableCell>
                             <TableCell className="hidden md:table-cell text-sm text-gray-500">{reg.nisn}</TableCell>
@@ -2616,40 +3134,32 @@ export default function Home() {
                               <Badge variant="secondary">{reg.jurusan}</Badge>
                             </TableCell>
                             <TableCell className="hidden sm:table-cell text-xs text-gray-500">
-                              {reg.updatedAt ? new Date(reg.updatedAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
+                              {reg.tanggalVerif || (reg.updatedAt ? new Date(reg.updatedAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-')}
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-1">
-                                <Button variant="ghost" size="sm" onClick={() => { setDetailTarget(reg); setDetailDialogOpen(true) }}>
+                                <Button variant="ghost" size="sm" onClick={() => { setDetailTarget(reg); setDetailDialogOpen(true) }} title="Lihat Detail">
                                   <Eye className="w-4 h-4" />
                                 </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-yellow-600 hover:text-white hover:bg-yellow-500"
-                                  title="Kembalikan ke Menunggu"
-                                  onClick={() => {
-                                    setVerifyTargetId(reg.id)
-                                    setVerifyAction('REJECTED')
-                                    setVerifyNote('')
-                                    setVerifyDialogOpen(true)
-                                  }}
-                                >
-                                  <RotateCcw className="w-4 h-4" />
+                                <Button variant="ghost" size="sm" className="text-blue-600 hover:text-white hover:bg-blue-600" title="Edit Data" onClick={() => openEditDialog(reg)}>
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                                <Button variant="ghost" size="sm" className="text-red-600 hover:text-white hover:bg-red-600" title="Hapus Data" onClick={() => openDeleteDialog(reg)}>
+                                  <Trash2 className="w-4 h-4" />
                                 </Button>
                               </div>
                             </TableCell>
                           </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={8} className="text-center py-12">
-                            <UserCheck className="w-10 h-10 mx-auto text-gray-300 mb-2" />
-                            <p className="text-gray-500 font-medium">Belum ada pendaftar yang diterima</p>
-                            <p className="text-sm text-gray-400">Verifikasi pendaftar untuk menerimanya</p>
-                          </TableCell>
-                        </TableRow>
-                      )}
+                        )) : (
+                          <TableRow>
+                            <TableCell colSpan={9} className="text-center py-12">
+                              <UserCheck className="w-10 h-10 mx-auto text-gray-300 mb-2" />
+                              <p className="text-gray-500 font-medium">Belum ada pendaftar yang diterima</p>
+                              <p className="text-sm text-gray-400">Verifikasi pendaftar untuk menerimanya</p>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })()}
                     </TableBody>
                   </Table>
                 </div>
@@ -2659,98 +3169,127 @@ export default function Home() {
 
           {/* ==================== DITOLAK TAB ==================== */}
           <TabsContent value="ditolak" className="space-y-6">
-            {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="border-l-4 border-l-red-500 bg-gradient-to-br from-red-50 to-white">
-                <CardContent className="p-5">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-red-100 rounded-xl">
-                      <UserX className="w-8 h-8 text-red-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-red-600 font-medium">Total Ditolak</p>
-                      <p className="text-3xl font-bold text-red-700">{stats?.rejected || 0}</p>
-                      <p className="text-xs text-red-500">dari {stats?.total || 0} pendaftar ({rejectedPercent}%)</p>
-                    </div>
+            {/* Elegant Header - Red Theme */}
+            <Card className="overflow-hidden border-0 shadow-lg">
+              <div className="bg-gradient-to-r from-red-700 via-red-600 to-rose-600 p-6 text-white">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-2xl font-bold tracking-wide">LAPORAN PESERTA DITOLAK</h2>
+                    <p className="text-red-100 mt-1 text-sm">SPMB 2026 — Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
                   </div>
-                </CardContent>
-              </Card>
-              <Card className="border-l-4 border-l-red-400">
-                <CardContent className="p-5">
-                  <CardTitle className="text-sm mb-3">Per Sub Jalur</CardTitle>
-                  <div className="space-y-2">
+                  <Button variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-white/30" onClick={() => handlePrintReport('ditolak')}>
+                    <Printer className="w-4 h-4 mr-2" /> Cetak Laporan
+                  </Button>
+                </div>
+              </div>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-red-50 rounded-xl p-4 text-center border border-red-100">
+                    <p className="text-3xl font-bold text-red-700">{stats?.rejected || 0}</p>
+                    <p className="text-xs text-red-600 font-medium mt-1">Total Ditolak</p>
+                  </div>
+                  <div className="bg-red-50 rounded-xl p-4 text-center border border-red-100">
+                    <p className="text-3xl font-bold text-red-700">{stats?.total || 0}</p>
+                    <p className="text-xs text-red-600 font-medium mt-1">Total Pendaftar</p>
+                  </div>
+                  <div className="bg-red-50 rounded-xl p-4 text-center border border-red-100">
+                    <p className="text-3xl font-bold text-red-700">{rejectedPercent}%</p>
+                    <p className="text-xs text-red-600 font-medium mt-1">Persentase Ditolak</p>
+                  </div>
+                  <div className="bg-red-50 rounded-xl p-4 text-center border border-red-100">
+                    <p className="text-3xl font-bold text-red-700">{stats?.rejectedBySubJalur?.length || 0}</p>
+                    <p className="text-xs text-red-600 font-medium mt-1">Jalur Aktif</p>
+                  </div>
+                </div>
+
+                {/* Per Jalur Breakdown with Progress Bars */}
+                <div className="mt-6">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Distribusi Per Sub Jalur</h3>
+                  <div className="space-y-2.5">
                     {stats?.rejectedBySubJalur.map((item) => (
-                      <div key={item.name} className="flex justify-between text-sm">
-                        <span className="text-gray-600">{item.name}</span>
-                        <Badge className="bg-red-100 text-red-700 border-red-200">{item.count}</Badge>
+                      <div key={item.name} className="flex items-center gap-3">
+                        <Badge variant="outline" className={`${SUB_JALUR_COLORS[item.name] || 'bg-gray-100 text-gray-800'} min-w-[130px] justify-center text-xs`}>
+                          {item.name}
+                        </Badge>
+                        <div className="flex-1 bg-gray-100 rounded-full h-5 relative overflow-hidden">
+                          <div
+                            className="h-full bg-red-500 rounded-full transition-all duration-500"
+                            style={{ width: stats?.rejected ? `${(item.count / stats.rejected) * 100}%` : '0%' }}
+                          />
+                        </div>
+                        <span className="text-sm font-semibold text-gray-700 min-w-[40px] text-right">{item.count}</span>
                       </div>
                     ))}
                     {(!stats?.rejectedBySubJalur || stats.rejectedBySubJalur.length === 0) && (
-                      <p className="text-xs text-gray-400">Belum ada data</p>
+                      <p className="text-xs text-gray-400 text-center py-2">Belum ada data</p>
                     )}
                   </div>
-                </CardContent>
-              </Card>
-              <Card className="border-l-4 border-l-red-400">
-                <CardContent className="p-5">
-                  <CardTitle className="text-sm mb-3">Per Sekolah & Jurusan</CardTitle>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-xs text-gray-400 mb-1.5 font-medium uppercase tracking-wide">Sekolah Pilihan</p>
-                      {stats?.rejectedBySekolah.map((item) => (
-                        <div key={item.name} className="flex justify-between text-sm mb-1">
-                          <span className="text-gray-600 truncate mr-2">{item.name}</span>
-                          <Badge className="bg-red-100 text-red-700 border-red-200 shrink-0">{item.count}</Badge>
-                        </div>
-                      ))}
-                    </div>
-                    <Separator />
-                    <div>
-                      <p className="text-xs text-gray-400 mb-1.5 font-medium uppercase tracking-wide">Jurusan</p>
-                      {stats?.rejectedByJurusan.map((item) => (
-                        <div key={item.name} className="flex justify-between text-sm mb-1">
-                          <span className="text-gray-600">{item.name}</span>
-                          <Badge className="bg-red-100 text-red-700 border-red-200">{item.count}</Badge>
-                        </div>
-                      ))}
-                    </div>
-                    {(!stats?.rejectedBySekolah || stats.rejectedBySekolah.length === 0) && (
-                      <p className="text-xs text-gray-400">Belum ada data</p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                </div>
+              </CardContent>
+            </Card>
 
-            {/* Rejected List Table */}
+            {/* Filter Bar */}
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+              <CardContent className="p-4">
+                <div className="flex flex-col sm:flex-row gap-3 items-center">
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Filter className="w-4 h-4" /> Filter:
+                  </div>
+                  <Select value={ditolakFilterJalur} onValueChange={setDitolakFilterJalur}>
+                    <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Sub Jalur" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Jalur</SelectItem>
+                      <SelectItem value="Domisili">Domisili</SelectItem>
+                      <SelectItem value="Keluarga Tidak Mampu">Keluarga Tidak Mampu</SelectItem>
+                      <SelectItem value="Mutasi">Mutasi</SelectItem>
+                      <SelectItem value="Prestasi">Prestasi</SelectItem>
+                      <SelectItem value="Prestasi Non Akademik">Prestasi Non Akademik</SelectItem>
+                      <SelectItem value="Anak Guru">Anak Guru</SelectItem>
+                      <SelectItem value="Zonasi">Zonasi</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <div className="sm:ml-auto text-sm text-gray-500">
+                    Menampilkan {(() => {
+                      const list = stats?.rejectedList || []
+                      const filtered = list.filter(r => ditolakFilterJalur === 'all' || r.subJalur === ditolakFilterJalur)
+                      return filtered.length
+                    })()} dari {stats?.rejected || 0} peserta
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Table */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-lg">
                   <FileText className="w-5 h-5 text-red-600" />
-                  Daftar Pendaftar Ditolak
+                  Daftar Peserta Ditolak
                 </CardTitle>
-                <CardDescription>Pendaftar yang ditolak dalam verifikasi SPMB 2026</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-red-50/80">
-                        <TableHead>No. Reg</TableHead>
+                        <TableHead className="w-12 text-center">No</TableHead>
+                        <TableHead>No. Registrasi</TableHead>
                         <TableHead>Nama</TableHead>
                         <TableHead className="hidden md:table-cell">NISN</TableHead>
                         <TableHead>Sub Jalur</TableHead>
                         <TableHead className="hidden lg:table-cell">Sekolah Pilihan</TableHead>
                         <TableHead className="hidden lg:table-cell">Jurusan</TableHead>
                         <TableHead className="hidden sm:table-cell">Alasan Penolakan</TableHead>
-                        <TableHead className="hidden sm:table-cell">Waktu Ditolak</TableHead>
                         <TableHead className="text-right">Aksi</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {stats?.rejectedList && stats.rejectedList.length > 0 ? (
-                        stats.rejectedList.map((reg) => (
+                      {(() => {
+                        const list = stats?.rejectedList || []
+                        const filtered = list.filter(r => ditolakFilterJalur === 'all' || r.subJalur === ditolakFilterJalur)
+                        return filtered.length > 0 ? filtered.map((reg, idx) => (
                           <TableRow key={reg.id} className="hover:bg-red-50/30">
+                            <TableCell className="text-center text-sm text-gray-500">{idx + 1}</TableCell>
                             <TableCell className="font-mono text-sm">{reg.noRegistrasi}</TableCell>
                             <TableCell className="font-medium">{reg.nama}</TableCell>
                             <TableCell className="hidden md:table-cell text-sm text-gray-500">{reg.nisn}</TableCell>
@@ -2766,41 +3305,30 @@ export default function Home() {
                             <TableCell className="hidden sm:table-cell text-sm text-gray-500 max-w-[200px] truncate">
                               {reg.verificationNote || <span className="text-gray-400 italic">Tidak ada alasan</span>}
                             </TableCell>
-                            <TableCell className="hidden sm:table-cell text-xs text-gray-500">
-                              {reg.updatedAt ? new Date(reg.updatedAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
-                            </TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-1">
-                                <Button variant="ghost" size="sm" onClick={() => { setDetailTarget(reg); setDetailDialogOpen(true) }}>
+                                <Button variant="ghost" size="sm" onClick={() => { setDetailTarget(reg); setDetailDialogOpen(true) }} title="Lihat Detail">
                                   <Eye className="w-4 h-4" />
                                 </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-emerald-600 hover:text-white hover:bg-emerald-600"
-                                  title="Terima Ulang Pendaftar"
-                                  onClick={() => {
-                                    setVerifyTargetId(reg.id)
-                                    setVerifyAction('VERIFIED')
-                                    setVerifyNote('')
-                                    setVerifyDialogOpen(true)
-                                  }}
-                                >
-                                  <RotateCcw className="w-4 h-4" />
+                                <Button variant="ghost" size="sm" className="text-blue-600 hover:text-white hover:bg-blue-600" title="Edit Data" onClick={() => openEditDialog(reg)}>
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                                <Button variant="ghost" size="sm" className="text-red-600 hover:text-white hover:bg-red-600" title="Hapus Data" onClick={() => openDeleteDialog(reg)}>
+                                  <Trash2 className="w-4 h-4" />
                                 </Button>
                               </div>
                             </TableCell>
                           </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={9} className="text-center py-12">
-                            <UserX className="w-10 h-10 mx-auto text-gray-300 mb-2" />
-                            <p className="text-gray-500 font-medium">Belum ada pendaftar yang ditolak</p>
-                            <p className="text-sm text-gray-400">Semua pendaftar dalam proses verifikasi</p>
-                          </TableCell>
-                        </TableRow>
-                      )}
+                        )) : (
+                          <TableRow>
+                            <TableCell colSpan={9} className="text-center py-12">
+                              <UserX className="w-10 h-10 mx-auto text-gray-300 mb-2" />
+                              <p className="text-gray-500 font-medium">Belum ada pendaftar yang ditolak</p>
+                              <p className="text-sm text-gray-400">Semua pendaftar dalam proses verifikasi</p>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })()}
                     </TableBody>
                   </Table>
                 </div>
@@ -3599,6 +4127,223 @@ export default function Home() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ==================== EDIT DIALOG (Home Component) ==================== */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="w-5 h-5 text-blue-600" /> Edit Data Pendaftar
+            </DialogTitle>
+            <DialogDescription>
+              Edit data pendaftar <span className="font-semibold">{editTarget?.nama}</span> ({editTarget?.noRegistrasi})
+            </DialogDescription>
+          </DialogHeader>
+          {editTarget && (
+            <div className="space-y-6">
+              {/* Data Pendaftar */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
+                  <Users className="w-4 h-4 text-gray-500" /> Data Pendaftar
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">No. Registrasi</label>
+                    <Input value={editForm.noRegistrasi || ''} onChange={e => setEditForm({...editForm, noRegistrasi: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Nama</label>
+                    <Input value={editForm.nama || ''} onChange={e => setEditForm({...editForm, nama: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">NISN</label>
+                    <Input value={editForm.nisn || ''} onChange={e => setEditForm({...editForm, nisn: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Sub Jalur</label>
+                    <Select value={editForm.subJalur || ''} onValueChange={v => setEditForm({...editForm, subJalur: v})}>
+                      <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih Sub Jalur" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Domisili">Domisili</SelectItem>
+                        <SelectItem value="Keluarga Tidak Mampu">Keluarga Tidak Mampu</SelectItem>
+                        <SelectItem value="Mutasi">Mutasi</SelectItem>
+                        <SelectItem value="Prestasi">Prestasi</SelectItem>
+                        <SelectItem value="Prestasi Non Akademik">Prestasi Non Akademik</SelectItem>
+                        <SelectItem value="Anak Guru">Anak Guru</SelectItem>
+                        <SelectItem value="Zonasi">Zonasi</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">NIK</label>
+                    <Input value={editForm.nik || ''} onChange={e => setEditForm({...editForm, nik: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Tanggal Lahir</label>
+                    <Input type="date" value={editForm.tanggalLahir || ''} onChange={e => setEditForm({...editForm, tanggalLahir: e.target.value})} className="mt-1" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="text-xs text-gray-500 font-medium">Alamat</label>
+                    <Input value={editForm.alamat || ''} onChange={e => setEditForm({...editForm, alamat: e.target.value})} className="mt-1" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="text-xs text-gray-500 font-medium">Alamat Lengkap</label>
+                    <Textarea value={editForm.alamatLengkap || ''} onChange={e => setEditForm({...editForm, alamatLengkap: e.target.value})} className="mt-1" rows={2} />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">No. Telp Siswa</label>
+                    <Input value={editForm.noTelpSiswa || ''} onChange={e => setEditForm({...editForm, noTelpSiswa: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">No. Telp Orangtua</label>
+                    <Input value={editForm.noTelpOrangtua || ''} onChange={e => setEditForm({...editForm, noTelpOrangtua: e.target.value})} className="mt-1" />
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Data Sekolah */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
+                  <School className="w-4 h-4 text-gray-500" /> Data Sekolah
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">NPSN Sekolah Pilihan</label>
+                    <Input value={editForm.npsnSekolahPilihan || ''} onChange={e => setEditForm({...editForm, npsnSekolahPilihan: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Nama Sekolah Pilihan</label>
+                    <Input value={editForm.namaSekolahPilihan || ''} onChange={e => setEditForm({...editForm, namaSekolahPilihan: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Jurusan</label>
+                    <Input value={editForm.jurusan || ''} onChange={e => setEditForm({...editForm, jurusan: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">NPSN Sekolah Asal</label>
+                    <Input value={editForm.npsnSekolahAsal || ''} onChange={e => setEditForm({...editForm, npsnSekolahAsal: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Nama Sekolah Asal</label>
+                    <Input value={editForm.namaSekolahAsal || ''} onChange={e => setEditForm({...editForm, namaSekolahAsal: e.target.value})} className="mt-1" />
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Data Verifikasi */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
+                  <ClipboardCheck className="w-4 h-4 text-gray-500" /> Data Verifikasi
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Skor Jarak</label>
+                    <Input value={editForm.skorJarak || ''} onChange={e => setEditForm({...editForm, skorJarak: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Skor Nilai Raport</label>
+                    <Input value={editForm.skorNilaiRaport || ''} onChange={e => setEditForm({...editForm, skorNilaiRaport: e.target.value})} className="mt-1" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="text-xs text-gray-500 font-medium">Kekurangan Verifikasi</label>
+                    <div className="mt-1">
+                      <Select value={editForm.kekuranganVerifikasi || ''} onValueChange={v => setEditForm({...editForm, kekuranganVerifikasi: v === '__none__' ? '' : v})}>
+                        <SelectTrigger><SelectValue placeholder="Pilih kekurangan verifikasi" /></SelectTrigger>
+                        <SelectContent className="max-h-64">
+                          <SelectItem value="__none__">- Tidak Ada -</SelectItem>
+                          {KEKURANGAN_VERIFIKASI_OPTIONS.map(opt => (
+                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Tanggal Verifikasi</label>
+                    <Input type="date" value={editForm.tanggalVerif || ''} onChange={e => setEditForm({...editForm, tanggalVerif: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Jam Verifikasi</label>
+                    <Input type="time" value={editForm.jamVerif || ''} onChange={e => setEditForm({...editForm, jamVerif: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Terbit KK</label>
+                    <Input type="date" value={editForm.terbitKK || ''} onChange={e => setEditForm({...editForm, terbitKK: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Lama KK</label>
+                    <Input value={editForm.terbitKK ? hitungLamaKK(editForm.terbitKK) : ''} readOnly className="mt-1 bg-gray-50" />
+                    <p className="text-xs text-gray-400 mt-1">Dihitung otomatis dari Terbit KK</p>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Data Lokasi & Nilai */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4 text-gray-500" /> Lokasi & Nilai
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Latitude</label>
+                    <Input value={editForm.latitude || ''} onChange={e => setEditForm({...editForm, latitude: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Longitude</label>
+                    <Input value={editForm.longitude || ''} onChange={e => setEditForm({...editForm, longitude: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Lokasi Jarak</label>
+                    <Input value={editForm.lokasiJarak || ''} onChange={e => setEditForm({...editForm, lokasiJarak: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Nilai Rata-Rata</label>
+                    <Input value={editForm.nilaiRataRata || ''} onChange={e => setEditForm({...editForm, nilaiRataRata: e.target.value})} className="mt-1" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Batal</Button>
+            <Button onClick={handleSaveEdit} disabled={saving} className="bg-blue-600 hover:bg-blue-700">
+              {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Menyimpan...</> : <><Pencil className="w-4 h-4" /> Simpan</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ==================== DELETE DIALOG (Home Component) ==================== */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="w-5 h-5 text-red-600" /> Hapus Data Pendaftar
+            </DialogTitle>
+            <DialogDescription>
+              Apakah Anda yakin ingin menghapus data pendaftar <span className="font-semibold">{deleteTarget?.nama}</span>? Tindakan ini tidak dapat dibatalkan.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+            <div className="flex gap-2">
+              <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 shrink-0" />
+              <p className="text-sm text-red-700">Data yang sudah dihapus tidak dapat dikembalikan. Pastikan Anda yakin sebelum melanjutkan.</p>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Batal</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting ? <><Loader2 className="w-4 h-4 animate-spin" /> Menghapus...</> : <><Trash2 className="w-4 h-4" /> Hapus</>}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
