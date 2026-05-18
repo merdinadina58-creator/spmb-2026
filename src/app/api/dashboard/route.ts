@@ -19,21 +19,21 @@ export async function GET() {
       where: { verificationStatus: 'PENDING' },
     });
 
-    // By sub jalur
+    // By sub jalur (all)
     const bySubJalur = await db.registration.groupBy({
       by: ['subJalur'],
       _count: { id: true },
       orderBy: { _count: { id: 'desc' } },
     });
 
-    // By sekolah pilihan
+    // By sekolah pilihan (all)
     const bySekolahPilihan = await db.registration.groupBy({
       by: ['namaSekolahPilihan'],
       _count: { id: true },
       orderBy: { _count: { id: 'desc' } },
     });
 
-    // By jurusan
+    // By jurusan (all)
     const byJurusan = await db.registration.groupBy({
       by: ['jurusan'],
       _count: { id: true },
@@ -45,6 +45,62 @@ export async function GET() {
       by: ['status'],
       _count: { id: true },
       orderBy: { _count: { id: 'desc' } },
+    });
+
+    // === VERIFIED breakdowns ===
+    const verifiedBySubJalur = await db.registration.groupBy({
+      by: ['subJalur'],
+      _count: { id: true },
+      where: { verificationStatus: 'VERIFIED' },
+      orderBy: { _count: { id: 'desc' } },
+    });
+
+    const verifiedBySekolah = await db.registration.groupBy({
+      by: ['namaSekolahPilihan'],
+      _count: { id: true },
+      where: { verificationStatus: 'VERIFIED' },
+      orderBy: { _count: { id: 'desc' } },
+    });
+
+    const verifiedByJurusan = await db.registration.groupBy({
+      by: ['jurusan'],
+      _count: { id: true },
+      where: { verificationStatus: 'VERIFIED' },
+      orderBy: { _count: { id: 'desc' } },
+    });
+
+    // Get all verified registrations for detailed list
+    const verifiedList = await db.registration.findMany({
+      where: { verificationStatus: 'VERIFIED' },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    // === REJECTED breakdowns ===
+    const rejectedBySubJalur = await db.registration.groupBy({
+      by: ['subJalur'],
+      _count: { id: true },
+      where: { verificationStatus: 'REJECTED' },
+      orderBy: { _count: { id: 'desc' } },
+    });
+
+    const rejectedBySekolah = await db.registration.groupBy({
+      by: ['namaSekolahPilihan'],
+      _count: { id: true },
+      where: { verificationStatus: 'REJECTED' },
+      orderBy: { _count: { id: 'desc' } },
+    });
+
+    const rejectedByJurusan = await db.registration.groupBy({
+      by: ['jurusan'],
+      _count: { id: true },
+      where: { verificationStatus: 'REJECTED' },
+      orderBy: { _count: { id: 'desc' } },
+    });
+
+    // Get all rejected registrations for detailed list
+    const rejectedList = await db.registration.findMany({
+      where: { verificationStatus: 'REJECTED' },
+      orderBy: { updatedAt: 'desc' },
     });
 
     return NextResponse.json({
@@ -68,6 +124,34 @@ export async function GET() {
         name: item.status,
         count: item._count.id,
       })),
+      // Verified details
+      verifiedBySubJalur: verifiedBySubJalur.map(item => ({
+        name: item.subJalur,
+        count: item._count.id,
+      })),
+      verifiedBySekolah: verifiedBySekolah.map(item => ({
+        name: item.namaSekolahPilihan,
+        count: item._count.id,
+      })),
+      verifiedByJurusan: verifiedByJurusan.map(item => ({
+        name: item.jurusan,
+        count: item._count.id,
+      })),
+      verifiedList,
+      // Rejected details
+      rejectedBySubJalur: rejectedBySubJalur.map(item => ({
+        name: item.subJalur,
+        count: item._count.id,
+      })),
+      rejectedBySekolah: rejectedBySekolah.map(item => ({
+        name: item.namaSekolahPilihan,
+        count: item._count.id,
+      })),
+      rejectedByJurusan: rejectedByJurusan.map(item => ({
+        name: item.jurusan,
+        count: item._count.id,
+      })),
+      rejectedList,
     });
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);

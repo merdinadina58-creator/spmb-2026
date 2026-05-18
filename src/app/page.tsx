@@ -38,6 +38,7 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Progress } from '@/components/ui/progress'
+import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/hooks/use-toast'
 import {
   Upload,
@@ -57,6 +58,15 @@ import {
   Loader2,
   Trash2,
   Eye,
+  UserCheck,
+  UserX,
+  ArrowRightLeft,
+  ListChecks,
+  ThumbsUp,
+  ThumbsDown,
+  FileText,
+  RotateCcw,
+  Check,
 } from 'lucide-react'
 
 interface Registration {
@@ -87,6 +97,14 @@ interface DashboardStats {
   bySekolahPilihan: { name: string; count: number }[]
   byJurusan: { name: string; count: number }[]
   byStatus: { name: string; count: number }[]
+  verifiedBySubJalur: { name: string; count: number }[]
+  verifiedBySekolah: { name: string; count: number }[]
+  verifiedByJurusan: { name: string; count: number }[]
+  verifiedList: Registration[]
+  rejectedBySubJalur: { name: string; count: number }[]
+  rejectedBySekolah: { name: string; count: number }[]
+  rejectedByJurusan: { name: string; count: number }[]
+  rejectedList: Registration[]
 }
 
 interface PaginationInfo {
@@ -97,9 +115,9 @@ interface PaginationInfo {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  PENDING: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-  VERIFIED: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-  REJECTED: 'bg-red-100 text-red-800 border-red-200',
+  PENDING: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+  VERIFIED: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+  REJECTED: 'bg-red-100 text-red-800 border-red-300',
 }
 
 const SUB_JALUR_COLORS: Record<string, string> = {
@@ -108,6 +126,23 @@ const SUB_JALUR_COLORS: Record<string, string> = {
   'Anak Guru': 'bg-violet-100 text-violet-800 border-violet-200',
   'Prestasi': 'bg-emerald-100 text-emerald-800 border-emerald-200',
   'Zonasi': 'bg-pink-100 text-pink-800 border-pink-200',
+}
+
+function StatBar({ label, count, total, color }: { label: string; count: number; total: number; color: string }) {
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between text-sm">
+        <span className="font-medium">{label}</span>
+        <span className="text-gray-500">{count} ({total > 0 ? Math.round((count / total) * 100) : 0}%)</span>
+      </div>
+      <div className="w-full bg-gray-100 rounded-full h-2.5">
+        <div
+          className={`h-2.5 rounded-full transition-all duration-500 ${color}`}
+          style={{ width: total > 0 ? `${(count / total) * 100}%` : '0%' }}
+        />
+      </div>
+    </div>
+  )
 }
 
 export default function Home() {
@@ -125,7 +160,6 @@ export default function Home() {
   const [search, setSearch] = useState('')
   const [subJalurFilter, setSubJalurFilter] = useState('all')
   const [verificationFilter, setVerificationFilter] = useState('all')
-  const [sekolahFilter, setSekolahFilter] = useState('all')
   const [jurusanFilter, setJurusanFilter] = useState('all')
 
   // Selection
@@ -153,6 +187,9 @@ export default function Home() {
   // CSV file
   const [csvFile, setCsvFile] = useState<File | null>(null)
 
+  // Active tab
+  const [activeTab, setActiveTab] = useState('dashboard')
+
   const fetchRegistrations = useCallback(async () => {
     setLoading(true)
     try {
@@ -162,7 +199,6 @@ export default function Home() {
       if (search) params.set('search', search)
       if (subJalurFilter !== 'all') params.set('subJalur', subJalurFilter)
       if (verificationFilter !== 'all') params.set('verificationStatus', verificationFilter)
-      if (sekolahFilter !== 'all') params.set('sekolahPilihan', sekolahFilter)
       if (jurusanFilter !== 'all') params.set('jurusan', jurusanFilter)
 
       const res = await fetch(`/api/registrations?${params}`)
@@ -174,7 +210,7 @@ export default function Home() {
     } finally {
       setLoading(false)
     }
-  }, [pagination.page, pagination.limit, search, subJalurFilter, verificationFilter, sekolahFilter, jurusanFilter, toast])
+  }, [pagination.page, pagination.limit, search, subJalurFilter, verificationFilter, jurusanFilter, toast])
 
   const fetchStats = useCallback(async () => {
     try {
@@ -310,8 +346,10 @@ export default function Home() {
 
       if (data.success) {
         toast({
-          title: 'Verifikasi Berhasil',
-          description: `Pendaftar ${verifyAction === 'VERIFIED' ? 'diverifikasi' : 'ditolak'}`,
+          title: verifyAction === 'VERIFIED' ? 'Pendaftar Diterima' : 'Pendaftar Ditolak',
+          description: verifyAction === 'VERIFIED'
+            ? 'Data pendaftar telah diverifikasi dan diterima'
+            : 'Data pendaftar telah ditolak',
         })
         setVerifyDialogOpen(false)
         setVerifyNote('')
@@ -355,8 +393,8 @@ export default function Home() {
 
       if (data.success) {
         toast({
-          title: 'Verifikasi Massal Berhasil',
-          description: `${data.updated} pendaftar ${verifyAction === 'VERIFIED' ? 'diverifikasi' : 'ditolak'}`,
+          title: verifyAction === 'VERIFIED' ? 'Pendaftar Diterima' : 'Pendaftar Ditolak',
+          description: `${data.updated} pendaftar ${verifyAction === 'VERIFIED' ? 'diterima' : 'ditolak'}`,
         })
         setBulkVerifyDialogOpen(false)
         setVerifyNote('')
@@ -405,6 +443,10 @@ export default function Home() {
       : 0
     : 0
 
+  const verifiedPercent = stats && stats.total > 0 ? Math.round((stats.verified / stats.total) * 100) : 0
+  const rejectedPercent = stats && stats.total > 0 ? Math.round((stats.rejected / stats.total) * 100) : 0
+  const pendingPercent = stats && stats.total > 0 ? Math.round((stats.pending / stats.total) * 100) : 0
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50/50">
       {/* Header */}
@@ -435,8 +477,8 @@ export default function Home() {
 
       {/* Main Content */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
-        <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="flex-wrap">
             <TabsTrigger value="dashboard" className="gap-1.5">
               <Eye className="w-4 h-4" />
               Dashboard
@@ -445,21 +487,39 @@ export default function Home() {
               <FileSpreadsheet className="w-4 h-4" />
               Data Pendaftar
             </TabsTrigger>
+            <TabsTrigger value="diterima" className="gap-1.5 data-[state=active]:bg-emerald-100 data-[state=active]:text-emerald-800">
+              <ThumbsUp className="w-4 h-4" />
+              Diterima
+              {stats && stats.verified > 0 && (
+                <Badge className="ml-1 bg-emerald-600 text-white text-xs px-1.5 py-0 min-w-[20px] h-5 flex items-center justify-center">
+                  {stats.verified}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="ditolak" className="gap-1.5 data-[state=active]:bg-red-100 data-[state=active]:text-red-800">
+              <ThumbsDown className="w-4 h-4" />
+              Ditolak
+              {stats && stats.rejected > 0 && (
+                <Badge className="ml-1 bg-red-600 text-white text-xs px-1.5 py-0 min-w-[20px] h-5 flex items-center justify-center">
+                  {stats.rejected}
+                </Badge>
+              )}
+            </TabsTrigger>
           </TabsList>
 
-          {/* Dashboard Tab */}
+          {/* ==================== DASHBOARD TAB ==================== */}
           <TabsContent value="dashboard" className="space-y-6">
             {/* Stats Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Card className="border-l-4 border-l-emerald-500">
+              <Card className="border-l-4 border-l-gray-500">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-gray-500">Total Pendaftar</p>
                       <p className="text-2xl font-bold">{stats?.total || 0}</p>
                     </div>
-                    <div className="p-2 bg-emerald-50 rounded-lg">
-                      <Users className="w-5 h-5 text-emerald-600" />
+                    <div className="p-2 bg-gray-50 rounded-lg">
+                      <Users className="w-5 h-5 text-gray-600" />
                     </div>
                   </div>
                 </CardContent>
@@ -479,21 +539,21 @@ export default function Home() {
                 </CardContent>
               </Card>
 
-              <Card className="border-l-4 border-l-blue-500">
+              <Card className="border-l-4 border-l-emerald-500 cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('diterima')}>
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-500">Terverifikasi</p>
-                      <p className="text-2xl font-bold text-blue-600">{stats?.verified || 0}</p>
+                      <p className="text-sm text-gray-500">Diterima</p>
+                      <p className="text-2xl font-bold text-emerald-600">{stats?.verified || 0}</p>
                     </div>
-                    <div className="p-2 bg-blue-50 rounded-lg">
-                      <CheckCircle2 className="w-5 h-5 text-blue-600" />
+                    <div className="p-2 bg-emerald-50 rounded-lg">
+                      <UserCheck className="w-5 h-5 text-emerald-600" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="border-l-4 border-l-red-500">
+              <Card className="border-l-4 border-l-red-500 cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('ditolak')}>
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
@@ -501,7 +561,7 @@ export default function Home() {
                       <p className="text-2xl font-bold text-red-600">{stats?.rejected || 0}</p>
                     </div>
                     <div className="p-2 bg-red-50 rounded-lg">
-                      <XCircle className="w-5 h-5 text-red-600" />
+                      <UserX className="w-5 h-5 text-red-600" />
                     </div>
                   </div>
                 </CardContent>
@@ -513,20 +573,29 @@ export default function Home() {
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Progres Verifikasi</CardTitle>
                 <CardDescription>
-                  {verificationPercent}% pendaftar telah diverifikasi
+                  {verificationPercent}% pendaftar telah diproses
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Progress value={verificationPercent} className="h-3" />
-                <div className="flex justify-between mt-2 text-xs text-gray-500">
-                  <span>{stats?.verified || 0} diverifikasi</span>
-                  <span>{stats?.rejected || 0} ditolak</span>
-                  <span>{stats?.pending || 0} menunggu</span>
+                <Progress value={verificationPercent} className="h-4" />
+                <div className="flex justify-between mt-3 text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                    <span className="text-gray-600">Diterima: {stats?.verified || 0} ({verifiedPercent}%)</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-3 rounded-full bg-red-500" />
+                    <span className="text-gray-600">Ditolak: {stats?.rejected || 0} ({rejectedPercent}%)</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                    <span className="text-gray-600">Menunggu: {stats?.pending || 0} ({pendingPercent}%)</span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Charts */}
+            {/* Charts Grid */}
             <div className="grid md:grid-cols-2 gap-6">
               {/* By Sub Jalur */}
               <Card>
@@ -539,22 +608,7 @@ export default function Home() {
                 <CardContent>
                   <div className="space-y-3">
                     {stats?.bySubJalur.map((item) => (
-                      <div key={item.name} className="space-y-1">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="font-medium">{item.name}</span>
-                          <span className="text-gray-500">{item.count} pendaftar</span>
-                        </div>
-                        <div className="w-full bg-gray-100 rounded-full h-2.5">
-                          <div
-                            className="h-2.5 rounded-full bg-emerald-500 transition-all duration-500"
-                            style={{
-                              width: stats?.total
-                                ? `${(item.count / stats.total) * 100}%`
-                                : '0%',
-                            }}
-                          />
-                        </div>
-                      </div>
+                      <StatBar key={item.name} label={item.name} count={item.count} total={stats.total} color="bg-emerald-500" />
                     ))}
                     {(!stats?.bySubJalur || stats.bySubJalur.length === 0) && (
                       <p className="text-sm text-gray-400 text-center py-4">Belum ada data</p>
@@ -574,22 +628,7 @@ export default function Home() {
                 <CardContent>
                   <div className="space-y-3 max-h-64 overflow-y-auto">
                     {stats?.bySekolahPilihan.map((item) => (
-                      <div key={item.name} className="space-y-1">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="font-medium truncate mr-2">{item.name}</span>
-                          <span className="text-gray-500 shrink-0">{item.count}</span>
-                        </div>
-                        <div className="w-full bg-gray-100 rounded-full h-2.5">
-                          <div
-                            className="h-2.5 rounded-full bg-sky-500 transition-all duration-500"
-                            style={{
-                              width: stats?.total
-                                ? `${(item.count / stats.total) * 100}%`
-                                : '0%',
-                            }}
-                          />
-                        </div>
-                      </div>
+                      <StatBar key={item.name} label={item.name} count={item.count} total={stats.total} color="bg-sky-500" />
                     ))}
                     {(!stats?.bySekolahPilihan || stats.bySekolahPilihan.length === 0) && (
                       <p className="text-sm text-gray-400 text-center py-4">Belum ada data</p>
@@ -609,22 +648,7 @@ export default function Home() {
                 <CardContent>
                   <div className="space-y-3">
                     {stats?.byJurusan.map((item) => (
-                      <div key={item.name} className="space-y-1">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="font-medium">{item.name}</span>
-                          <span className="text-gray-500">{item.count} pendaftar</span>
-                        </div>
-                        <div className="w-full bg-gray-100 rounded-full h-2.5">
-                          <div
-                            className="h-2.5 rounded-full bg-violet-500 transition-all duration-500"
-                            style={{
-                              width: stats?.total
-                                ? `${(item.count / stats.total) * 100}%`
-                                : '0%',
-                            }}
-                          />
-                        </div>
-                      </div>
+                      <StatBar key={item.name} label={item.name} count={item.count} total={stats.total} color="bg-violet-500" />
                     ))}
                     {(!stats?.byJurusan || stats.byJurusan.length === 0) && (
                       <p className="text-sm text-gray-400 text-center py-4">Belum ada data</p>
@@ -638,72 +662,21 @@ export default function Home() {
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4" />
-                    Status Verifikasi
+                    Ringkasan Status
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <div className="flex items-center gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-medium text-emerald-700">Terverifikasi</span>
-                          <span className="text-sm text-gray-500">{stats?.verified || 0}</span>
-                        </div>
-                        <div className="w-full bg-gray-100 rounded-full h-3">
-                          <div
-                            className="h-3 rounded-full bg-emerald-500 transition-all duration-500"
-                            style={{
-                              width: stats?.total
-                                ? `${(stats.verified / stats.total) * 100}%`
-                                : '0%',
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-medium text-red-700">Ditolak</span>
-                          <span className="text-sm text-gray-500">{stats?.rejected || 0}</span>
-                        </div>
-                        <div className="w-full bg-gray-100 rounded-full h-3">
-                          <div
-                            className="h-3 rounded-full bg-red-500 transition-all duration-500"
-                            style={{
-                              width: stats?.total
-                                ? `${(stats.rejected / stats.total) * 100}%`
-                                : '0%',
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-medium text-yellow-700">Menunggu</span>
-                          <span className="text-sm text-gray-500">{stats?.pending || 0}</span>
-                        </div>
-                        <div className="w-full bg-gray-100 rounded-full h-3">
-                          <div
-                            className="h-3 rounded-full bg-yellow-500 transition-all duration-500"
-                            style={{
-                              width: stats?.total
-                                ? `${(stats.pending / stats.total) * 100}%`
-                                : '0%',
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </div>
+                    <StatBar label="Diterima (Terverifikasi)" count={stats?.verified || 0} total={stats?.total || 0} color="bg-emerald-500" />
+                    <StatBar label="Ditolak" count={stats?.rejected || 0} total={stats?.total || 0} color="bg-red-500" />
+                    <StatBar label="Menunggu Verifikasi" count={stats?.pending || 0} total={stats?.total || 0} color="bg-yellow-500" />
                   </div>
                 </CardContent>
               </Card>
             </div>
           </TabsContent>
 
-          {/* Data Tab */}
+          {/* ==================== DATA PENDAFTAR TAB ==================== */}
           <TabsContent value="data" className="space-y-4">
             {/* Filters */}
             <Card>
@@ -753,7 +726,7 @@ export default function Home() {
                     <SelectContent>
                       <SelectItem value="all">Semua Status</SelectItem>
                       <SelectItem value="PENDING">Menunggu</SelectItem>
-                      <SelectItem value="VERIFIED">Terverifikasi</SelectItem>
+                      <SelectItem value="VERIFIED">Diterima</SelectItem>
                       <SelectItem value="REJECTED">Ditolak</SelectItem>
                     </SelectContent>
                   </Select>
@@ -767,8 +740,8 @@ export default function Home() {
                           setBulkVerifyDialogOpen(true)
                         }}
                       >
-                        <CheckCircle2 className="w-4 h-4" />
-                        Verifikasi ({selectedIds.size})
+                        <ThumbsUp className="w-4 h-4" />
+                        Terima ({selectedIds.size})
                       </Button>
                       <Button
                         size="sm"
@@ -778,7 +751,7 @@ export default function Home() {
                           setBulkVerifyDialogOpen(true)
                         }}
                       >
-                        <XCircle className="w-4 h-4" />
+                        <ThumbsDown className="w-4 h-4" />
                         Tolak ({selectedIds.size})
                       </Button>
                       <Button
@@ -813,7 +786,7 @@ export default function Home() {
                         <TableHead>Sub Jalur</TableHead>
                         <TableHead className="hidden lg:table-cell">Sekolah Pilihan</TableHead>
                         <TableHead className="hidden lg:table-cell">Jurusan</TableHead>
-                        <TableHead>Status Verifikasi</TableHead>
+                        <TableHead>Status</TableHead>
                         <TableHead className="text-right">Aksi</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -830,13 +803,8 @@ export default function Home() {
                           <TableCell colSpan={9} className="text-center py-12">
                             <FileSpreadsheet className="w-10 h-10 mx-auto text-gray-300 mb-2" />
                             <p className="text-gray-500 font-medium">Belum ada data pendaftar</p>
-                            <p className="text-sm text-gray-400">
-                              Import CSV untuk memulai verifikasi
-                            </p>
-                            <Button
-                              className="mt-3 bg-emerald-600 hover:bg-emerald-700"
-                              onClick={() => setImportDialogOpen(true)}
-                            >
+                            <p className="text-sm text-gray-400">Import CSV untuk memulai verifikasi</p>
+                            <Button className="mt-3 bg-emerald-600 hover:bg-emerald-700" onClick={() => setImportDialogOpen(true)}>
                               <Upload className="w-4 h-4" />
                               Import CSV
                             </Button>
@@ -844,21 +812,18 @@ export default function Home() {
                         </TableRow>
                       ) : (
                         registrations.map((reg) => (
-                          <TableRow key={reg.id} className={selectedIds.has(reg.id) ? 'bg-emerald-50/50' : ''}>
+                          <TableRow key={reg.id} className={
+                            reg.verificationStatus === 'VERIFIED' ? 'bg-emerald-50/40' :
+                            reg.verificationStatus === 'REJECTED' ? 'bg-red-50/40' : ''
+                          }>
                             <TableCell>
-                              <Checkbox
-                                checked={selectedIds.has(reg.id)}
-                                onCheckedChange={() => toggleSelect(reg.id)}
-                              />
+                              <Checkbox checked={selectedIds.has(reg.id)} onCheckedChange={() => toggleSelect(reg.id)} />
                             </TableCell>
                             <TableCell className="font-mono text-sm">{reg.noRegistrasi}</TableCell>
                             <TableCell className="font-medium">{reg.nama}</TableCell>
                             <TableCell className="hidden md:table-cell text-sm text-gray-500">{reg.nisn}</TableCell>
                             <TableCell>
-                              <Badge
-                                variant="outline"
-                                className={SUB_JALUR_COLORS[reg.subJalur] || 'bg-gray-100 text-gray-800 border-gray-200'}
-                              >
+                              <Badge variant="outline" className={SUB_JALUR_COLORS[reg.subJalur] || 'bg-gray-100 text-gray-800 border-gray-200'}>
                                 {reg.subJalur}
                               </Badge>
                             </TableCell>
@@ -867,34 +832,25 @@ export default function Home() {
                               <Badge variant="secondary">{reg.jurusan}</Badge>
                             </TableCell>
                             <TableCell>
-                              <Badge
-                                variant="outline"
-                                className={STATUS_COLORS[reg.verificationStatus]}
-                              >
+                              <Badge variant="outline" className={STATUS_COLORS[reg.verificationStatus]}>
                                 {reg.verificationStatus === 'PENDING' && <Clock className="w-3 h-3" />}
                                 {reg.verificationStatus === 'VERIFIED' && <CheckCircle2 className="w-3 h-3" />}
                                 {reg.verificationStatus === 'REJECTED' && <XCircle className="w-3 h-3" />}
                                 {reg.verificationStatus === 'PENDING' ? 'Menunggu' :
-                                 reg.verificationStatus === 'VERIFIED' ? 'Terverifikasi' : 'Ditolak'}
+                                 reg.verificationStatus === 'VERIFIED' ? 'Diterima' : 'Ditolak'}
                               </Badge>
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    setDetailTarget(reg)
-                                    setDetailDialogOpen(true)
-                                  }}
-                                >
+                                <Button variant="ghost" size="sm" onClick={() => { setDetailTarget(reg); setDetailDialogOpen(true) }}>
                                   <Eye className="w-4 h-4" />
                                 </Button>
                                 {reg.verificationStatus !== 'VERIFIED' && (
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                    className="text-emerald-600 hover:text-white hover:bg-emerald-600"
+                                    title="Terima Pendaftar"
                                     onClick={() => {
                                       setVerifyTargetId(reg.id)
                                       setVerifyAction('VERIFIED')
@@ -902,14 +858,15 @@ export default function Home() {
                                       setVerifyDialogOpen(true)
                                     }}
                                   >
-                                    <CheckCircle2 className="w-4 h-4" />
+                                    <ThumbsUp className="w-4 h-4" />
                                   </Button>
                                 )}
                                 {reg.verificationStatus !== 'REJECTED' && (
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    className="text-red-600 hover:text-white hover:bg-red-600"
+                                    title="Tolak Pendaftar"
                                     onClick={() => {
                                       setVerifyTargetId(reg.id)
                                       setVerifyAction('REJECTED')
@@ -917,7 +874,7 @@ export default function Home() {
                                       setVerifyDialogOpen(true)
                                     }}
                                   >
-                                    <XCircle className="w-4 h-4" />
+                                    <ThumbsDown className="w-4 h-4" />
                                   </Button>
                                 )}
                               </div>
@@ -934,32 +891,317 @@ export default function Home() {
                   <div className="flex items-center justify-between px-4 py-3 border-t">
                     <p className="text-sm text-gray-500">
                       Menampilkan {(pagination.page - 1) * pagination.limit + 1}-
-                      {Math.min(pagination.page * pagination.limit, pagination.total)} dari{' '}
-                      {pagination.total} pendaftar
+                      {Math.min(pagination.page * pagination.limit, pagination.total)} dari {pagination.total} pendaftar
                     </p>
                     <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={pagination.page <= 1}
-                        onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
-                      >
+                      <Button variant="outline" size="sm" disabled={pagination.page <= 1} onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}>
                         <ChevronLeft className="w-4 h-4" />
                       </Button>
-                      <span className="text-sm text-gray-600">
-                        Hal {pagination.page} / {pagination.totalPages}
-                      </span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={pagination.page >= pagination.totalPages}
-                        onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
-                      >
+                      <span className="text-sm text-gray-600">Hal {pagination.page} / {pagination.totalPages}</span>
+                      <Button variant="outline" size="sm" disabled={pagination.page >= pagination.totalPages} onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}>
                         <ChevronRight className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ==================== DITERIMA TAB ==================== */}
+          <TabsContent value="diterima" className="space-y-6">
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card className="border-l-4 border-l-emerald-500 bg-gradient-to-br from-emerald-50 to-white">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-emerald-100 rounded-xl">
+                      <UserCheck className="w-8 h-8 text-emerald-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-emerald-600 font-medium">Total Diterima</p>
+                      <p className="text-3xl font-bold text-emerald-700">{stats?.verified || 0}</p>
+                      <p className="text-xs text-emerald-500">dari {stats?.total || 0} pendaftar ({verifiedPercent}%)</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-l-4 border-l-emerald-400">
+                <CardContent className="p-5">
+                  <CardTitle className="text-sm mb-3">Per Sub Jalur</CardTitle>
+                  <div className="space-y-2">
+                    {stats?.verifiedBySubJalur.map((item) => (
+                      <div key={item.name} className="flex justify-between text-sm">
+                        <span className="text-gray-600">{item.name}</span>
+                        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">{item.count}</Badge>
+                      </div>
+                    ))}
+                    {(!stats?.verifiedBySubJalur || stats.verifiedBySubJalur.length === 0) && (
+                      <p className="text-xs text-gray-400">Belum ada data</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-l-4 border-l-emerald-400">
+                <CardContent className="p-5">
+                  <CardTitle className="text-sm mb-3">Per Sekolah & Jurusan</CardTitle>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-xs text-gray-400 mb-1.5 font-medium uppercase tracking-wide">Sekolah Pilihan</p>
+                      {stats?.verifiedBySekolah.map((item) => (
+                        <div key={item.name} className="flex justify-between text-sm mb-1">
+                          <span className="text-gray-600 truncate mr-2">{item.name}</span>
+                          <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 shrink-0">{item.count}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                    <Separator />
+                    <div>
+                      <p className="text-xs text-gray-400 mb-1.5 font-medium uppercase tracking-wide">Jurusan</p>
+                      {stats?.verifiedByJurusan.map((item) => (
+                        <div key={item.name} className="flex justify-between text-sm mb-1">
+                          <span className="text-gray-600">{item.name}</span>
+                          <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">{item.count}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                    {(!stats?.verifiedBySekolah || stats.verifiedBySekolah.length === 0) && (
+                      <p className="text-xs text-gray-400">Belum ada data</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Verified List Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ListChecks className="w-5 h-5 text-emerald-600" />
+                  Daftar Pendaftar Diterima
+                </CardTitle>
+                <CardDescription>Pendaftar yang telah diverifikasi dan diterima di SPMB 2026</CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-emerald-50/80">
+                        <TableHead>No. Reg</TableHead>
+                        <TableHead>Nama</TableHead>
+                        <TableHead className="hidden md:table-cell">NISN</TableHead>
+                        <TableHead>Sub Jalur</TableHead>
+                        <TableHead className="hidden lg:table-cell">Sekolah Pilihan</TableHead>
+                        <TableHead className="hidden lg:table-cell">Jurusan</TableHead>
+                        <TableHead className="hidden sm:table-cell">Waktu Verifikasi</TableHead>
+                        <TableHead className="text-right">Aksi</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {stats?.verifiedList && stats.verifiedList.length > 0 ? (
+                        stats.verifiedList.map((reg) => (
+                          <TableRow key={reg.id} className="hover:bg-emerald-50/30">
+                            <TableCell className="font-mono text-sm">{reg.noRegistrasi}</TableCell>
+                            <TableCell className="font-medium">{reg.nama}</TableCell>
+                            <TableCell className="hidden md:table-cell text-sm text-gray-500">{reg.nisn}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={SUB_JALUR_COLORS[reg.subJalur] || 'bg-gray-100 text-gray-800'}>
+                                {reg.subJalur}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="hidden lg:table-cell text-sm">{reg.namaSekolahPilihan}</TableCell>
+                            <TableCell className="hidden lg:table-cell">
+                              <Badge variant="secondary">{reg.jurusan}</Badge>
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell text-xs text-gray-500">
+                              {reg.updatedAt ? new Date(reg.updatedAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button variant="ghost" size="sm" onClick={() => { setDetailTarget(reg); setDetailDialogOpen(true) }}>
+                                  <Eye className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-yellow-600 hover:text-white hover:bg-yellow-500"
+                                  title="Kembalikan ke Menunggu"
+                                  onClick={() => {
+                                    setVerifyTargetId(reg.id)
+                                    setVerifyAction('REJECTED')
+                                    setVerifyNote('')
+                                    setVerifyDialogOpen(true)
+                                  }}
+                                >
+                                  <RotateCcw className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center py-12">
+                            <UserCheck className="w-10 h-10 mx-auto text-gray-300 mb-2" />
+                            <p className="text-gray-500 font-medium">Belum ada pendaftar yang diterima</p>
+                            <p className="text-sm text-gray-400">Verifikasi pendaftar untuk menerimanya</p>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ==================== DITOLAK TAB ==================== */}
+          <TabsContent value="ditolak" className="space-y-6">
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card className="border-l-4 border-l-red-500 bg-gradient-to-br from-red-50 to-white">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-red-100 rounded-xl">
+                      <UserX className="w-8 h-8 text-red-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-red-600 font-medium">Total Ditolak</p>
+                      <p className="text-3xl font-bold text-red-700">{stats?.rejected || 0}</p>
+                      <p className="text-xs text-red-500">dari {stats?.total || 0} pendaftar ({rejectedPercent}%)</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-l-4 border-l-red-400">
+                <CardContent className="p-5">
+                  <CardTitle className="text-sm mb-3">Per Sub Jalur</CardTitle>
+                  <div className="space-y-2">
+                    {stats?.rejectedBySubJalur.map((item) => (
+                      <div key={item.name} className="flex justify-between text-sm">
+                        <span className="text-gray-600">{item.name}</span>
+                        <Badge className="bg-red-100 text-red-700 border-red-200">{item.count}</Badge>
+                      </div>
+                    ))}
+                    {(!stats?.rejectedBySubJalur || stats.rejectedBySubJalur.length === 0) && (
+                      <p className="text-xs text-gray-400">Belum ada data</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-l-4 border-l-red-400">
+                <CardContent className="p-5">
+                  <CardTitle className="text-sm mb-3">Per Sekolah & Jurusan</CardTitle>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-xs text-gray-400 mb-1.5 font-medium uppercase tracking-wide">Sekolah Pilihan</p>
+                      {stats?.rejectedBySekolah.map((item) => (
+                        <div key={item.name} className="flex justify-between text-sm mb-1">
+                          <span className="text-gray-600 truncate mr-2">{item.name}</span>
+                          <Badge className="bg-red-100 text-red-700 border-red-200 shrink-0">{item.count}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                    <Separator />
+                    <div>
+                      <p className="text-xs text-gray-400 mb-1.5 font-medium uppercase tracking-wide">Jurusan</p>
+                      {stats?.rejectedByJurusan.map((item) => (
+                        <div key={item.name} className="flex justify-between text-sm mb-1">
+                          <span className="text-gray-600">{item.name}</span>
+                          <Badge className="bg-red-100 text-red-700 border-red-200">{item.count}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                    {(!stats?.rejectedBySekolah || stats.rejectedBySekolah.length === 0) && (
+                      <p className="text-xs text-gray-400">Belum ada data</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Rejected List Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-red-600" />
+                  Daftar Pendaftar Ditolak
+                </CardTitle>
+                <CardDescription>Pendaftar yang ditolak dalam verifikasi SPMB 2026</CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-red-50/80">
+                        <TableHead>No. Reg</TableHead>
+                        <TableHead>Nama</TableHead>
+                        <TableHead className="hidden md:table-cell">NISN</TableHead>
+                        <TableHead>Sub Jalur</TableHead>
+                        <TableHead className="hidden lg:table-cell">Sekolah Pilihan</TableHead>
+                        <TableHead className="hidden lg:table-cell">Jurusan</TableHead>
+                        <TableHead className="hidden sm:table-cell">Alasan Penolakan</TableHead>
+                        <TableHead className="hidden sm:table-cell">Waktu Ditolak</TableHead>
+                        <TableHead className="text-right">Aksi</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {stats?.rejectedList && stats.rejectedList.length > 0 ? (
+                        stats.rejectedList.map((reg) => (
+                          <TableRow key={reg.id} className="hover:bg-red-50/30">
+                            <TableCell className="font-mono text-sm">{reg.noRegistrasi}</TableCell>
+                            <TableCell className="font-medium">{reg.nama}</TableCell>
+                            <TableCell className="hidden md:table-cell text-sm text-gray-500">{reg.nisn}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={SUB_JALUR_COLORS[reg.subJalur] || 'bg-gray-100 text-gray-800'}>
+                                {reg.subJalur}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="hidden lg:table-cell text-sm">{reg.namaSekolahPilihan}</TableCell>
+                            <TableCell className="hidden lg:table-cell">
+                              <Badge variant="secondary">{reg.jurusan}</Badge>
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell text-sm text-gray-500 max-w-[200px] truncate">
+                              {reg.verificationNote || <span className="text-gray-400 italic">Tidak ada alasan</span>}
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell text-xs text-gray-500">
+                              {reg.updatedAt ? new Date(reg.updatedAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button variant="ghost" size="sm" onClick={() => { setDetailTarget(reg); setDetailDialogOpen(true) }}>
+                                  <Eye className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-emerald-600 hover:text-white hover:bg-emerald-600"
+                                  title="Terima Ulang Pendaftar"
+                                  onClick={() => {
+                                    setVerifyTargetId(reg.id)
+                                    setVerifyAction('VERIFIED')
+                                    setVerifyNote('')
+                                    setVerifyDialogOpen(true)
+                                  }}
+                                >
+                                  <RotateCcw className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={9} className="text-center py-12">
+                            <UserX className="w-10 h-10 mx-auto text-gray-300 mb-2" />
+                            <p className="text-gray-500 font-medium">Belum ada pendaftar yang ditolak</p>
+                            <p className="text-sm text-gray-400">Semua pendaftar dalam proses verifikasi</p>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -970,17 +1212,13 @@ export default function Home() {
       <footer className="border-t bg-white mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
-            <p className="text-sm text-gray-500">
-              © 2026 SPMB Verifikasi System
-            </p>
-            <p className="text-xs text-gray-400">
-              Sistem Verifikasi Penerimaan Peserta Didik Baru
-            </p>
+            <p className="text-sm text-gray-500">© 2026 SPMB Verifikasi System</p>
+            <p className="text-xs text-gray-400">Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
           </div>
         </div>
       </footer>
 
-      {/* Import Dialog */}
+      {/* ==================== IMPORT DIALOG ==================== */}
       <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -997,35 +1235,23 @@ export default function Home() {
             <div
               className="border-2 border-dashed rounded-lg p-8 text-center hover:border-emerald-400 transition-colors cursor-pointer"
               onClick={() => document.getElementById('csv-upload')?.click()}
-              onDragOver={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-              }}
+              onDragOver={(e) => { e.preventDefault(); e.stopPropagation() }}
               onDrop={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
+                e.preventDefault(); e.stopPropagation()
                 const file = e.dataTransfer.files[0]
-                if (file && file.name.endsWith('.csv')) {
-                  setCsvFile(file)
-                }
+                if (file && file.name.endsWith('.csv')) setCsvFile(file)
               }}
             >
               <FileSpreadsheet className="w-10 h-10 mx-auto text-gray-400 mb-3" />
               {csvFile ? (
                 <div>
                   <p className="font-medium text-emerald-700">{csvFile.name}</p>
-                  <p className="text-sm text-gray-500">
-                    {(csvFile.size / 1024).toFixed(1)} KB
-                  </p>
+                  <p className="text-sm text-gray-500">{(csvFile.size / 1024).toFixed(1)} KB</p>
                 </div>
               ) : (
                 <div>
-                  <p className="font-medium text-gray-700">
-                    Klik atau seret file CSV ke sini
-                  </p>
-                  <p className="text-sm text-gray-400 mt-1">
-                    Format: No.Registrasi, Nama, NISN, Sub Jalur, dll.
-                  </p>
+                  <p className="font-medium text-gray-700">Klik atau seret file CSV ke sini</p>
+                  <p className="text-sm text-gray-400 mt-1">Format: No.Registrasi, Nama, NISN, Sub Jalur, dll.</p>
                 </div>
               )}
               <input
@@ -1033,10 +1259,7 @@ export default function Home() {
                 type="file"
                 accept=".csv"
                 className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) setCsvFile(file)
-                }}
+                onChange={(e) => { const file = e.target.files?.[0]; if (file) setCsvFile(file) }}
               />
             </div>
 
@@ -1045,72 +1268,66 @@ export default function Home() {
                 <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
                 <div className="text-sm text-amber-700">
                   <p className="font-medium">Format CSV yang diharapkan:</p>
-                  <p className="mt-1">
-                    No.Registrasi, Nama, NISN, Sub Jalur, NPSN Sekolah Pilihan,
-                    Nama Sekolah Pilihan, Jurusan, NPSN Sekolah Asal,
-                    Nama Sekolah Asal, Status, Waktu Daftar
-                  </p>
+                  <p className="mt-1">No.Registrasi, Nama, NISN, Sub Jalur, NPSN Sekolah Pilihan, Nama Sekolah Pilihan, Jurusan, NPSN Sekolah Asal, Nama Sekolah Asal, Status, Waktu Daftar</p>
                 </div>
               </div>
             </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setImportDialogOpen(false)}>
-              Batal
-            </Button>
-            <Button
-              onClick={handleImport}
-              disabled={!csvFile || importing}
-              className="bg-emerald-600 hover:bg-emerald-700"
-            >
-              {importing ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Mengimport...
-                </>
-              ) : (
-                <>
-                  <Upload className="w-4 h-4" />
-                  Import
-                </>
-              )}
+            <Button variant="outline" onClick={() => setImportDialogOpen(false)}>Batal</Button>
+            <Button onClick={handleImport} disabled={!csvFile || importing} className="bg-emerald-600 hover:bg-emerald-700">
+              {importing ? (<><Loader2 className="w-4 h-4 animate-spin" /> Mengimport...</>) : (<><Upload className="w-4 h-4" /> Import</>)}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Single Verify Dialog */}
+      {/* ==================== SINGLE VERIFY DIALOG ==================== */}
       <Dialog open={verifyDialogOpen} onOpenChange={setVerifyDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {verifyAction === 'VERIFIED' ? (
-                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                <><ThumbsUp className="w-5 h-5 text-emerald-600" /> Terima Pendaftar</>
               ) : (
-                <XCircle className="w-5 h-5 text-red-600" />
+                <><ThumbsDown className="w-5 h-5 text-red-600" /> Tolak Pendaftar</>
               )}
-              {verifyAction === 'VERIFIED' ? 'Verifikasi Pendaftar' : 'Tolak Pendaftar'}
             </DialogTitle>
             <DialogDescription>
               {verifyAction === 'VERIFIED'
-                ? 'Apakah Anda yakin ingin memverifikasi pendaftar ini?'
-                : 'Apakah Anda yakin ingin menolak pendaftar ini?'}
+                ? 'Apakah Anda yakin ingin MENERIMA pendaftar ini? Data akan diverifikasi dan diterima di SPMB 2026.'
+                : 'Apakah Anda yakin ingin MENOLAK pendaftar ini? Berikan alasan penolakan jika diperlukan.'}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
-            <Textarea
-              placeholder="Catatan verifikasi (opsional)..."
-              value={verifyNote}
-              onChange={(e) => setVerifyNote(e.target.value)}
-            />
+            {verifyAction === 'REJECTED' && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-red-800">Perhatian!</p>
+                    <p className="text-sm text-red-700">Pendaftar yang ditolak tetap dapat diterima kembali nanti melalui menu Ditolak.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1.5 block">
+                {verifyAction === 'VERIFIED' ? 'Catatan Verifikasi' : 'Alasan Penolakan'} {verifyAction === 'REJECTED' && <span className="text-red-500">*</span>}
+              </label>
+              <Textarea
+                placeholder={verifyAction === 'VERIFIED' ? 'Catatan tambahan (opsional)...' : 'Tuliskan alasan penolakan...'}
+                value={verifyNote}
+                onChange={(e) => setVerifyNote(e.target.value)}
+                rows={3}
+              />
+            </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setVerifyDialogOpen(false)}>
-              Batal
-            </Button>
+            <Button variant="outline" onClick={() => setVerifyDialogOpen(false)}>Batal</Button>
             <Button
               onClick={handleVerify}
               disabled={verifying}
@@ -1118,59 +1335,62 @@ export default function Home() {
               variant={verifyAction === 'REJECTED' ? 'destructive' : 'default'}
             >
               {verifying ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Memproses...
-                </>
+                <><Loader2 className="w-4 h-4 animate-spin" /> Memproses...</>
               ) : verifyAction === 'VERIFIED' ? (
-                <>
-                  <CheckCircle2 className="w-4 h-4" />
-                  Verifikasi
-                </>
+                <><ThumbsUp className="w-4 h-4" /> Terima</>
               ) : (
-                <>
-                  <XCircle className="w-4 h-4" />
-                  Tolak
-                </>
+                <><ThumbsDown className="w-4 h-4" /> Tolak</>
               )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Bulk Verify Dialog */}
+      {/* ==================== BULK VERIFY DIALOG ==================== */}
       <Dialog open={bulkVerifyDialogOpen} onOpenChange={setBulkVerifyDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {verifyAction === 'VERIFIED' ? (
-                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                <><ThumbsUp className="w-5 h-5 text-emerald-600" /> Terima {selectedIds.size} Pendaftar</>
               ) : (
-                <XCircle className="w-5 h-5 text-red-600" />
+                <><ThumbsDown className="w-5 h-5 text-red-600" /> Tolak {selectedIds.size} Pendaftar</>
               )}
-              {verifyAction === 'VERIFIED'
-                ? `Verifikasi ${selectedIds.size} Pendaftar`
-                : `Tolak ${selectedIds.size} Pendaftar`}
             </DialogTitle>
             <DialogDescription>
               {verifyAction === 'VERIFIED'
-                ? `Apakah Anda yakin ingin memverifikasi ${selectedIds.size} pendaftar yang dipilih?`
-                : `Apakah Anda yakin ingin menolak ${selectedIds.size} pendaftar yang dipilih?`}
+                ? `Apakah Anda yakin ingin MENERIMA ${selectedIds.size} pendaftar yang dipilih?`
+                : `Apakah Anda yakin ingin MENOLAK ${selectedIds.size} pendaftar yang dipilih?`}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
-            <Textarea
-              placeholder="Catatan verifikasi untuk semua pendaftar (opsional)..."
-              value={verifyNote}
-              onChange={(e) => setVerifyNote(e.target.value)}
-            />
+            {verifyAction === 'REJECTED' && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-red-800">Perhatian!</p>
+                    <p className="text-sm text-red-700">Pendaftar yang ditolak tetap dapat diterima kembali nanti melalui menu Ditolak.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1.5 block">
+                {verifyAction === 'VERIFIED' ? 'Catatan Verifikasi' : 'Alasan Penolakan'} {verifyAction === 'REJECTED' && <span className="text-red-500">*</span>}
+              </label>
+              <Textarea
+                placeholder={verifyAction === 'VERIFIED' ? 'Catatan untuk semua pendaftar (opsional)...' : 'Tuliskan alasan penolakan untuk semua pendaftar...'}
+                value={verifyNote}
+                onChange={(e) => setVerifyNote(e.target.value)}
+                rows={3}
+              />
+            </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setBulkVerifyDialogOpen(false)}>
-              Batal
-            </Button>
+            <Button variant="outline" onClick={() => setBulkVerifyDialogOpen(false)}>Batal</Button>
             <Button
               onClick={handleBulkVerify}
               disabled={verifying}
@@ -1178,27 +1398,18 @@ export default function Home() {
               variant={verifyAction === 'REJECTED' ? 'destructive' : 'default'}
             >
               {verifying ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Memproses...
-                </>
+                <><Loader2 className="w-4 h-4 animate-spin" /> Memproses...</>
               ) : verifyAction === 'VERIFIED' ? (
-                <>
-                  <CheckCircle2 className="w-4 h-4" />
-                  Verifikasi Semua
-                </>
+                <><ThumbsUp className="w-4 h-4" /> Terima Semua</>
               ) : (
-                <>
-                  <XCircle className="w-4 h-4" />
-                  Tolak Semua
-                </>
+                <><ThumbsDown className="w-4 h-4" /> Tolak Semua</>
               )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Detail Dialog */}
+      {/* ==================== DETAIL DIALOG ==================== */}
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
@@ -1206,13 +1417,22 @@ export default function Home() {
               <Users className="w-5 h-5 text-emerald-600" />
               Detail Pendaftar
             </DialogTitle>
-            <DialogDescription>
-              Informasi lengkap pendaftar SPMB 2026
-            </DialogDescription>
+            <DialogDescription>Informasi lengkap pendaftar SPMB 2026</DialogDescription>
           </DialogHeader>
 
           {detailTarget && (
             <div className="space-y-4">
+              {/* Status badge at top */}
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className={`${STATUS_COLORS[detailTarget.verificationStatus]} text-sm px-3 py-1`}>
+                  {detailTarget.verificationStatus === 'PENDING' && <Clock className="w-4 h-4" />}
+                  {detailTarget.verificationStatus === 'VERIFIED' && <CheckCircle2 className="w-4 h-4" />}
+                  {detailTarget.verificationStatus === 'REJECTED' && <XCircle className="w-4 h-4" />}
+                  {detailTarget.verificationStatus === 'PENDING' ? 'Menunggu Verifikasi' :
+                   detailTarget.verificationStatus === 'VERIFIED' ? 'Diterima (Terverifikasi)' : 'Ditolak'}
+                </Badge>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs text-gray-500 font-medium">No. Registrasi</label>
@@ -1229,10 +1449,7 @@ export default function Home() {
                 <div>
                   <label className="text-xs text-gray-500 font-medium">Sub Jalur</label>
                   <div className="mt-1">
-                    <Badge
-                      variant="outline"
-                      className={SUB_JALUR_COLORS[detailTarget.subJalur] || 'bg-gray-100 text-gray-800'}
-                    >
+                    <Badge variant="outline" className={SUB_JALUR_COLORS[detailTarget.subJalur] || 'bg-gray-100 text-gray-800'}>
                       {detailTarget.subJalur}
                     </Badge>
                   </div>
@@ -1265,21 +1482,7 @@ export default function Home() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs text-gray-500 font-medium">Status Pendaftaran</label>
-                    <div className="mt-1">
-                      <Badge variant="outline">{detailTarget.status}</Badge>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Status Verifikasi</label>
-                    <div className="mt-1">
-                      <Badge
-                        variant="outline"
-                        className={STATUS_COLORS[detailTarget.verificationStatus]}
-                      >
-                        {detailTarget.verificationStatus === 'PENDING' ? 'Menunggu' :
-                         detailTarget.verificationStatus === 'VERIFIED' ? 'Terverifikasi' : 'Ditolak'}
-                      </Badge>
-                    </div>
+                    <div className="mt-1"><Badge variant="outline">{detailTarget.status}</Badge></div>
                   </div>
                   <div>
                     <label className="text-xs text-gray-500 font-medium">Waktu Daftar</label>
@@ -1287,7 +1490,9 @@ export default function Home() {
                   </div>
                   {detailTarget.verificationNote && (
                     <div className="col-span-2">
-                      <label className="text-xs text-gray-500 font-medium">Catatan Verifikasi</label>
+                      <label className="text-xs text-gray-500 font-medium">
+                        {detailTarget.verificationStatus === 'REJECTED' ? 'Alasan Penolakan' : 'Catatan Verifikasi'}
+                      </label>
                       <p className="text-sm mt-1 bg-yellow-50 p-2 rounded border border-yellow-200">
                         {detailTarget.verificationNote}
                       </p>
@@ -1296,7 +1501,8 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="flex gap-2 pt-2">
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-2 border-t">
                 {detailTarget.verificationStatus !== 'VERIFIED' && (
                   <Button
                     className="flex-1 bg-emerald-600 hover:bg-emerald-700"
@@ -1308,8 +1514,8 @@ export default function Home() {
                       setVerifyDialogOpen(true)
                     }}
                   >
-                    <CheckCircle2 className="w-4 h-4" />
-                    Verifikasi
+                    <ThumbsUp className="w-4 h-4" />
+                    Terima
                   </Button>
                 )}
                 {detailTarget.verificationStatus !== 'REJECTED' && (
@@ -1324,8 +1530,40 @@ export default function Home() {
                       setVerifyDialogOpen(true)
                     }}
                   >
-                    <XCircle className="w-4 h-4" />
+                    <ThumbsDown className="w-4 h-4" />
                     Tolak
+                  </Button>
+                )}
+                {detailTarget.verificationStatus === 'VERIFIED' && (
+                  <Button
+                    variant="outline"
+                    className="flex-1 border-yellow-400 text-yellow-700 hover:bg-yellow-50"
+                    onClick={() => {
+                      setVerifyTargetId(detailTarget.id)
+                      setVerifyAction('REJECTED')
+                      setVerifyNote('')
+                      setDetailDialogOpen(false)
+                      setVerifyDialogOpen(true)
+                    }}
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    Batalkan & Tolak
+                  </Button>
+                )}
+                {detailTarget.verificationStatus === 'REJECTED' && (
+                  <Button
+                    variant="outline"
+                    className="flex-1 border-emerald-400 text-emerald-700 hover:bg-emerald-50"
+                    onClick={() => {
+                      setVerifyTargetId(detailTarget.id)
+                      setVerifyAction('VERIFIED')
+                      setVerifyNote('')
+                      setDetailDialogOpen(false)
+                      setVerifyDialogOpen(true)
+                    }}
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    Terima Ulang
                   </Button>
                 )}
               </div>
