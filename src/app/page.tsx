@@ -2010,10 +2010,22 @@ export default function Home() {
       const data = await res.json()
       if (data.success) {
         const nisnLabel = portalParsedData.nisn ? ` (NISN: ${portalParsedData.nisn})` : ''
-        toast({
-          title: data.action === 'created' ? 'Data Baru Disimpan' : 'Data Diperbarui',
-          description: data.message || `Data ${portalParsedData.nama || 'pendaftar'}${nisnLabel} berhasil ${data.action === 'created' ? 'disimpan' : 'diperbarui'}`,
-        })
+        if (data.action === 'created') {
+          toast({
+            title: '✅ Data Baru Disimpan',
+            description: data.message || `Data ${portalParsedData.nama || 'pendaftar'}${nisnLabel} berhasil ditambahkan sebagai data baru`,
+          })
+        } else if (data.action === 'updated') {
+          toast({
+            title: '🔄 Data Diperbarui',
+            description: data.message || `Data ${portalParsedData.nama || 'pendaftar'}${nisnLabel} berhasil diperbarui — field kosong telah diisi`,
+          })
+        } else {
+          toast({
+            title: 'ℹ️ Data Sudah Lengkap',
+            description: data.message || `Data ${portalParsedData.nama || 'pendaftar'}${nisnLabel} sudah lengkap, tidak ada perubahan`,
+          })
+        }
         setPortalPasteOpen(false)
         setPortalRawText('')
         setPortalParsedData(null)
@@ -2847,7 +2859,8 @@ export default function Home() {
                   <Table>
                     <TableHeader className="sticky top-0 z-10 bg-white">
                       <TableRow className="bg-gray-50/80">
-                        <TableHead className="w-12">
+                        <TableHead className="w-10 text-center">No</TableHead>
+                        <TableHead className="w-10">
                           <Checkbox
                             checked={registrations.length > 0 && selectedIds.size === registrations.length}
                             onCheckedChange={toggleSelectAll}
@@ -2866,14 +2879,14 @@ export default function Home() {
                     <TableBody>
                       {loading ? (
                         <TableRow>
-                          <TableCell colSpan={9} className="text-center py-12">
+                          <TableCell colSpan={10} className="text-center py-12">
                             <Loader2 className="w-6 h-6 animate-spin mx-auto text-gray-400" />
                             <p className="text-sm text-gray-400 mt-2">Memuat data...</p>
                           </TableCell>
                         </TableRow>
                       ) : registrations.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={9} className="text-center py-12">
+                          <TableCell colSpan={10} className="text-center py-12">
                             <FileSpreadsheet className="w-10 h-10 mx-auto text-gray-300 mb-2" />
                             <p className="text-gray-500 font-medium">Belum ada data pendaftar</p>
                             <p className="text-sm text-gray-400">Import CSV untuk memulai verifikasi</p>
@@ -2884,11 +2897,14 @@ export default function Home() {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        registrations.map((reg) => (
+                        registrations.map((reg, idx) => (
                           <TableRow key={reg.id} className={
                             reg.verificationStatus === 'VERIFIED' ? 'bg-emerald-50/40' :
                             reg.verificationStatus === 'REJECTED' ? 'bg-red-50/40' : ''
                           }>
+                            <TableCell className="text-center text-sm text-gray-500">
+                              {(pagination.page - 1) * pagination.limit + idx + 1}
+                            </TableCell>
                             <TableCell>
                               <Checkbox checked={selectedIds.has(reg.id)} onCheckedChange={() => toggleSelect(reg.id)} />
                             </TableCell>

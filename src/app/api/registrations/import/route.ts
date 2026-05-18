@@ -76,7 +76,16 @@ export async function POST(request: NextRequest) {
           });
         }
 
-        // STEP 2: Fallback - try by noRegistrasi + npsnSekolahPilihan
+        // STEP 2: Try by NISN alone (without npsnSekolahPilihan) - broader match
+        if (!existing && nisn && nisn.trim()) {
+          existing = await db.registration.findFirst({
+            where: {
+              nisn: nisn.trim(),
+            },
+          });
+        }
+
+        // STEP 3: Fallback - try by noRegistrasi + npsnSekolahPilihan
         if (!existing && noRegistrasi && noRegistrasi.trim()) {
           existing = await db.registration.findFirst({
             where: {
@@ -86,25 +95,65 @@ export async function POST(request: NextRequest) {
           });
         }
 
-        if (existing) {
-          // UPDATE existing record - merge new data, don't overwrite with empty
-          await db.registration.update({
-            where: { id: existing.id },
-            data: {
-              noRegistrasi: noRegistrasi || existing.noRegistrasi,
-              nama: row.nama || existing.nama,
-              nisn: nisn || existing.nisn,
-              subJalur: row.subJalur || existing.subJalur,
-              namaSekolahPilihan: row.namaSekolahPilihan || existing.namaSekolahPilihan,
-              jurusan: row.jurusan || existing.jurusan,
-              npsnSekolahAsal: row.npsnSekolahAsal || existing.npsnSekolahAsal,
-              namaSekolahAsal: row.namaSekolahAsal || existing.namaSekolahAsal,
-              status: row.status || existing.status,
-              waktuDaftar: row.waktuDaftar || existing.waktuDaftar,
-              // Only update portal fields if new values are provided
-              ...portalData,
+        // STEP 4: Fallback - try by noRegistrasi alone
+        if (!existing && noRegistrasi && noRegistrasi.trim()) {
+          existing = await db.registration.findFirst({
+            where: {
+              noRegistrasi: noRegistrasi.trim(),
             },
           });
+        }
+
+        // STEP 5: Fallback - try by nama + subJalur
+        if (!existing && row.nama && row.nama.trim() && row.subJalur && row.subJalur.trim()) {
+          existing = await db.registration.findFirst({
+            where: {
+              nama: row.nama.trim(),
+              subJalur: row.subJalur.trim(),
+            },
+          });
+        }
+
+        if (existing) {
+          // UPDATE existing record - fill empty fields with new data
+          const updateData: Record<string, string | null> = {};
+
+          const mergeField = (key: string, newValue: string | undefined, existingValue: string | null | undefined) => {
+            const trimmed = newValue?.trim();
+            if (trimmed && (!existingValue || existingValue.trim() === '' || existingValue === '0')) {
+              updateData[key] = trimmed;
+            }
+          };
+
+          // Core fields
+          mergeField('noRegistrasi', noRegistrasi, existing.noRegistrasi);
+          mergeField('nisn', nisn, existing.nisn);
+          mergeField('nama', row.nama, existing.nama);
+          mergeField('subJalur', row.subJalur, existing.subJalur);
+          mergeField('namaSekolahPilihan', row.namaSekolahPilihan, existing.namaSekolahPilihan);
+          mergeField('jurusan', row.jurusan, existing.jurusan);
+          mergeField('npsnSekolahAsal', row.npsnSekolahAsal, existing.npsnSekolahAsal);
+          mergeField('namaSekolahAsal', row.namaSekolahAsal, existing.namaSekolahAsal);
+          mergeField('status', row.status, existing.status);
+          mergeField('waktuDaftar', row.waktuDaftar, existing.waktuDaftar);
+          mergeField('npsnSekolahPilihan', row.npsnSekolahPilihan, existing.npsnSekolahPilihan);
+
+          // Portal fields - only fill empty fields
+          for (const [key, value] of Object.entries(portalData)) {
+            if (value && value.trim()) {
+              const existingValue = (existing as Record<string, unknown>)[key] as string | null | undefined;
+              if (!existingValue || existingValue.trim() === '') {
+                updateData[key] = value;
+              }
+            }
+          }
+
+          if (Object.keys(updateData).length > 0) {
+            await db.registration.update({
+              where: { id: existing.id },
+              data: updateData,
+            });
+          }
           updated++;
           imported++;
         } else {
