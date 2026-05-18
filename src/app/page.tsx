@@ -926,14 +926,14 @@ function LembarVerifikasiSheet({
     <div className="space-y-6">
       {/* Header Card */}
       <Card className={`${config.borderColor} border-l-4 shadow-sm hover:shadow-md transition-shadow`}>
-        <CardContent className="p-5">
-          <div className="flex items-center gap-4">
-            <div className={`p-3 ${config.iconBg} rounded-xl shadow-sm`}>
-              <Icon className={`w-8 h-8 ${config.iconColor}`} />
+        <CardContent className="p-3 sm:p-5">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className={`p-2 sm:p-3 ${config.iconBg} rounded-lg sm:rounded-xl shadow-sm`}>
+              <Icon className={`w-6 h-6 sm:w-8 sm:h-8 ${config.iconColor}`} />
             </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <h3 className="text-xl font-bold text-gray-900">Lembar Verifikasi: {config.label}</h3>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-base sm:text-xl font-bold text-gray-900">Lembar Verifikasi: {config.label}</h3>
                 {config.subCategories && (
                   <div className="flex gap-1">
                     {config.subCategories.map(sub => (
@@ -951,55 +951,55 @@ function LembarVerifikasiSheet({
       </Card>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
         <Card className={`${config.bgColor} shadow-sm hover:shadow-md transition-shadow`}>
-          <CardContent className="p-4">
+          <CardContent className="p-2.5 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Total Pendaftar</p>
-                <p className="text-2xl font-bold">{s.total}</p>
+                <p className="text-[10px] sm:text-sm text-gray-500">Total Pendaftar</p>
+                <p className="text-lg sm:text-2xl font-bold">{s.total}</p>
               </div>
-              <div className={`p-2.5 ${config.iconBg} rounded-xl shadow-sm`}>
-                <Users className={`w-5 h-5 ${config.iconColor}`} />
+              <div className={`p-1.5 sm:p-2.5 ${config.iconBg} rounded-lg sm:rounded-xl shadow-sm`}>
+                <Users className={`w-4 h-4 sm:w-5 sm:h-5 ${config.iconColor}`} />
               </div>
             </div>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-amber-50 to-yellow-50/50 shadow-sm hover:shadow-md transition-shadow">
-          <CardContent className="p-4">
+          <CardContent className="p-2.5 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Menunggu</p>
-                <p className="text-2xl font-bold text-yellow-600">{s.pending}</p>
+                <p className="text-[10px] sm:text-sm text-gray-500">Menunggu</p>
+                <p className="text-lg sm:text-2xl font-bold text-yellow-600">{s.pending}</p>
               </div>
-              <div className="p-2.5 bg-amber-100 rounded-xl shadow-sm">
-                <Clock className="w-5 h-5 text-yellow-600" />
+              <div className="p-1.5 sm:p-2.5 bg-amber-100 rounded-lg sm:rounded-xl shadow-sm">
+                <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600" />
               </div>
             </div>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-emerald-50 to-teal-50/50 shadow-sm hover:shadow-md transition-shadow">
-          <CardContent className="p-4">
+          <CardContent className="p-2.5 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Diterima</p>
-                <p className="text-2xl font-bold text-emerald-600">{s.verified}</p>
+                <p className="text-[10px] sm:text-sm text-gray-500">Diterima</p>
+                <p className="text-lg sm:text-2xl font-bold text-emerald-600">{s.verified}</p>
               </div>
-              <div className="p-2.5 bg-emerald-100 rounded-xl shadow-sm">
-                <UserCheck className="w-5 h-5 text-emerald-600" />
+              <div className="p-1.5 sm:p-2.5 bg-emerald-100 rounded-lg sm:rounded-xl shadow-sm">
+                <UserCheck className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />
               </div>
             </div>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-red-50 to-rose-50/50 shadow-sm hover:shadow-md transition-shadow">
-          <CardContent className="p-4">
+          <CardContent className="p-2.5 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Ditolak</p>
-                <p className="text-2xl font-bold text-red-600">{s.rejected}</p>
+                <p className="text-[10px] sm:text-sm text-gray-500">Ditolak</p>
+                <p className="text-lg sm:text-2xl font-bold text-red-600">{s.rejected}</p>
               </div>
-              <div className="p-2.5 bg-red-100 rounded-xl shadow-sm">
-                <UserX className="w-5 h-5 text-red-600" />
+              <div className="p-1.5 sm:p-2.5 bg-red-100 rounded-lg sm:rounded-xl shadow-sm">
+                <UserX className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
               </div>
             </div>
           </CardContent>
@@ -2741,31 +2741,33 @@ export default function Home() {
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-gray-50 to-emerald-50/30">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-gradient-to-r from-slate-900 via-emerald-900 to-slate-900 border-b border-emerald-400/20 shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-18">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-emerald-600 text-white ring-2 ring-emerald-400/30 shadow-lg shadow-emerald-500/20">
-                <ShieldCheck className="w-6 h-6" />
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-14 sm:h-18">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-emerald-600 text-white ring-2 ring-emerald-400/30 shadow-lg shadow-emerald-500/20">
+                <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-white tracking-tight">SPMB 2026</h1>
-                <p className="text-xs text-emerald-200">Sistem Verifikasi Pendaftaran</p>
+                <h1 className="text-base sm:text-xl font-bold text-white tracking-tight">SPMB 2026</h1>
+                <p className="text-[10px] sm:text-xs text-emerald-200 hidden xs:block">Sistem Verifikasi Pendaftaran</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <Button
                 onClick={() => setPortalPasteOpen(true)}
                 variant="outline"
-                className="bg-white/10 hover:bg-white/20 text-white border-white/20"
+                size="sm"
+                className="bg-white/10 hover:bg-white/20 text-white border-white/20 h-8 sm:h-9 px-2 sm:px-3"
               >
-                <ClipboardPaste className="w-4 h-4" />
+                <ClipboardPaste className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 <span className="hidden sm:inline">Paste Portal</span>
               </Button>
               <Button
                 onClick={() => setImportDialogOpen(true)}
-                className="bg-white/10 hover:bg-white/20 text-white border border-white/20"
+                size="sm"
+                className="bg-white/10 hover:bg-white/20 text-white border border-white/20 h-8 sm:h-9 px-2 sm:px-3"
               >
-                <Upload className="w-4 h-4" />
+                <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 <span className="hidden sm:inline">Import CSV</span>
               </Button>
             </div>
@@ -2774,125 +2776,131 @@ export default function Home() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
+      <main className="flex-1 max-w-7xl mx-auto w-full px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="flex-wrap bg-white/80 backdrop-blur-sm border border-gray-200/60 rounded-xl p-1 shadow-sm">
-            <TabsTrigger value="dashboard" className="gap-1.5 rounded-lg px-4 py-2 transition-all duration-200 data-[state=active]:shadow-sm">
-              <Eye className="w-4 h-4" />
-              Dashboard
-            </TabsTrigger>
-            <TabsTrigger value="lembar-verifikasi" className="gap-1.5 rounded-lg px-4 py-2 transition-all duration-200 data-[state=active]:bg-amber-100 data-[state=active]:text-amber-800 data-[state=active]:shadow-sm">
-              <ClipboardCheck className="w-4 h-4" />
-              Lembar Verifikasi
-              {stats && stats.pending > 0 && (
-                <Badge className="ml-1 bg-amber-500 text-white text-xs px-1.5 py-0 min-w-[20px] h-5 flex items-center justify-center">
-                  {stats.pending}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="data" className="gap-1.5 rounded-lg px-4 py-2 transition-all duration-200 data-[state=active]:shadow-sm">
-              <FileSpreadsheet className="w-4 h-4" />
-              Data Pendaftar
-            </TabsTrigger>
-            <TabsTrigger value="diterima" className="gap-1.5 rounded-lg px-4 py-2 transition-all duration-200 data-[state=active]:bg-emerald-100 data-[state=active]:text-emerald-800 data-[state=active]:shadow-sm">
-              <ThumbsUp className="w-4 h-4" />
-              Diterima
-              {stats && stats.verified > 0 && (
-                <Badge className="ml-1 bg-emerald-600 text-white text-xs px-1.5 py-0 min-w-[20px] h-5 flex items-center justify-center">
-                  {stats.verified}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="ditolak" className="gap-1.5 rounded-lg px-4 py-2 transition-all duration-200 data-[state=active]:bg-red-100 data-[state=active]:text-red-800 data-[state=active]:shadow-sm">
-              <ThumbsDown className="w-4 h-4" />
-              Ditolak
-              {stats && stats.rejected > 0 && (
-                <Badge className="ml-1 bg-red-600 text-white text-xs px-1.5 py-0 min-w-[20px] h-5 flex items-center justify-center">
-                  {stats.rejected}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="pengaturan" className="gap-1.5 rounded-lg px-4 py-2 transition-all duration-200 data-[state=active]:bg-sky-100 data-[state=active]:text-sky-800 data-[state=active]:shadow-sm">
-              <Settings className="w-4 h-4" />
-              Pengaturan
-            </TabsTrigger>
-          </TabsList>
+          {/* Mobile: scrollable horizontal tabs, Desktop: wrap */}
+          <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0 scrollbar-hide">
+            <TabsList className="flex-nowrap sm:flex-wrap bg-white/80 backdrop-blur-sm border border-gray-200/60 rounded-xl p-1 shadow-sm w-max sm:w-auto">
+              <TabsTrigger value="dashboard" className="gap-1 rounded-lg px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm transition-all duration-200 data-[state=active]:shadow-sm whitespace-nowrap">
+                <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                Dashboard
+              </TabsTrigger>
+              <TabsTrigger value="lembar-verifikasi" className="gap-1 rounded-lg px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm transition-all duration-200 data-[state=active]:bg-amber-100 data-[state=active]:text-amber-800 data-[state=active]:shadow-sm whitespace-nowrap">
+                <ClipboardCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Lembar Verifikasi</span>
+                <span className="sm:hidden">Verifikasi</span>
+                {stats && stats.pending > 0 && (
+                  <Badge className="ml-0.5 sm:ml-1 bg-amber-500 text-white text-[10px] sm:text-xs px-1 sm:px-1.5 py-0 min-w-[16px] sm:min-w-[20px] h-4 sm:h-5 flex items-center justify-center">
+                    {stats.pending}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="data" className="gap-1 rounded-lg px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm transition-all duration-200 data-[state=active]:shadow-sm whitespace-nowrap">
+                <FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Data Pendaftar</span>
+                <span className="sm:hidden">Pendaftar</span>
+              </TabsTrigger>
+              <TabsTrigger value="diterima" className="gap-1 rounded-lg px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm transition-all duration-200 data-[state=active]:bg-emerald-100 data-[state=active]:text-emerald-800 data-[state=active]:shadow-sm whitespace-nowrap">
+                <ThumbsUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                Diterima
+                {stats && stats.verified > 0 && (
+                  <Badge className="ml-0.5 sm:ml-1 bg-emerald-600 text-white text-[10px] sm:text-xs px-1 sm:px-1.5 py-0 min-w-[16px] sm:min-w-[20px] h-4 sm:h-5 flex items-center justify-center">
+                    {stats.verified}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="ditolak" className="gap-1 rounded-lg px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm transition-all duration-200 data-[state=active]:bg-red-100 data-[state=active]:text-red-800 data-[state=active]:shadow-sm whitespace-nowrap">
+                <ThumbsDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                Ditolak
+                {stats && stats.rejected > 0 && (
+                  <Badge className="ml-0.5 sm:ml-1 bg-red-600 text-white text-[10px] sm:text-xs px-1 sm:px-1.5 py-0 min-w-[16px] sm:min-w-[20px] h-4 sm:h-5 flex items-center justify-center">
+                    {stats.rejected}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="pengaturan" className="gap-1 rounded-lg px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm transition-all duration-200 data-[state=active]:bg-sky-100 data-[state=active]:text-sky-800 data-[state=active]:shadow-sm whitespace-nowrap">
+                <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Pengaturan</span>
+                <span className="sm:hidden">Setting</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* ==================== DASHBOARD TAB ==================== */}
           <TabsContent value="dashboard" className="space-y-6">
             {/* Hero Welcome Section */}
-            <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 rounded-2xl p-6 text-white shadow-lg shadow-emerald-200/50">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-white shadow-lg shadow-emerald-200/50">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                 <div>
-                  <h2 className="text-2xl font-bold tracking-tight">Selamat Datang di SPMB 2026</h2>
-                  <p className="text-emerald-100 mt-1">Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
+                  <h2 className="text-lg sm:text-2xl font-bold tracking-tight">Selamat Datang di SPMB 2026</h2>
+                  <p className="text-emerald-100 mt-0.5 text-xs sm:text-sm">Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
                 </div>
-                <div className="flex gap-3">
-                  <div className="bg-white/15 backdrop-blur-sm rounded-xl px-4 py-2 text-center">
-                    <p className="text-2xl font-bold">{stats?.total || 0}</p>
-                    <p className="text-xs text-emerald-100">Pendaftar</p>
+                <div className="flex gap-2 sm:gap-3">
+                  <div className="bg-white/15 backdrop-blur-sm rounded-lg sm:rounded-xl px-3 sm:px-4 py-1.5 sm:py-2 text-center">
+                    <p className="text-xl sm:text-2xl font-bold">{stats?.total || 0}</p>
+                    <p className="text-[10px] sm:text-xs text-emerald-100">Pendaftar</p>
                   </div>
-                  <div className="bg-white/15 backdrop-blur-sm rounded-xl px-4 py-2 text-center">
-                    <p className="text-2xl font-bold">{verificationPercent}%</p>
-                    <p className="text-xs text-emerald-100">Terverifikasi</p>
+                  <div className="bg-white/15 backdrop-blur-sm rounded-lg sm:rounded-xl px-3 sm:px-4 py-1.5 sm:py-2 text-center">
+                    <p className="text-xl sm:text-2xl font-bold">{verificationPercent}%</p>
+                    <p className="text-[10px] sm:text-xs text-emerald-100">Terverifikasi</p>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
               <Card className="bg-gradient-to-br from-slate-50 to-slate-100/50 shadow-sm hover:shadow-md transition-shadow">
-                <CardContent className="p-4">
+                <CardContent className="p-3 sm:p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-500">Total Pendaftar</p>
-                      <p className="text-2xl font-bold">{stats?.total || 0}</p>
+                      <p className="text-xs sm:text-sm text-gray-500">Total Pendaftar</p>
+                      <p className="text-xl sm:text-2xl font-bold">{stats?.total || 0}</p>
                     </div>
-                    <div className="p-2.5 bg-gray-100 rounded-xl shadow-sm">
-                      <Users className="w-5 h-5 text-gray-600" />
+                    <div className="p-2 sm:p-2.5 bg-gray-100 rounded-lg sm:rounded-xl shadow-sm">
+                      <Users className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card className="bg-gradient-to-br from-amber-50 to-yellow-50/50 shadow-sm hover:shadow-md transition-shadow">
-                <CardContent className="p-4">
+                <CardContent className="p-3 sm:p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-500">Menunggu</p>
-                      <p className="text-2xl font-bold text-yellow-600">{stats?.pending || 0}</p>
+                      <p className="text-xs sm:text-sm text-gray-500">Menunggu</p>
+                      <p className="text-xl sm:text-2xl font-bold text-yellow-600">{stats?.pending || 0}</p>
                     </div>
-                    <div className="p-2.5 bg-amber-100 rounded-xl shadow-sm">
-                      <Clock className="w-5 h-5 text-yellow-600" />
+                    <div className="p-2 sm:p-2.5 bg-amber-100 rounded-lg sm:rounded-xl shadow-sm">
+                      <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card className="bg-gradient-to-br from-emerald-50 to-teal-50/50 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => setActiveTab('diterima')}>
-                <CardContent className="p-4">
+                <CardContent className="p-3 sm:p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-500">Diterima</p>
-                      <p className="text-2xl font-bold text-emerald-600">{stats?.verified || 0}</p>
+                      <p className="text-xs sm:text-sm text-gray-500">Diterima</p>
+                      <p className="text-xl sm:text-2xl font-bold text-emerald-600">{stats?.verified || 0}</p>
                     </div>
-                    <div className="p-2.5 bg-emerald-100 rounded-xl shadow-sm">
-                      <UserCheck className="w-5 h-5 text-emerald-600" />
+                    <div className="p-2 sm:p-2.5 bg-emerald-100 rounded-lg sm:rounded-xl shadow-sm">
+                      <UserCheck className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card className="bg-gradient-to-br from-red-50 to-rose-50/50 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => setActiveTab('ditolak')}>
-                <CardContent className="p-4">
+                <CardContent className="p-3 sm:p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-500">Ditolak</p>
-                      <p className="text-2xl font-bold text-red-600">{stats?.rejected || 0}</p>
+                      <p className="text-xs sm:text-sm text-gray-500">Ditolak</p>
+                      <p className="text-xl sm:text-2xl font-bold text-red-600">{stats?.rejected || 0}</p>
                     </div>
-                    <div className="p-2.5 bg-red-100 rounded-xl shadow-sm">
-                      <UserX className="w-5 h-5 text-red-600" />
+                    <div className="p-2 sm:p-2.5 bg-red-100 rounded-lg sm:rounded-xl shadow-sm">
+                      <UserX className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
                     </div>
                   </div>
                 </CardContent>
@@ -3042,28 +3050,30 @@ export default function Home() {
           {/* ==================== LEMBAR VERIFIKASI TAB ==================== */}
           <TabsContent value="lembar-verifikasi" className="space-y-6">
             <Tabs value={lembarTab} onValueChange={setLembarTab}>
-              <TabsList className="flex-wrap h-auto gap-1 bg-white/60 backdrop-blur-sm border rounded-xl p-1 shadow-sm">
-                {lembarVerifikasi.map((lv) => {
-                  const LvIcon = lv.icon
-                  const pendingCount = getPendingForLembar(lv.subJalurFilter)
-                  return (
-                    <TabsTrigger
-                      key={lv.key}
-                      value={lv.key}
-                      className="gap-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 rounded-lg transition-all duration-200"
-                    >
-                      <LvIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                      <span className="hidden md:inline">{lv.label}</span>
-                      <span className="md:hidden">{lv.label.length > 10 ? lv.label.substring(0, 8) + '..' : lv.label}</span>
-                      {pendingCount > 0 && (
-                        <Badge className="ml-0.5 bg-amber-500 text-white text-xs px-1 py-0 min-w-[16px] h-4 flex items-center justify-center">
-                          {pendingCount}
-                        </Badge>
-                      )}
-                    </TabsTrigger>
-                  )
-                })}
-              </TabsList>
+              <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0 scrollbar-hide">
+                <TabsList className="flex-nowrap sm:flex-wrap h-auto gap-1 bg-white/60 backdrop-blur-sm border rounded-xl p-1 shadow-sm w-max sm:w-auto">
+                  {lembarVerifikasi.map((lv) => {
+                    const LvIcon = lv.icon
+                    const pendingCount = getPendingForLembar(lv.subJalurFilter)
+                    return (
+                      <TabsTrigger
+                        key={lv.key}
+                        value={lv.key}
+                        className="gap-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 rounded-lg transition-all duration-200 whitespace-nowrap"
+                      >
+                        <LvIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        <span className="hidden md:inline">{lv.label}</span>
+                        <span className="md:hidden">{lv.label.length > 10 ? lv.label.substring(0, 8) + '..' : lv.label}</span>
+                        {pendingCount > 0 && (
+                          <Badge className="ml-0.5 bg-amber-500 text-white text-[10px] sm:text-xs px-1 py-0 min-w-[14px] sm:min-w-[16px] h-3.5 sm:h-4 flex items-center justify-center">
+                            {pendingCount}
+                          </Badge>
+                        )}
+                      </TabsTrigger>
+                    )
+                  })}
+                </TabsList>
+              </div>
 
               {lembarVerifikasi.map((lv) => (
                 <TabsContent key={lv.key} value={lv.key} className="mt-6">
@@ -3084,13 +3094,13 @@ export default function Home() {
           <TabsContent value="data" className="space-y-4">
             {/* Filters */}
             <Card className="shadow-sm">
-              <CardContent className="p-4">
-                <div className="flex flex-col sm:flex-row gap-3">
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <Input
-                      placeholder="Cari nama, no. registrasi, atau NISN..."
-                      className="pl-9"
+                      placeholder="Cari nama, NISN..."
+                      className="pl-9 h-9 sm:h-10 text-sm"
                       value={search}
                       onChange={(e) => {
                         setSearch(e.target.value)
@@ -3098,16 +3108,17 @@ export default function Home() {
                       }}
                     />
                   </div>
-                  <Select
-                    value={subJalurFilter}
-                    onValueChange={(v) => {
-                      setSubJalurFilter(v)
-                      setPagination(prev => ({ ...prev, page: 1 }))
-                    }}
-                  >
-                    <SelectTrigger className="w-full sm:w-[180px]">
-                      <SelectValue placeholder="Sub Jalur" />
-                    </SelectTrigger>
+                  <div className="grid grid-cols-2 sm:flex gap-2">
+                    <Select
+                      value={subJalurFilter}
+                      onValueChange={(v) => {
+                        setSubJalurFilter(v)
+                        setPagination(prev => ({ ...prev, page: 1 }))
+                      }}
+                    >
+                      <SelectTrigger className="w-full sm:w-[180px] h-9 sm:h-10 text-xs sm:text-sm">
+                        <SelectValue placeholder="Sub Jalur" />
+                      </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Semua Jalur</SelectItem>
                       {subJalurOptions.map(opt => (
@@ -3122,8 +3133,8 @@ export default function Home() {
                       setPagination(prev => ({ ...prev, page: 1 }))
                     }}
                   >
-                    <SelectTrigger className="w-full sm:w-[180px]">
-                      <SelectValue placeholder="Status Verifikasi" />
+                    <SelectTrigger className="w-full sm:w-[180px] h-9 sm:h-10 text-xs sm:text-sm">
+                      <SelectValue placeholder="Status" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Semua Status</SelectItem>
@@ -3132,6 +3143,7 @@ export default function Home() {
                       <SelectItem value="REJECTED">Ditolak</SelectItem>
                     </SelectContent>
                   </Select>
+                  </div>
                   {selectedIds.size > 0 && (
                     <div className="flex gap-2">
                       <Button
@@ -3324,34 +3336,34 @@ export default function Home() {
           <TabsContent value="diterima" className="space-y-6">
             {/* Elegant Header */}
             <Card className="overflow-hidden border-0 shadow-lg">
-              <div className="bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-600 p-6 text-white">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-600 p-4 sm:p-6 text-white">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
                   <div>
-                    <h2 className="text-2xl font-bold tracking-wide">LAPORAN PESERTA DITERIMA</h2>
-                    <p className="text-emerald-100 mt-1 text-sm">SPMB 2026 — Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
+                    <h2 className="text-lg sm:text-2xl font-bold tracking-wide">LAPORAN PESERTA DITERIMA</h2>
+                    <p className="text-emerald-100 mt-0.5 sm:mt-1 text-xs sm:text-sm">SPMB 2026 — Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
                   </div>
-                  <Button variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-white/30" onClick={() => handlePrintReport('diterima')}>
-                    <Printer className="w-4 h-4 mr-2" /> Cetak Laporan
+                  <Button variant="secondary" size="sm" className="bg-white/20 hover:bg-white/30 text-white border-white/30" onClick={() => handlePrintReport('diterima')}>
+                    <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2" /> <span className="text-xs sm:text-sm">Cetak</span>
                   </Button>
                 </div>
               </div>
-              <CardContent className="p-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-emerald-50 rounded-xl p-4 text-center border border-emerald-100">
-                    <p className="text-3xl font-bold text-emerald-700">{stats?.verified || 0}</p>
-                    <p className="text-xs text-emerald-600 font-medium mt-1">Total Diterima</p>
+              <CardContent className="p-3 sm:p-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+                  <div className="bg-emerald-50 rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-emerald-100">
+                    <p className="text-xl sm:text-3xl font-bold text-emerald-700">{stats?.verified || 0}</p>
+                    <p className="text-[10px] sm:text-xs text-emerald-600 font-medium mt-0.5 sm:mt-1">Total Diterima</p>
                   </div>
-                  <div className="bg-emerald-50 rounded-xl p-4 text-center border border-emerald-100">
-                    <p className="text-3xl font-bold text-emerald-700">{stats?.total || 0}</p>
-                    <p className="text-xs text-emerald-600 font-medium mt-1">Total Pendaftar</p>
+                  <div className="bg-emerald-50 rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-emerald-100">
+                    <p className="text-xl sm:text-3xl font-bold text-emerald-700">{stats?.total || 0}</p>
+                    <p className="text-[10px] sm:text-xs text-emerald-600 font-medium mt-0.5 sm:mt-1">Total Pendaftar</p>
                   </div>
-                  <div className="bg-emerald-50 rounded-xl p-4 text-center border border-emerald-100">
-                    <p className="text-3xl font-bold text-emerald-700">{verifiedPercent}%</p>
-                    <p className="text-xs text-emerald-600 font-medium mt-1">Persentase Diterima</p>
+                  <div className="bg-emerald-50 rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-emerald-100">
+                    <p className="text-xl sm:text-3xl font-bold text-emerald-700">{verifiedPercent}%</p>
+                    <p className="text-[10px] sm:text-xs text-emerald-600 font-medium mt-0.5 sm:mt-1">Persentase Diterima</p>
                   </div>
-                  <div className="bg-emerald-50 rounded-xl p-4 text-center border border-emerald-100">
-                    <p className="text-3xl font-bold text-emerald-700">{stats?.verifiedBySubJalur?.length || 0}</p>
-                    <p className="text-xs text-emerald-600 font-medium mt-1">Jalur Aktif</p>
+                  <div className="bg-emerald-50 rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-emerald-100">
+                    <p className="text-xl sm:text-3xl font-bold text-emerald-700">{stats?.verifiedBySubJalur?.length || 0}</p>
+                    <p className="text-[10px] sm:text-xs text-emerald-600 font-medium mt-0.5 sm:mt-1">Jalur Aktif</p>
                   </div>
                 </div>
 
@@ -3504,34 +3516,34 @@ export default function Home() {
           <TabsContent value="ditolak" className="space-y-6">
             {/* Elegant Header - Red Theme */}
             <Card className="overflow-hidden border-0 shadow-lg">
-              <div className="bg-gradient-to-r from-red-700 via-red-600 to-rose-600 p-6 text-white">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="bg-gradient-to-r from-red-700 via-red-600 to-rose-600 p-4 sm:p-6 text-white">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
                   <div>
-                    <h2 className="text-2xl font-bold tracking-wide">LAPORAN PESERTA DITOLAK</h2>
-                    <p className="text-red-100 mt-1 text-sm">SPMB 2026 — Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
+                    <h2 className="text-lg sm:text-2xl font-bold tracking-wide">LAPORAN PESERTA DITOLAK</h2>
+                    <p className="text-red-100 mt-0.5 sm:mt-1 text-xs sm:text-sm">SPMB 2026 — Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
                   </div>
-                  <Button variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-white/30" onClick={() => handlePrintReport('ditolak')}>
-                    <Printer className="w-4 h-4 mr-2" /> Cetak Laporan
+                  <Button variant="secondary" size="sm" className="bg-white/20 hover:bg-white/30 text-white border-white/30" onClick={() => handlePrintReport('ditolak')}>
+                    <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2" /> <span className="text-xs sm:text-sm">Cetak</span>
                   </Button>
                 </div>
               </div>
-              <CardContent className="p-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-red-50 rounded-xl p-4 text-center border border-red-100">
-                    <p className="text-3xl font-bold text-red-700">{stats?.rejected || 0}</p>
-                    <p className="text-xs text-red-600 font-medium mt-1">Total Ditolak</p>
+              <CardContent className="p-3 sm:p-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+                  <div className="bg-red-50 rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-red-100">
+                    <p className="text-xl sm:text-3xl font-bold text-red-700">{stats?.rejected || 0}</p>
+                    <p className="text-[10px] sm:text-xs text-red-600 font-medium mt-0.5 sm:mt-1">Total Ditolak</p>
                   </div>
-                  <div className="bg-red-50 rounded-xl p-4 text-center border border-red-100">
-                    <p className="text-3xl font-bold text-red-700">{stats?.total || 0}</p>
-                    <p className="text-xs text-red-600 font-medium mt-1">Total Pendaftar</p>
+                  <div className="bg-red-50 rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-red-100">
+                    <p className="text-xl sm:text-3xl font-bold text-red-700">{stats?.total || 0}</p>
+                    <p className="text-[10px] sm:text-xs text-red-600 font-medium mt-0.5 sm:mt-1">Total Pendaftar</p>
                   </div>
-                  <div className="bg-red-50 rounded-xl p-4 text-center border border-red-100">
-                    <p className="text-3xl font-bold text-red-700">{rejectedPercent}%</p>
-                    <p className="text-xs text-red-600 font-medium mt-1">Persentase Ditolak</p>
+                  <div className="bg-red-50 rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-red-100">
+                    <p className="text-xl sm:text-3xl font-bold text-red-700">{rejectedPercent}%</p>
+                    <p className="text-[10px] sm:text-xs text-red-600 font-medium mt-0.5 sm:mt-1">Persentase Ditolak</p>
                   </div>
-                  <div className="bg-red-50 rounded-xl p-4 text-center border border-red-100">
-                    <p className="text-3xl font-bold text-red-700">{stats?.rejectedBySubJalur?.length || 0}</p>
-                    <p className="text-xs text-red-600 font-medium mt-1">Jalur Aktif</p>
+                  <div className="bg-red-50 rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-red-100">
+                    <p className="text-xl sm:text-3xl font-bold text-red-700">{stats?.rejectedBySubJalur?.length || 0}</p>
+                    <p className="text-[10px] sm:text-xs text-red-600 font-medium mt-0.5 sm:mt-1">Jalur Aktif</p>
                   </div>
                 </div>
 
@@ -3669,12 +3681,12 @@ export default function Home() {
           <TabsContent value="pengaturan" className="space-y-6">
             {/* Header */}
             <Card className="overflow-hidden border-0 shadow-lg">
-              <div className="bg-gradient-to-r from-sky-700 via-sky-600 to-cyan-600 p-6 text-white">
-                <div className="flex items-center gap-3">
-                  <Settings className="w-8 h-8" />
+              <div className="bg-gradient-to-r from-sky-700 via-sky-600 to-cyan-600 p-4 sm:p-6 text-white">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <Settings className="w-6 h-6 sm:w-8 sm:h-8" />
                   <div>
-                    <h2 className="text-2xl font-bold tracking-wide">PENGATURAN KUOTA</h2>
-                    <p className="text-sky-100 mt-1 text-sm">SPMB 2026 — Atur kuota siswa dan persentase jalur pendaftaran</p>
+                    <h2 className="text-lg sm:text-2xl font-bold tracking-wide">PENGATURAN KUOTA</h2>
+                    <p className="text-sky-100 mt-0.5 sm:mt-1 text-xs sm:text-sm">SPMB 2026 — Atur kuota siswa dan persentase jalur pendaftaran</p>
                   </div>
                 </div>
               </div>
@@ -4113,13 +4125,13 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="border-t bg-gradient-to-r from-slate-900 via-emerald-900 to-slate-900 mt-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-1 sm:gap-2">
             <div className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <p className="text-sm text-emerald-100 font-medium">&copy; 2026 SPMB Verifikasi System</p>
+              <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" />
+              <p className="text-xs sm:text-sm text-emerald-100 font-medium">&copy; 2026 SPMB Verifikasi System</p>
             </div>
-            <p className="text-xs text-emerald-200/60">Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
+            <p className="text-[10px] sm:text-xs text-emerald-200/60">Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
           </div>
         </div>
       </footer>
