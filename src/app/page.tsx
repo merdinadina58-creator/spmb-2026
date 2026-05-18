@@ -286,10 +286,10 @@ const SUB_JALUR_COLORS: Record<string, string> = {
   'Domisili': 'bg-sky-100 text-sky-800 border-sky-200',
   'Keluarga Tidak Mampu': 'bg-orange-100 text-orange-800 border-orange-200',
   'Afirmasi': 'bg-orange-100 text-orange-800 border-orange-200',
+  'Disabilitas': 'bg-purple-100 text-purple-800 border-purple-200',
   'Anak Guru': 'bg-violet-100 text-violet-800 border-violet-200',
   'Prestasi': 'bg-emerald-100 text-emerald-800 border-emerald-200',
   'Prestasi Non Akademik': 'bg-teal-100 text-teal-800 border-teal-200',
-  'Zonasi': 'bg-pink-100 text-pink-800 border-pink-200',
   'Mutasi': 'bg-cyan-100 text-cyan-800 border-cyan-200',
 }
 
@@ -330,107 +330,118 @@ function isKKKurangSetahun(terbitKK: string): boolean {
   return diffDays < 365
 }
 
-// Lembar Verifikasi configuration
-const LEMBAR_VERIFIKASI = [
-  {
-    key: 'domisili',
-    label: 'Domisili',
-    icon: MapPin,
-    subJalurFilter: 'Domisili',
-    color: 'sky',
-    bgColor: 'bg-sky-50',
-    borderColor: 'border-sky-500',
-    headerBg: 'bg-sky-50/80',
-    iconBg: 'bg-sky-100',
-    iconColor: 'text-sky-600',
-    btnColor: 'bg-sky-600 hover:bg-sky-700',
-    description: 'Verifikasi pendaftar jalur Domisili',
-  },
-  {
-    key: 'afirmasi',
-    label: 'Afirmasi (KTM)',
-    icon: Heart,
-    subJalurFilter: 'Keluarga Tidak Mampu',
-    color: 'orange',
-    bgColor: 'bg-orange-50',
-    borderColor: 'border-orange-500',
-    headerBg: 'bg-orange-50/80',
-    iconBg: 'bg-orange-100',
-    iconColor: 'text-orange-600',
-    btnColor: 'bg-orange-600 hover:bg-orange-700',
-    description: 'Verifikasi pendaftar jalur Afirmasi — Keluarga Tidak Mampu (KTM)',
-  },
-  {
-    key: 'mutasi',
-    label: 'Mutasi',
-    icon: ArrowLeftRight,
-    subJalurFilter: 'Mutasi',
-    color: 'cyan',
-    bgColor: 'bg-cyan-50',
-    borderColor: 'border-cyan-500',
-    headerBg: 'bg-cyan-50/80',
-    iconBg: 'bg-cyan-100',
-    iconColor: 'text-cyan-600',
-    btnColor: 'bg-cyan-600 hover:bg-cyan-700',
-    description: 'Verifikasi pendaftar jalur Mutasi (Perpindahan Tugas Orang Tua)',
-  },
-  {
-    key: 'prestasi',
-    label: 'Prestasi Nilai Rapor',
-    icon: Award,
-    subJalurFilter: 'Prestasi',
-    color: 'emerald',
-    bgColor: 'bg-emerald-50',
-    borderColor: 'border-emerald-500',
-    headerBg: 'bg-emerald-50/80',
-    iconBg: 'bg-emerald-100',
-    iconColor: 'text-emerald-600',
-    btnColor: 'bg-emerald-600 hover:bg-emerald-700',
-    description: 'Verifikasi pendaftar jalur Prestasi Nilai Rapor (Akademik)',
-  },
-  {
-    key: 'prestasi-non-akademik',
-    label: 'Prestasi Non Akademik',
-    icon: Trophy,
-    subJalurFilter: 'Prestasi Non Akademik',
-    color: 'teal',
-    bgColor: 'bg-teal-50',
-    borderColor: 'border-teal-500',
-    headerBg: 'bg-teal-50/80',
-    iconBg: 'bg-teal-100',
-    iconColor: 'text-teal-600',
-    btnColor: 'bg-teal-600 hover:bg-teal-700',
-    description: 'Verifikasi pendaftar jalur Prestasi Non Akademik (Kejuaraan/Lomba)',
-  },
-  {
-    key: 'anak-guru',
-    label: 'Anak Guru',
-    icon: UserCog,
-    subJalurFilter: 'Anak Guru',
-    color: 'violet',
-    bgColor: 'bg-violet-50',
-    borderColor: 'border-violet-500',
-    headerBg: 'bg-violet-50/80',
-    iconBg: 'bg-violet-100',
-    iconColor: 'text-violet-600',
-    btnColor: 'bg-violet-600 hover:bg-violet-700',
-    description: 'Verifikasi pendaftar jalur Anak Guru',
-  },
-  {
-    key: 'zonasi',
-    label: 'Zonasi',
-    icon: BookOpen,
-    subJalurFilter: 'Zonasi',
-    color: 'pink',
-    bgColor: 'bg-pink-50',
-    borderColor: 'border-pink-500',
-    headerBg: 'bg-pink-50/80',
-    iconBg: 'bg-pink-100',
-    iconColor: 'text-pink-600',
-    btnColor: 'bg-pink-600 hover:bg-pink-700',
-    description: 'Verifikasi pendaftar jalur Zonasi',
-  },
+// Lembar Verifikasi — built dynamically from jalurConfigs
+// Icon and color mapping by jalur nama keywords
+const JALUR_ICON_MAP: Record<string, any> = {
+  'domisili': MapPin,
+  'afirmasi': Heart,
+  'ktm': Heart,
+  'keluarga tidak mampu': Heart,
+  'disabilitas': BookOpen,
+  'penyandang disabilitas': BookOpen,
+  'anak guru': UserCog,
+  'mutasi': ArrowLeftRight,
+  'perpindahan': ArrowLeftRight,
+  'prestasi nilai rapor': Award,
+  'prestasi akademik': Award,
+  'prestasi': Award,
+  'non akademik': Trophy,
+  'nonakademik': Trophy,
+  'bencana': AlertTriangle,
+}
+
+const JALUR_COLOR_MAP: Record<string, { color: string; bgColor: string; borderColor: string; headerBg: string; iconBg: string; iconColor: string; btnColor: string }> = {
+  'domisili': { color: 'sky', bgColor: 'bg-sky-50', borderColor: 'border-sky-500', headerBg: 'bg-sky-50/80', iconBg: 'bg-sky-100', iconColor: 'text-sky-600', btnColor: 'bg-sky-600 hover:bg-sky-700' },
+  'afirmasi': { color: 'orange', bgColor: 'bg-orange-50', borderColor: 'border-orange-500', headerBg: 'bg-orange-50/80', iconBg: 'bg-orange-100', iconColor: 'text-orange-600', btnColor: 'bg-orange-600 hover:bg-orange-700' },
+  'ktm': { color: 'orange', bgColor: 'bg-orange-50', borderColor: 'border-orange-500', headerBg: 'bg-orange-50/80', iconBg: 'bg-orange-100', iconColor: 'text-orange-600', btnColor: 'bg-orange-600 hover:bg-orange-700' },
+  'keluarga tidak mampu': { color: 'orange', bgColor: 'bg-orange-50', borderColor: 'border-orange-500', headerBg: 'bg-orange-50/80', iconBg: 'bg-orange-100', iconColor: 'text-orange-600', btnColor: 'bg-orange-600 hover:bg-orange-700' },
+  'disabilitas': { color: 'purple', bgColor: 'bg-purple-50', borderColor: 'border-purple-500', headerBg: 'bg-purple-50/80', iconBg: 'bg-purple-100', iconColor: 'text-purple-600', btnColor: 'bg-purple-600 hover:bg-purple-700' },
+  'penyandang disabilitas': { color: 'purple', bgColor: 'bg-purple-50', borderColor: 'border-purple-500', headerBg: 'bg-purple-50/80', iconBg: 'bg-purple-100', iconColor: 'text-purple-600', btnColor: 'bg-purple-600 hover:bg-purple-700' },
+  'anak guru': { color: 'violet', bgColor: 'bg-violet-50', borderColor: 'border-violet-500', headerBg: 'bg-violet-50/80', iconBg: 'bg-violet-100', iconColor: 'text-violet-600', btnColor: 'bg-violet-600 hover:bg-violet-700' },
+  'mutasi': { color: 'cyan', bgColor: 'bg-cyan-50', borderColor: 'border-cyan-500', headerBg: 'bg-cyan-50/80', iconBg: 'bg-cyan-100', iconColor: 'text-cyan-600', btnColor: 'bg-cyan-600 hover:bg-cyan-700' },
+  'perpindahan': { color: 'cyan', bgColor: 'bg-cyan-50', borderColor: 'border-cyan-500', headerBg: 'bg-cyan-50/80', iconBg: 'bg-cyan-100', iconColor: 'text-cyan-600', btnColor: 'bg-cyan-600 hover:bg-cyan-700' },
+  'prestasi nilai rapor': { color: 'emerald', bgColor: 'bg-emerald-50', borderColor: 'border-emerald-500', headerBg: 'bg-emerald-50/80', iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600', btnColor: 'bg-emerald-600 hover:bg-emerald-700' },
+  'prestasi akademik': { color: 'emerald', bgColor: 'bg-emerald-50', borderColor: 'border-emerald-500', headerBg: 'bg-emerald-50/80', iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600', btnColor: 'bg-emerald-600 hover:bg-emerald-700' },
+  'prestasi non akademik': { color: 'teal', bgColor: 'bg-teal-50', borderColor: 'border-teal-500', headerBg: 'bg-teal-50/80', iconBg: 'bg-teal-100', iconColor: 'text-teal-600', btnColor: 'bg-teal-600 hover:bg-teal-700' },
+  'nonakademik': { color: 'teal', bgColor: 'bg-teal-50', borderColor: 'border-teal-500', headerBg: 'bg-teal-50/80', iconBg: 'bg-teal-100', iconColor: 'text-teal-600', btnColor: 'bg-teal-600 hover:bg-teal-700' },
+  'bencana': { color: 'red', bgColor: 'bg-red-50', borderColor: 'border-red-500', headerBg: 'bg-red-50/80', iconBg: 'bg-red-100', iconColor: 'text-red-600', btnColor: 'bg-red-600 hover:bg-red-700' },
+}
+
+// Fallback colors for custom jalur (cycling through these)
+const FALLBACK_COLORS = [
+  { color: 'rose', bgColor: 'bg-rose-50', borderColor: 'border-rose-500', headerBg: 'bg-rose-50/80', iconBg: 'bg-rose-100', iconColor: 'text-rose-600', btnColor: 'bg-rose-600 hover:bg-rose-700' },
+  { color: 'indigo', bgColor: 'bg-indigo-50', borderColor: 'border-indigo-500', headerBg: 'bg-indigo-50/80', iconBg: 'bg-indigo-100', iconColor: 'text-indigo-600', btnColor: 'bg-indigo-600 hover:bg-indigo-700' },
+  { color: 'amber', bgColor: 'bg-amber-50', borderColor: 'border-amber-500', headerBg: 'bg-amber-50/80', iconBg: 'bg-amber-100', iconColor: 'text-amber-600', btnColor: 'bg-amber-600 hover:bg-amber-700' },
+  { color: 'lime', bgColor: 'bg-lime-50', borderColor: 'border-lime-500', headerBg: 'bg-lime-50/80', iconBg: 'bg-lime-100', iconColor: 'text-lime-600', btnColor: 'bg-lime-600 hover:bg-lime-700' },
+  { color: 'fuchsia', bgColor: 'bg-fuchsia-50', borderColor: 'border-fuchsia-500', headerBg: 'bg-fuchsia-50/80', iconBg: 'bg-fuchsia-100', iconColor: 'text-fuchsia-600', btnColor: 'bg-fuchsia-600 hover:bg-fuchsia-700' },
 ]
+
+// subJalurFilter mapping — maps jalur nama to the subJalur value used in Registration data
+// If a jalur name doesn't match the subJalur value in the data, add it here
+const JALUR_SUB_FILTER_MAP: Record<string, string> = {
+  'Afirmasi (KTM)': 'Keluarga Tidak Mampu',
+  'Keluarga Tidak Mampu': 'Keluarga Tidak Mampu',
+  'Penyandang Disabilitas': 'Disabilitas',
+  'Mutasi Orang tua/ Wali': 'Mutasi',
+  'Prestasi Akademik': 'Prestasi',
+  'Prestasi Nonakademik': 'Prestasi Non Akademik',
+  'Terdampak Bencana Alam': 'Terdampak Bencana Alam',
+}
+
+function getJalurIcon(nama: string) {
+  const lower = nama.toLowerCase()
+  for (const [keyword, icon] of Object.entries(JALUR_ICON_MAP)) {
+    if (lower.includes(keyword)) return icon
+  }
+  return ClipboardCheck // default icon
+}
+
+function getJalurColors(nama: string, index: number) {
+  const lower = nama.toLowerCase()
+  for (const [keyword, colors] of Object.entries(JALUR_COLOR_MAP)) {
+    if (lower.includes(keyword)) return colors
+  }
+  return FALLBACK_COLORS[index % FALLBACK_COLORS.length]
+}
+
+function getJalurSubFilter(nama: string) {
+  return JALUR_SUB_FILTER_MAP[nama] || nama
+}
+
+// Build Lembar Verifikasi config from jalurConfigs
+function buildLembarVerifikasi(jalurConfigs: Array<{ id: string; nama: string; urutan: number; aktif: boolean }>) {
+  const active = jalurConfigs.filter(j => j.aktif)
+  return active.map((jalur, idx) => {
+    const key = jalur.nama.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+    const colors = getJalurColors(jalur.nama, idx)
+    const icon = getJalurIcon(jalur.nama)
+    const subJalurFilter = getJalurSubFilter(jalur.nama)
+    return {
+      key,
+      label: jalur.nama,
+      icon,
+      subJalurFilter,
+      ...colors,
+      description: `Verifikasi pendaftar jalur ${jalur.nama}`,
+    }
+  })
+}
+
+// Type for Lembar Verifikasi config
+interface LembarVerifikasiConfig {
+  key: string
+  label: string
+  icon: any
+  subJalurFilter: string
+  color: string
+  bgColor: string
+  borderColor: string
+  headerBg: string
+  iconBg: string
+  iconColor: string
+  btnColor: string
+  description: string
+}
 
 function StatBar({ label, count, total, color }: { label: string; count: number; total: number; color: string }) {
   return (
@@ -533,12 +544,14 @@ function KekuranganVerifSelect({ value, onChange }: { value: string; onChange: (
 // Lembar Verifikasi Sheet Component
 function LembarVerifikasiSheet({
   config,
+  subJalurOptions,
   onVerify,
   onBulkVerify,
   onViewDetail,
   toast,
 }: {
-  config: typeof LEMBAR_VERIFIKASI[number]
+  config: LembarVerifikasiConfig
+  subJalurOptions: Array<{ label: string; value: string }>
   onVerify: (id: string, action: 'VERIFIED' | 'REJECTED') => void
   onBulkVerify: (ids: string[], action: 'VERIFIED' | 'REJECTED') => void
   onViewDetail: (reg: Registration) => void
@@ -1580,13 +1593,9 @@ function LembarVerifikasiSheet({
                     <Select value={editForm.subJalur || ''} onValueChange={v => setEditForm({...editForm, subJalur: v})}>
                       <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih Sub Jalur" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Domisili">Domisili</SelectItem>
-                        <SelectItem value="Keluarga Tidak Mampu">Keluarga Tidak Mampu</SelectItem>
-                        <SelectItem value="Mutasi">Mutasi</SelectItem>
-                        <SelectItem value="Prestasi">Prestasi</SelectItem>
-                        <SelectItem value="Prestasi Non Akademik">Prestasi Non Akademik</SelectItem>
-                        <SelectItem value="Anak Guru">Anak Guru</SelectItem>
-                        <SelectItem value="Zonasi">Zonasi</SelectItem>
+                        {subJalurOptions.map(opt => (
+                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -1824,7 +1833,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState('dashboard')
 
   // Lembar verifikasi sub-tab
-  const [lembarTab, setLembarTab] = useState('domisili')
+  const [lembarTab, setLembarTab] = useState('')
 
   // Edit dialog state (Home component)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
@@ -1856,6 +1865,26 @@ export default function Home() {
   const [newJalurNama, setNewJalurNama] = useState('')
   const [newJalurPersentase, setNewJalurPersentase] = useState(0)
   const [addJalurOpen, setAddJalurOpen] = useState(false)
+
+  // Build lembar verifikasi from jalurConfigs (must be after jalurConfigs declaration)
+  const lembarVerifikasi = buildLembarVerifikasi(jalurConfigs)
+
+  // Available subJalur options for dropdowns (derived from jalurConfigs)
+  const subJalurOptions = jalurConfigs
+    .filter(j => j.aktif)
+    .map(j => {
+      // Map jalur nama to the subJalur value used in data
+      const filter = getJalurSubFilter(j.nama)
+      return { label: j.nama, value: filter }
+    })
+
+  // Auto-set lembarTab to first tab when configs load
+  useEffect(() => {
+    if (jalurConfigs.length > 0 && !lembarTab) {
+      const firstKey = lembarVerifikasi[0]?.key
+      if (firstKey) setLembarTab(firstKey)
+    }
+  }, [jalurConfigs, lembarTab, lembarVerifikasi])
 
   // Portal Sync state
   const [portalSyncOpen, setPortalSyncOpen] = useState(false)
@@ -1900,7 +1929,7 @@ export default function Home() {
     if (noRegMatch) result['noRegistrasi'] = noRegMatch[1]
 
     // Sub Jalur - detect from the text (Domisili, Afirmasi, Prestasi, etc.)
-    const subJalurOptions = ['Domisili', 'Afirmasi', 'Keluarga Tidak Mampu', 'Prestasi Non Akademik', 'Prestasi', 'Zonasi', 'Mutasi', 'Anak Guru']
+    const subJalurOptions = ['Domisili', 'Afirmasi', 'Keluarga Tidak Mampu', 'Disabilitas', 'Prestasi Non Akademik', 'Prestasi', 'Mutasi', 'Anak Guru']
     // Afirmasi = Keluarga Tidak Mampu, so map it
     const afirmasiMap: Record<string, string> = { 'Afirmasi': 'Keluarga Tidak Mampu' }
     for (const jalur of subJalurOptions) {
@@ -2925,7 +2954,7 @@ export default function Home() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {LEMBAR_VERIFIKASI.map((lv) => {
+                  {lembarVerifikasi.map((lv) => {
                     const LvIcon = lv.icon
                     const pendingCount = getPendingForLembar(lv.subJalurFilter)
                     return (
@@ -2951,7 +2980,7 @@ export default function Home() {
           <TabsContent value="lembar-verifikasi" className="space-y-6">
             <Tabs value={lembarTab} onValueChange={setLembarTab}>
               <TabsList className="flex-wrap h-auto gap-1">
-                {LEMBAR_VERIFIKASI.map((lv) => {
+                {lembarVerifikasi.map((lv) => {
                   const LvIcon = lv.icon
                   const pendingCount = getPendingForLembar(lv.subJalurFilter)
                   return (
@@ -2973,10 +3002,11 @@ export default function Home() {
                 })}
               </TabsList>
 
-              {LEMBAR_VERIFIKASI.map((lv) => (
+              {lembarVerifikasi.map((lv) => (
                 <TabsContent key={lv.key} value={lv.key} className="mt-6">
                   <LembarVerifikasiSheet
                     config={lv}
+                    subJalurOptions={subJalurOptions}
                     onVerify={() => {}}
                     onBulkVerify={() => {}}
                     onViewDetail={handleViewDetail}
@@ -3017,13 +3047,9 @@ export default function Home() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Semua Jalur</SelectItem>
-                      <SelectItem value="Domisili">Domisili</SelectItem>
-                      <SelectItem value="Keluarga Tidak Mampu">Keluarga Tidak Mampu</SelectItem>
-                      <SelectItem value="Anak Guru">Anak Guru</SelectItem>
-                      <SelectItem value="Prestasi">Prestasi</SelectItem>
-                      <SelectItem value="Prestasi Non Akademik">Prestasi Non Akademik</SelectItem>
-                      <SelectItem value="Mutasi">Mutasi</SelectItem>
-                      <SelectItem value="Zonasi">Zonasi</SelectItem>
+                      {subJalurOptions.map(opt => (
+                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                   <Select
@@ -3303,13 +3329,9 @@ export default function Home() {
                     <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Sub Jalur" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Semua Jalur</SelectItem>
-                      <SelectItem value="Domisili">Domisili</SelectItem>
-                      <SelectItem value="Keluarga Tidak Mampu">Keluarga Tidak Mampu</SelectItem>
-                      <SelectItem value="Mutasi">Mutasi</SelectItem>
-                      <SelectItem value="Prestasi">Prestasi</SelectItem>
-                      <SelectItem value="Prestasi Non Akademik">Prestasi Non Akademik</SelectItem>
-                      <SelectItem value="Anak Guru">Anak Guru</SelectItem>
-                      <SelectItem value="Zonasi">Zonasi</SelectItem>
+                      {subJalurOptions.map(opt => (
+                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                   <Select value={diterimaFilterSekolah} onValueChange={setDiterimaFilterSekolah}>
@@ -3487,13 +3509,9 @@ export default function Home() {
                     <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Sub Jalur" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Semua Jalur</SelectItem>
-                      <SelectItem value="Domisili">Domisili</SelectItem>
-                      <SelectItem value="Keluarga Tidak Mampu">Keluarga Tidak Mampu</SelectItem>
-                      <SelectItem value="Mutasi">Mutasi</SelectItem>
-                      <SelectItem value="Prestasi">Prestasi</SelectItem>
-                      <SelectItem value="Prestasi Non Akademik">Prestasi Non Akademik</SelectItem>
-                      <SelectItem value="Anak Guru">Anak Guru</SelectItem>
-                      <SelectItem value="Zonasi">Zonasi</SelectItem>
+                      {subJalurOptions.map(opt => (
+                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                   <div className="sm:ml-auto text-sm text-gray-500">
@@ -3994,7 +4012,7 @@ export default function Home() {
                     <Input
                       value={newJalurNama}
                       onChange={(e) => setNewJalurNama(e.target.value)}
-                      placeholder="Contoh: Zonasi"
+                      placeholder="Contoh: Zonasi, Perpindahan Orang Tua"
                       className="mt-1"
                     />
                   </div>
@@ -4858,13 +4876,9 @@ export default function Home() {
                     <Select value={editForm.subJalur || ''} onValueChange={v => setEditForm({...editForm, subJalur: v})}>
                       <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih Sub Jalur" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Domisili">Domisili</SelectItem>
-                        <SelectItem value="Keluarga Tidak Mampu">Keluarga Tidak Mampu</SelectItem>
-                        <SelectItem value="Mutasi">Mutasi</SelectItem>
-                        <SelectItem value="Prestasi">Prestasi</SelectItem>
-                        <SelectItem value="Prestasi Non Akademik">Prestasi Non Akademik</SelectItem>
-                        <SelectItem value="Anak Guru">Anak Guru</SelectItem>
-                        <SelectItem value="Zonasi">Zonasi</SelectItem>
+                        {subJalurOptions.map(opt => (
+                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
