@@ -4054,24 +4054,22 @@ export default function Home() {
                                 </span>
                               </TableCell>
                               <TableCell className="text-center">
-                                {jalurRank > 0 ? (
-                                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold bg-sky-100 text-sky-700">
-                                    {jalurRank}
-                                  </span>
-                                ) : (
-                                  <span className="text-gray-300">-</span>
-                                )}
+                                <div className="flex flex-col items-center gap-0.5">
+                                  <Badge variant="outline" className={`text-[10px] ${SUB_JALUR_COLORS[r.subJalur as string] || 'bg-gray-100 text-gray-700 border-gray-200'}`}>
+                                    {r.subJalur as string}
+                                  </Badge>
+                                  {jalurRank > 0 && (
+                                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-[9px] font-bold bg-sky-100 text-sky-700">
+                                      #{jalurRank}
+                                    </span>
+                                  )}
+                                </div>
                               </TableCell>
                               <TableCell>
                                 <div>
                                   <p className="text-xs font-medium text-gray-900">{r.nama as string}</p>
                                   <p className="text-[10px] text-gray-400">NISN: {r.nisn as string}</p>
                                 </div>
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant="outline" className={`text-[10px] ${SUB_JALUR_COLORS[r.subJalur as string] || 'bg-gray-100 text-gray-700 border-gray-200'}`}>
-                                  {r.subJalur as string}
-                                </Badge>
                               </TableCell>
                               <TableCell className="text-xs text-gray-700">{r.namaSekolahPilihan as string}</TableCell>
                               <TableCell className="text-xs text-gray-600">{r.jurusan as string}</TableCell>
