@@ -1232,14 +1232,19 @@ function LembarVerifikasiSheet({
                             className="w-32 px-1.5 py-0.5 text-sm border border-sky-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
                             value={editingValue}
                             onChange={(e) => {
-                              const newDate = e.target.value
-                              setEditingValue(newDate)
-                              // Auto-commit when date is selected
-                              if (newDate) {
-                                commitTerbitKK(reg.id, newDate)
+                              setEditingValue(e.target.value)
+                            }}
+                            onBlur={() => {
+                              if (editingValue) {
+                                commitTerbitKK(reg.id, editingValue)
+                              } else {
+                                cancelEdit()
                               }
                             }}
                             onKeyDown={(e) => {
+                              if (e.key === 'Enter' && editingValue) {
+                                commitTerbitKK(reg.id, editingValue)
+                              }
                               if (e.key === 'Escape') cancelEdit()
                             }}
                             autoFocus
