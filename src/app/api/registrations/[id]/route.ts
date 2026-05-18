@@ -1,6 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
+// Hitung Lama KK dari tanggal Terbit KK
+function hitungLamaKK(terbitKK: string): string {
+  if (!terbitKK) return ''
+  const terbit = new Date(terbitKK)
+  if (isNaN(terbit.getTime())) return ''
+  const now = new Date()
+  let years = now.getFullYear() - terbit.getFullYear()
+  let months = now.getMonth() - terbit.getMonth()
+  let days = now.getDate() - terbit.getDate()
+  if (days < 0) {
+    months--
+    const prevMonth = new Date(now.getFullYear(), now.getMonth(), 0)
+    days += prevMonth.getDate()
+  }
+  if (months < 0) {
+    years--
+    months += 12
+  }
+  const parts: string[] = []
+  if (years > 0) parts.push(`${years} Tahun`)
+  if (months > 0) parts.push(`${months} Bulan`)
+  if (days > 0 && years === 0) parts.push(`${days} Hari`)
+  if (parts.length === 0) parts.push('0 Hari')
+  return parts.join(' ')
+}
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -35,6 +61,14 @@ export async function PATCH(
         if (field in body) {
           updateData[field] = body[field] ?? null;
         }
+      }
+    }
+
+    // Auto-calculate lamaKK when terbitKK is provided
+    if ('terbitKK' in updateData && updateData.terbitKK) {
+      const calculatedLama = hitungLamaKK(updateData.terbitKK);
+      if (calculatedLama) {
+        updateData['lamaKK'] = calculatedLama;
       }
     }
 

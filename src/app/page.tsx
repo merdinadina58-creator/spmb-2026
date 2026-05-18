@@ -82,6 +82,7 @@ import {
   CalendarDays,
   IdCard,
   Pencil,
+  CalendarClock,
 } from 'lucide-react'
 
 interface Registration {
@@ -280,6 +281,43 @@ const SUB_JALUR_COLORS: Record<string, string> = {
   'Prestasi Non Akademik': 'bg-teal-100 text-teal-800 border-teal-200',
   'Zonasi': 'bg-pink-100 text-pink-800 border-pink-200',
   'Mutasi': 'bg-cyan-100 text-cyan-800 border-cyan-200',
+}
+
+// Hitung Lama KK dari tanggal Terbit KK
+function hitungLamaKK(terbitKK: string): string {
+  if (!terbitKK) return ''
+  const terbit = new Date(terbitKK)
+  if (isNaN(terbit.getTime())) return ''
+  const now = new Date()
+  let years = now.getFullYear() - terbit.getFullYear()
+  let months = now.getMonth() - terbit.getMonth()
+  let days = now.getDate() - terbit.getDate()
+  if (days < 0) {
+    months--
+    const prevMonth = new Date(now.getFullYear(), now.getMonth(), 0)
+    days += prevMonth.getDate()
+  }
+  if (months < 0) {
+    years--
+    months += 12
+  }
+  const parts: string[] = []
+  if (years > 0) parts.push(`${years} Tahun`)
+  if (months > 0) parts.push(`${months} Bulan`)
+  if (days > 0 && years === 0) parts.push(`${days} Hari`)
+  if (parts.length === 0) parts.push('0 Hari')
+  return parts.join(' ')
+}
+
+// Cek apakah KK kurang dari 1 tahun
+function isKKKurangSetahun(terbitKK: string): boolean {
+  if (!terbitKK) return false
+  const terbit = new Date(terbitKK)
+  if (isNaN(terbit.getTime())) return false
+  const now = new Date()
+  const diffMs = now.getTime() - terbit.getTime()
+  const diffDays = diffMs / (1000 * 60 * 60 * 24)
+  return diffDays < 365
 }
 
 // Lembar Verifikasi configuration
@@ -1041,9 +1079,22 @@ function LembarVerifikasiSheet({
                             className="w-32 px-1.5 py-0.5 text-sm border border-sky-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
                             value={editingValue}
                             onChange={(e) => setEditingValue(e.target.value)}
-                            onBlur={() => commitEdit(reg.id, 'terbitKK')}
+                            onBlur={() => {
+                              commitEdit(reg.id, 'terbitKK')
+                              // Auto-calculate and save lamaKK
+                              const calculated = hitungLamaKK(editingValue)
+                              if (calculated) {
+                                commitEditDirect(reg.id, 'lamaKK', calculated)
+                              }
+                            }}
                             onKeyDown={(e) => {
-                              if (e.key === 'Enter') commitEdit(reg.id, 'terbitKK')
+                              if (e.key === 'Enter') {
+                                commitEdit(reg.id, 'terbitKK')
+                                const calculated = hitungLamaKK(editingValue)
+                                if (calculated) {
+                                  commitEditDirect(reg.id, 'lamaKK', calculated)
+                                }
+                              }
                               if (e.key === 'Escape') cancelEdit()
                             }}
                             autoFocus
@@ -1058,30 +1109,24 @@ function LembarVerifikasiSheet({
                           </span>
                         )}
                       </TableCell>
-                      {/* Lama KK */}
+                      {/* Lama KK - Auto-calculated from Terbit KK */}
                       <TableCell className="text-sm">
-                        {editingCell === `${reg.id}-lamaKK` ? (
-                          <input
-                            type="text"
-                            className="w-20 px-1.5 py-0.5 text-sm border border-sky-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
-                            value={editingValue}
-                            onChange={(e) => setEditingValue(e.target.value)}
-                            onBlur={() => commitEdit(reg.id, 'lamaKK')}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') commitEdit(reg.id, 'lamaKK')
-                              if (e.key === 'Escape') cancelEdit()
-                            }}
-                            autoFocus
-                          />
-                        ) : (
-                          <span
-                            className="cursor-pointer hover:bg-sky-50 px-1 py-0.5 rounded inline-flex items-center gap-1 group"
-                            onClick={() => startEditing(reg.id, 'lamaKK', reg.lamaKK || '')}
-                          >
-                            {reg.lamaKK || '-'}
-                            <Pencil className="w-3 h-3 text-gray-300 group-hover:text-sky-500" />
-                          </span>
-                        )}
+                        <span
+                          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium ${
+                            !reg.terbitKK ? 'text-gray-400' :
+                            isKKKurangSetahun(reg.terbitKK)
+                              ? 'bg-red-100 text-red-700 border border-red-200'
+                              : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                          }`}
+                          title={reg.terbitKK ? `Terbit: ${reg.terbitKK}` : undefined}
+                        >
+                          {reg.terbitKK ? (
+                            <>
+                              <CalendarClock className="w-3 h-3" />
+                              {reg.lamaKK || hitungLamaKK(reg.terbitKK) || '-'}
+                            </>
+                          ) : '-'}
+                        </span>
                       </TableCell>
                       {/* No. Registrasi */}
                       <TableCell className="font-mono text-sm">{reg.noRegistrasi}</TableCell>
@@ -3390,10 +3435,29 @@ export default function Home() {
                         <p className="text-sm">{detailTarget.terbitKK}</p>
                       </div>
                     )}
-                    {detailTarget.lamaKK && (
-                      <div className="bg-gray-50 rounded-lg p-2">
-                        <label className="text-xs text-gray-500 font-medium">Lama KK</label>
-                        <p className="text-sm">{detailTarget.lamaKK}</p>
+                    {(detailTarget.terbitKK || detailTarget.lamaKK) && (
+                      <div className={`rounded-lg p-2 ${
+                        detailTarget.terbitKK && isKKKurangSetahun(detailTarget.terbitKK)
+                          ? 'bg-red-50 border border-red-200'
+                          : 'bg-emerald-50 border border-emerald-200'
+                      }`}>
+                        <label className={`text-xs font-medium flex items-center gap-1 ${
+                          detailTarget.terbitKK && isKKKurangSetahun(detailTarget.terbitKK)
+                            ? 'text-red-600'
+                            : 'text-emerald-600'
+                        }`}>
+                          <CalendarClock className="w-3 h-3" /> Lama KK
+                        </label>
+                        <p className={`text-sm font-bold ${
+                          detailTarget.terbitKK && isKKKurangSetahun(detailTarget.terbitKK)
+                            ? 'text-red-700'
+                            : 'text-emerald-700'
+                        }`}>
+                          {detailTarget.lamaKK || (detailTarget.terbitKK ? hitungLamaKK(detailTarget.terbitKK) : '-')}
+                        </p>
+                        {detailTarget.terbitKK && isKKKurangSetahun(detailTarget.terbitKK) && (
+                          <p className="text-xs text-red-500 mt-0.5">⚠ KK kurang dari 1 tahun</p>
+                        )}
                       </div>
                     )}
                     {detailTarget.dokumen && (
