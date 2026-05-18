@@ -89,6 +89,10 @@ import {
   Settings,
   Plus,
   Save,
+  Globe,
+  RefreshCw,
+  Lock,
+  Mail,
 } from 'lucide-react'
 
 interface Registration {
@@ -1853,6 +1857,15 @@ export default function Home() {
   const [newJalurPersentase, setNewJalurPersentase] = useState(0)
   const [addJalurOpen, setAddJalurOpen] = useState(false)
 
+  // Portal Sync state
+  const [portalSyncOpen, setPortalSyncOpen] = useState(false)
+  const [portalSyncEmail, setPortalSyncEmail] = useState('')
+  const [portalSyncPassword, setPortalSyncPassword] = useState('')
+  const [portalSyncStatus, setPortalSyncStatus] = useState('accepted')
+  const [portalSyncPages, setPortalSyncPages] = useState(10)
+  const [portalSyncing, setPortalSyncing] = useState(false)
+  const [portalSyncResult, setPortalSyncResult] = useState<{ success: boolean; message: string; created?: number; updated?: number; unchanged?: number; total?: number } | null>(null)
+
   // Portal SPMB text parser
   const parsePortalText = (text: string): Record<string, string> => {
     const result: Record<string, string> = {}
@@ -2229,6 +2242,54 @@ export default function Home() {
       }
     } catch {
       toast({ title: 'Gagal', description: 'Gagal mengubah status jalur', variant: 'destructive' })
+    }
+  }
+
+  // Portal Sync function
+  const handlePortalSync = async () => {
+    if (!portalSyncEmail.trim() || !portalSyncPassword.trim()) {
+      toast({ title: 'Gagal', description: 'Email dan password portal wajib diisi', variant: 'destructive' })
+      return
+    }
+    setPortalSyncing(true)
+    setPortalSyncResult(null)
+    try {
+      const res = await fetch('/api/portal-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: portalSyncEmail.trim(),
+          password: portalSyncPassword,
+          pages: portalSyncPages,
+          status: portalSyncStatus,
+        }),
+      })
+      const data = await res.json()
+      if (data.error) {
+        setPortalSyncResult({ success: false, message: data.error })
+        toast({ title: 'Gagal', description: data.error, variant: 'destructive' })
+      } else {
+        setPortalSyncResult({
+          success: true,
+          message: data.message,
+          created: data.created,
+          updated: data.updated,
+          unchanged: data.unchanged,
+          total: data.total,
+        })
+        toast({
+          title: '✅ Sinkronisasi Berhasil',
+          description: data.message,
+        })
+        fetchRegistrations()
+        fetchStats()
+      }
+    } catch {
+      const errMsg = 'Terjadi kesalahan saat sinkronisasi'
+      setPortalSyncResult({ success: false, message: errMsg })
+      toast({ title: 'Gagal', description: errMsg, variant: 'destructive' })
+    } finally {
+      setPortalSyncing(false)
     }
   }
 
@@ -3773,6 +3834,147 @@ export default function Home() {
                     </div>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* Sinkronisasi Portal SPMB */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Globe className="w-5 h-5 text-indigo-600" />
+                  Sinkronisasi Portal SPMB
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
+                    <div className="flex items-start gap-3">
+                      <Globe className="w-5 h-5 text-indigo-600 mt-0.5 shrink-0" />
+                      <div className="text-sm text-indigo-700">
+                        <p className="font-medium">Ambil data otomatis dari portal SPMB Sumatera Utara</p>
+                        <p className="mt-1 text-indigo-600">Masukkan kredensial login portal untuk mengambil data pendaftar secara otomatis. Data akan disinkronkan dengan database lokal menggunakan deduplikasi NISN.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
+                        <Mail className="w-3.5 h-3.5" /> Email Portal
+                      </label>
+                      <Input
+                        type="email"
+                        value={portalSyncEmail}
+                        onChange={(e) => setPortalSyncEmail(e.target.value)}
+                        placeholder="email@disdik.sumutprov.go.id"
+                        className="mt-1.5"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
+                        <Lock className="w-3.5 h-3.5" /> Password Portal
+                      </label>
+                      <Input
+                        type="password"
+                        value={portalSyncPassword}
+                        onChange={(e) => setPortalSyncPassword(e.target.value)}
+                        placeholder="Masukkan password..."
+                        className="mt-1.5"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Status Pendaftar</label>
+                      <select
+                        value={portalSyncStatus}
+                        onChange={(e) => setPortalSyncStatus(e.target.value)}
+                        className="mt-1.5 w-full h-10 px-3 border border-gray-200 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                      >
+                        <option value="accepted">Accepted (Diterima)</option>
+                        <option value="">Semua Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="rejected">Rejected</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Jumlah Halaman</label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={100}
+                        value={portalSyncPages}
+                        onChange={(e) => setPortalSyncPages(parseInt(e.target.value) || 10)}
+                        className="mt-1.5"
+                      />
+                      <p className="text-xs text-gray-400 mt-1">Setiap halaman berisi 10 data</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <Button
+                      onClick={handlePortalSync}
+                      disabled={portalSyncing}
+                      className="bg-indigo-600 hover:bg-indigo-700"
+                    >
+                      {portalSyncing ? (
+                        <><Loader2 className="w-4 h-4 animate-spin" /> Menyinkronkan...</>
+                      ) : (
+                        <><RefreshCw className="w-4 h-4" /> Mulai Sinkronisasi</>
+                      )}
+                    </Button>
+                    <a
+                      href="https://adminspmb.disdik.sumutprov.go.id/admin/registration"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-indigo-600 hover:text-indigo-800 underline"
+                    >
+                      Buka Portal SPMB ↗
+                    </a>
+                  </div>
+
+                  {/* Sync Result */}
+                  {portalSyncResult && (
+                    <div className={`rounded-xl p-4 border-2 ${portalSyncResult.success ? 'bg-emerald-50 border-emerald-300' : 'bg-red-50 border-red-300'}`}>
+                      <div className="flex items-start gap-3">
+                        {portalSyncResult.success ? (
+                          <CheckCircle2 className="w-5 h-5 text-emerald-600 mt-0.5 shrink-0" />
+                        ) : (
+                          <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5 shrink-0" />
+                        )}
+                        <div>
+                          <p className={`font-semibold text-sm ${portalSyncResult.success ? 'text-emerald-700' : 'text-red-700'}`}>
+                            {portalSyncResult.success ? 'Sinkronisasi Berhasil' : 'Sinkronisasi Gagal'}
+                          </p>
+                          <p className={`text-sm mt-1 ${portalSyncResult.success ? 'text-emerald-600' : 'text-red-600'}`}>
+                            {portalSyncResult.message}
+                          </p>
+                          {portalSyncResult.success && portalSyncResult.total !== undefined && (
+                            <div className="flex items-center gap-4 mt-3">
+                              <div className="text-center">
+                                <p className="text-2xl font-bold text-emerald-700">{portalSyncResult.created}</p>
+                                <p className="text-xs text-emerald-600">Data Baru</p>
+                              </div>
+                              <div className="text-center">
+                                <p className="text-2xl font-bold text-amber-600">{portalSyncResult.updated}</p>
+                                <p className="text-xs text-amber-600">Diperbarui</p>
+                              </div>
+                              <div className="text-center">
+                                <p className="text-2xl font-bold text-gray-500">{portalSyncResult.unchanged}</p>
+                                <p className="text-xs text-gray-500">Tidak Berubah</p>
+                              </div>
+                              <div className="text-center">
+                                <p className="text-2xl font-bold text-sky-700">{portalSyncResult.total}</p>
+                                <p className="text-xs text-sky-700">Total Diambil</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
 
