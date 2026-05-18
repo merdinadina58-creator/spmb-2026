@@ -1,0 +1,32 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Registration {
+  id                  String   @id @default(cuid())
+  noRegistrasi        String
+  nama                String
+  nisn                String
+  subJalur            String
+  npsnSekolahPilihan  String
+  namaSekolahPilihan  String
+  jurusan             String
+  npsnSekolahAsal     String
+  namaSekolahAsal     String
+  status              String   @default("ON PROGRESS")
+  waktuDaftar         String
+  verificationStatus  String   @default("PENDING") // PENDING, VERIFIED, REJECTED
+  verificationNote    String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@unique([noRegistrasi, npsnSekolahPilihan])
+}
