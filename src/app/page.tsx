@@ -72,6 +72,9 @@ import {
   Award,
   BookOpen,
   ClipboardCheck,
+  ArrowLeftRight,
+  Trophy,
+  UserCog,
 } from 'lucide-react'
 
 interface Registration {
@@ -141,7 +144,9 @@ const SUB_JALUR_COLORS: Record<string, string> = {
   'Keluarga Tidak Mampu': 'bg-orange-100 text-orange-800 border-orange-200',
   'Anak Guru': 'bg-violet-100 text-violet-800 border-violet-200',
   'Prestasi': 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  'Prestasi Non Akademik': 'bg-teal-100 text-teal-800 border-teal-200',
   'Zonasi': 'bg-pink-100 text-pink-800 border-pink-200',
+  'Mutasi': 'bg-cyan-100 text-cyan-800 border-cyan-200',
 }
 
 // Lembar Verifikasi configuration
@@ -164,7 +169,7 @@ const LEMBAR_VERIFIKASI = [
     key: 'afirmasi',
     label: 'Afirmasi',
     icon: Heart,
-    subJalurFilter: 'Keluarga Tidak Mampu,Anak Guru',
+    subJalurFilter: 'Keluarga Tidak Mampu',
     color: 'orange',
     bgColor: 'bg-orange-50',
     borderColor: 'border-orange-500',
@@ -172,8 +177,21 @@ const LEMBAR_VERIFIKASI = [
     iconBg: 'bg-orange-100',
     iconColor: 'text-orange-600',
     btnColor: 'bg-orange-600 hover:bg-orange-700',
-    description: 'Verifikasi pendaftar jalur Afirmasi (Keluarga Tidak Mampu & Anak Guru)',
-    subCategories: ['Keluarga Tidak Mampu', 'Anak Guru'],
+    description: 'Verifikasi pendaftar jalur Afirmasi (Keluarga Tidak Mampu)',
+  },
+  {
+    key: 'mutasi',
+    label: 'Mutasi',
+    icon: ArrowLeftRight,
+    subJalurFilter: 'Mutasi',
+    color: 'cyan',
+    bgColor: 'bg-cyan-50',
+    borderColor: 'border-cyan-500',
+    headerBg: 'bg-cyan-50/80',
+    iconBg: 'bg-cyan-100',
+    iconColor: 'text-cyan-600',
+    btnColor: 'bg-cyan-600 hover:bg-cyan-700',
+    description: 'Verifikasi pendaftar jalur Mutasi (Perpindahan Tugas Orang Tua)',
   },
   {
     key: 'prestasi',
@@ -187,7 +205,35 @@ const LEMBAR_VERIFIKASI = [
     iconBg: 'bg-emerald-100',
     iconColor: 'text-emerald-600',
     btnColor: 'bg-emerald-600 hover:bg-emerald-700',
-    description: 'Verifikasi pendaftar jalur Prestasi Nilai Rapor',
+    description: 'Verifikasi pendaftar jalur Prestasi Nilai Rapor (Akademik)',
+  },
+  {
+    key: 'prestasi-non-akademik',
+    label: 'Prestasi Non Akademik',
+    icon: Trophy,
+    subJalurFilter: 'Prestasi Non Akademik',
+    color: 'teal',
+    bgColor: 'bg-teal-50',
+    borderColor: 'border-teal-500',
+    headerBg: 'bg-teal-50/80',
+    iconBg: 'bg-teal-100',
+    iconColor: 'text-teal-600',
+    btnColor: 'bg-teal-600 hover:bg-teal-700',
+    description: 'Verifikasi pendaftar jalur Prestasi Non Akademik (Kejuaraan/Lomba)',
+  },
+  {
+    key: 'anak-guru',
+    label: 'Anak Guru',
+    icon: UserCog,
+    subJalurFilter: 'Anak Guru',
+    color: 'violet',
+    bgColor: 'bg-violet-50',
+    borderColor: 'border-violet-500',
+    headerBg: 'bg-violet-50/80',
+    iconBg: 'bg-violet-100',
+    iconColor: 'text-violet-600',
+    btnColor: 'bg-violet-600 hover:bg-violet-700',
+    description: 'Verifikasi pendaftar jalur Anak Guru',
   },
   {
     key: 'zonasi',
@@ -1444,7 +1490,7 @@ export default function Home() {
                 <CardDescription>Klik untuk membuka lembar verifikasi masing-masing jalur</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                   {LEMBAR_VERIFIKASI.map((lv) => {
                     const LvIcon = lv.icon
                     const pendingCount = getPendingForLembar(lv.subJalurFilter)
@@ -1454,10 +1500,10 @@ export default function Home() {
                         className={`border-2 cursor-pointer hover:shadow-lg transition-all ${lv.borderColor} ${lv.bgColor}`}
                         onClick={() => { setActiveTab('lembar-verifikasi'); setLembarTab(lv.key) }}
                       >
-                        <CardContent className="p-4 text-center">
-                          <LvIcon className={`w-8 h-8 mx-auto mb-2 ${lv.iconColor}`} />
-                          <p className="font-semibold text-gray-900">{lv.label}</p>
-                          <p className="text-xs text-gray-500 mt-1">{pendingCount} menunggu verifikasi</p>
+                        <CardContent className="p-3 sm:p-4 text-center">
+                          <LvIcon className={`w-7 h-7 sm:w-8 sm:h-8 mx-auto mb-1.5 ${lv.iconColor}`} />
+                          <p className="font-semibold text-gray-900 text-sm sm:text-base">{lv.label}</p>
+                          <p className="text-xs text-gray-500 mt-0.5">{pendingCount} menunggu verifikasi</p>
                         </CardContent>
                       </Card>
                     )
@@ -1470,7 +1516,7 @@ export default function Home() {
           {/* ==================== LEMBAR VERIFIKASI TAB ==================== */}
           <TabsContent value="lembar-verifikasi" className="space-y-6">
             <Tabs value={lembarTab} onValueChange={setLembarTab}>
-              <TabsList className="grid grid-cols-4 w-full">
+              <TabsList className="flex-wrap h-auto gap-1">
                 {LEMBAR_VERIFIKASI.map((lv) => {
                   const LvIcon = lv.icon
                   const pendingCount = getPendingForLembar(lv.subJalurFilter)
@@ -1478,13 +1524,13 @@ export default function Home() {
                     <TabsTrigger
                       key={lv.key}
                       value={lv.key}
-                      className="gap-1.5 text-xs sm:text-sm"
+                      className="gap-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5"
                     >
-                      <LvIcon className="w-4 h-4" />
-                      <span className="hidden sm:inline">{lv.label}</span>
-                      <span className="sm:hidden">{lv.key.charAt(0).toUpperCase() + lv.key.slice(1, 4)}</span>
+                      <LvIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      <span className="hidden md:inline">{lv.label}</span>
+                      <span className="md:hidden">{lv.label.length > 10 ? lv.label.substring(0, 8) + '..' : lv.label}</span>
                       {pendingCount > 0 && (
-                        <Badge className="ml-1 bg-amber-500 text-white text-xs px-1.5 py-0 min-w-[18px] h-4 flex items-center justify-center">
+                        <Badge className="ml-0.5 bg-amber-500 text-white text-xs px-1 py-0 min-w-[16px] h-4 flex items-center justify-center">
                           {pendingCount}
                         </Badge>
                       )}
@@ -1541,6 +1587,8 @@ export default function Home() {
                       <SelectItem value="Keluarga Tidak Mampu">Keluarga Tidak Mampu</SelectItem>
                       <SelectItem value="Anak Guru">Anak Guru</SelectItem>
                       <SelectItem value="Prestasi">Prestasi</SelectItem>
+                      <SelectItem value="Prestasi Non Akademik">Prestasi Non Akademik</SelectItem>
+                      <SelectItem value="Mutasi">Mutasi</SelectItem>
                       <SelectItem value="Zonasi">Zonasi</SelectItem>
                     </SelectContent>
                   </Select>
