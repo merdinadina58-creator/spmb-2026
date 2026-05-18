@@ -67,6 +67,11 @@ import {
   FileText,
   RotateCcw,
   Check,
+  MapPin,
+  Heart,
+  Award,
+  BookOpen,
+  ClipboardCheck,
 } from 'lucide-react'
 
 interface Registration {
@@ -114,6 +119,17 @@ interface PaginationInfo {
   totalPages: number
 }
 
+interface LembarVerifikasiData {
+  registrations: Registration[]
+  pagination: PaginationInfo
+  stats: {
+    total: number
+    verified: number
+    rejected: number
+    pending: number
+  }
+}
+
 const STATUS_COLORS: Record<string, string> = {
   PENDING: 'bg-yellow-100 text-yellow-800 border-yellow-300',
   VERIFIED: 'bg-emerald-100 text-emerald-800 border-emerald-300',
@@ -128,6 +144,67 @@ const SUB_JALUR_COLORS: Record<string, string> = {
   'Zonasi': 'bg-pink-100 text-pink-800 border-pink-200',
 }
 
+// Lembar Verifikasi configuration
+const LEMBAR_VERIFIKASI = [
+  {
+    key: 'domisili',
+    label: 'Domisili',
+    icon: MapPin,
+    subJalurFilter: 'Domisili',
+    color: 'sky',
+    bgColor: 'bg-sky-50',
+    borderColor: 'border-sky-500',
+    headerBg: 'bg-sky-50/80',
+    iconBg: 'bg-sky-100',
+    iconColor: 'text-sky-600',
+    btnColor: 'bg-sky-600 hover:bg-sky-700',
+    description: 'Verifikasi pendaftar jalur Domisili',
+  },
+  {
+    key: 'afirmasi',
+    label: 'Afirmasi',
+    icon: Heart,
+    subJalurFilter: 'Keluarga Tidak Mampu,Anak Guru',
+    color: 'orange',
+    bgColor: 'bg-orange-50',
+    borderColor: 'border-orange-500',
+    headerBg: 'bg-orange-50/80',
+    iconBg: 'bg-orange-100',
+    iconColor: 'text-orange-600',
+    btnColor: 'bg-orange-600 hover:bg-orange-700',
+    description: 'Verifikasi pendaftar jalur Afirmasi (Keluarga Tidak Mampu & Anak Guru)',
+    subCategories: ['Keluarga Tidak Mampu', 'Anak Guru'],
+  },
+  {
+    key: 'prestasi',
+    label: 'Prestasi Nilai Rapor',
+    icon: Award,
+    subJalurFilter: 'Prestasi',
+    color: 'emerald',
+    bgColor: 'bg-emerald-50',
+    borderColor: 'border-emerald-500',
+    headerBg: 'bg-emerald-50/80',
+    iconBg: 'bg-emerald-100',
+    iconColor: 'text-emerald-600',
+    btnColor: 'bg-emerald-600 hover:bg-emerald-700',
+    description: 'Verifikasi pendaftar jalur Prestasi Nilai Rapor',
+  },
+  {
+    key: 'zonasi',
+    label: 'Zonasi',
+    icon: BookOpen,
+    subJalurFilter: 'Zonasi',
+    color: 'pink',
+    bgColor: 'bg-pink-50',
+    borderColor: 'border-pink-500',
+    headerBg: 'bg-pink-50/80',
+    iconBg: 'bg-pink-100',
+    iconColor: 'text-pink-600',
+    btnColor: 'bg-pink-600 hover:bg-pink-700',
+    description: 'Verifikasi pendaftar jalur Zonasi',
+  },
+]
+
 function StatBar({ label, count, total, color }: { label: string; count: number; total: number; color: string }) {
   return (
     <div className="space-y-1">
@@ -141,6 +218,657 @@ function StatBar({ label, count, total, color }: { label: string; count: number;
           style={{ width: total > 0 ? `${(count / total) * 100}%` : '0%' }}
         />
       </div>
+    </div>
+  )
+}
+
+// Lembar Verifikasi Sheet Component
+function LembarVerifikasiSheet({
+  config,
+  onVerify,
+  onBulkVerify,
+  onViewDetail,
+  toast,
+}: {
+  config: typeof LEMBAR_VERIFIKASI[number]
+  onVerify: (id: string, action: 'VERIFIED' | 'REJECTED') => void
+  onBulkVerify: (ids: string[], action: 'VERIFIED' | 'REJECTED') => void
+  onViewDetail: (reg: Registration) => void
+  toast: ReturnType<typeof useToast>['toast']
+}) {
+  const [data, setData] = useState<LembarVerifikasiData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [verificationFilter, setVerificationFilter] = useState('all')
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [page, setPage] = useState(1)
+  const limit = 20
+  const [verifying, setVerifying] = useState(false)
+  const [verifyDialogOpen, setVerifyDialogOpen] = useState(false)
+  const [bulkVerifyDialogOpen, setBulkVerifyDialogOpen] = useState(false)
+  const [verifyAction, setVerifyAction] = useState<'VERIFIED' | 'REJECTED'>('VERIFIED')
+  const [verifyNote, setVerifyNote] = useState('')
+  const [verifyTargetId, setVerifyTargetId] = useState<string | null>(null)
+
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    try {
+      const params = new URLSearchParams()
+      params.set('page', page.toString())
+      params.set('limit', limit.toString())
+      params.set('subJalur', config.subJalurFilter)
+      if (search) params.set('search', search)
+      if (verificationFilter !== 'all') params.set('verificationStatus', verificationFilter)
+
+      const res = await fetch(`/api/registrations?${params}`)
+      const result = await res.json()
+
+      const regs: Registration[] = result.data || []
+      const pag = result.pagination || { page: 1, limit, total: 0, totalPages: 0 }
+
+      // Calculate stats from current data set
+      const statsRes = await fetch('/api/dashboard')
+      const statsData = await statsRes.json()
+
+      // Filter stats for this sub jalur
+      const jalurNames = config.subJalurFilter.split(',').map(s => s.trim())
+      const relevantSubJalurStats = statsData.bySubJalur.filter(
+        (item: { name: string; count: number }) => jalurNames.includes(item.name)
+      )
+      const totalForJalur = relevantSubJalurStats.reduce((acc: number, item: { count: number }) => acc + item.count, 0)
+
+      const relevantVerifiedStats = statsData.verifiedBySubJalur.filter(
+        (item: { name: string; count: number }) => jalurNames.includes(item.name)
+      )
+      const verifiedForJalur = relevantVerifiedStats.reduce((acc: number, item: { count: number }) => acc + item.count, 0)
+
+      const relevantRejectedStats = statsData.rejectedBySubJalur.filter(
+        (item: { name: string; count: number }) => jalurNames.includes(item.name)
+      )
+      const rejectedForJalur = relevantRejectedStats.reduce((acc: number, item: { count: number }) => acc + item.count, 0)
+
+      const pendingForJalur = totalForJalur - verifiedForJalur - rejectedForJalur
+
+      setData({
+        registrations: regs,
+        pagination: pag,
+        stats: {
+          total: totalForJalur,
+          verified: verifiedForJalur,
+          rejected: rejectedForJalur,
+          pending: pendingForJalur,
+        },
+      })
+    } catch {
+      toast({ title: 'Error', description: 'Gagal memuat data', variant: 'destructive' })
+    } finally {
+      setLoading(false)
+    }
+  }, [page, search, verificationFilter, config.subJalurFilter, toast])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
+
+  const handleVerify = async () => {
+    if (!verifyTargetId) return
+    setVerifying(true)
+    try {
+      const res = await fetch('/api/registrations/verify', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: verifyTargetId,
+          verificationStatus: verifyAction,
+          verificationNote: verifyNote || undefined,
+        }),
+      })
+      const result = await res.json()
+      if (result.success) {
+        toast({
+          title: verifyAction === 'VERIFIED' ? 'Pendaftar Diterima' : 'Pendaftar Ditolak',
+          description: verifyAction === 'VERIFIED' ? 'Data telah diverifikasi dan diterima' : 'Data pendaftar telah ditolak',
+        })
+        setVerifyDialogOpen(false)
+        setVerifyNote('')
+        setVerifyTargetId(null)
+        fetchData()
+      } else {
+        toast({ title: 'Gagal', description: result.error || 'Terjadi kesalahan', variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Gagal', description: 'Terjadi kesalahan', variant: 'destructive' })
+    } finally {
+      setVerifying(false)
+    }
+  }
+
+  const handleBulkVerify = async () => {
+    if (selectedIds.size === 0) return
+    setVerifying(true)
+    try {
+      const res = await fetch('/api/registrations/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ids: Array.from(selectedIds),
+          verificationStatus: verifyAction,
+          verificationNote: verifyNote || undefined,
+        }),
+      })
+      const result = await res.json()
+      if (result.success) {
+        toast({
+          title: verifyAction === 'VERIFIED' ? 'Pendaftar Diterima' : 'Pendaftar Ditolak',
+          description: `${result.updated} pendaftar ${verifyAction === 'VERIFIED' ? 'diterima' : 'ditolak'}`,
+        })
+        setBulkVerifyDialogOpen(false)
+        setVerifyNote('')
+        setSelectedIds(new Set())
+        fetchData()
+      } else {
+        toast({ title: 'Gagal', description: result.error || 'Terjadi kesalahan', variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Gagal', description: 'Terjadi kesalahan', variant: 'destructive' })
+    } finally {
+      setVerifying(false)
+    }
+  }
+
+  const toggleSelectAll = () => {
+    if (!data) return
+    if (selectedIds.size === data.registrations.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(data.registrations.map(r => r.id)))
+    }
+  }
+
+  const toggleSelect = (id: string) => {
+    const next = new Set(selectedIds)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    setSelectedIds(next)
+  }
+
+  const Icon = config.icon
+  const s = data?.stats || { total: 0, verified: 0, rejected: 0, pending: 0 }
+  const verifiedPct = s.total > 0 ? Math.round((s.verified / s.total) * 100) : 0
+  const rejectedPct = s.total > 0 ? Math.round((s.rejected / s.total) * 100) : 0
+  const pendingPct = s.total > 0 ? Math.round((s.pending / s.total) * 100) : 0
+  const progressPct = s.total > 0 ? Math.round(((s.verified + s.rejected) / s.total) * 100) : 0
+
+  return (
+    <div className="space-y-6">
+      {/* Header Card */}
+      <Card className={`${config.borderColor} border-l-4`}>
+        <CardContent className="p-5">
+          <div className="flex items-center gap-4">
+            <div className={`p-3 ${config.iconBg} rounded-xl`}>
+              <Icon className={`w-8 h-8 ${config.iconColor}`} />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <h3 className="text-xl font-bold text-gray-900">Lembar Verifikasi: {config.label}</h3>
+                {config.subCategories && (
+                  <div className="flex gap-1">
+                    {config.subCategories.map(sub => (
+                      <Badge key={sub} variant="outline" className={SUB_JALUR_COLORS[sub] || 'bg-gray-100 text-gray-800 border-gray-200'}>
+                        {sub}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <p className="text-sm text-gray-500 mt-0.5">{config.description}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Stats Row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className={`border-l-4 ${config.borderColor}`}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Total Pendaftar</p>
+                <p className="text-2xl font-bold">{s.total}</p>
+              </div>
+              <div className={`p-2 ${config.bgColor} rounded-lg`}>
+                <Users className={`w-5 h-5 ${config.iconColor}`} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-yellow-500">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Menunggu</p>
+                <p className="text-2xl font-bold text-yellow-600">{s.pending}</p>
+              </div>
+              <div className="p-2 bg-yellow-50 rounded-lg">
+                <Clock className="w-5 h-5 text-yellow-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-emerald-500">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Diterima</p>
+                <p className="text-2xl font-bold text-emerald-600">{s.verified}</p>
+              </div>
+              <div className="p-2 bg-emerald-50 rounded-lg">
+                <UserCheck className="w-5 h-5 text-emerald-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-red-500">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Ditolak</p>
+                <p className="text-2xl font-bold text-red-600">{s.rejected}</p>
+              </div>
+              <div className="p-2 bg-red-50 rounded-lg">
+                <UserX className="w-5 h-5 text-red-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Progress */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-gray-700">Progres Verifikasi {config.label}</span>
+            <span className="text-sm text-gray-500">{progressPct}% selesai</span>
+          </div>
+          <Progress value={progressPct} className="h-3" />
+          <div className="flex justify-between mt-2 text-xs">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+              <span className="text-gray-600">Diterima: {s.verified} ({verifiedPct}%)</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
+              <span className="text-gray-600">Ditolak: {s.rejected} ({rejectedPct}%)</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-yellow-500" />
+              <span className="text-gray-600">Menunggu: {s.pending} ({pendingPct}%)</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Filters & Search */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                placeholder="Cari nama, no. registrasi, atau NISN..."
+                className="pl-9"
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value)
+                  setPage(1)
+                }}
+              />
+            </div>
+            <Select
+              value={verificationFilter}
+              onValueChange={(v) => {
+                setVerificationFilter(v)
+                setPage(1)
+              }}
+            >
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Status Verifikasi" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua Status</SelectItem>
+                <SelectItem value="PENDING">Menunggu</SelectItem>
+                <SelectItem value="VERIFIED">Diterima</SelectItem>
+                <SelectItem value="REJECTED">Ditolak</SelectItem>
+              </SelectContent>
+            </Select>
+            {selectedIds.size > 0 && (
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  className="bg-emerald-600 hover:bg-emerald-700"
+                  onClick={() => {
+                    setVerifyAction('VERIFIED')
+                    setBulkVerifyDialogOpen(true)
+                  }}
+                >
+                  <ThumbsUp className="w-4 h-4" />
+                  Terima ({selectedIds.size})
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => {
+                    setVerifyAction('REJECTED')
+                    setBulkVerifyDialogOpen(true)
+                  }}
+                >
+                  <ThumbsDown className="w-4 h-4" />
+                  Tolak ({selectedIds.size})
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setSelectedIds(new Set())}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Verification Table */}
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className={config.headerBg}>
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={data ? data.registrations.length > 0 && selectedIds.size === data.registrations.length : false}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
+                  <TableHead>No. Reg</TableHead>
+                  <TableHead>Nama</TableHead>
+                  <TableHead className="hidden md:table-cell">NISN</TableHead>
+                  {config.subCategories && <TableHead>Kategori</TableHead>}
+                  <TableHead className="hidden lg:table-cell">Sekolah Pilihan</TableHead>
+                  <TableHead className="hidden lg:table-cell">Jurusan</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={config.subCategories ? 9 : 8} className="text-center py-12">
+                      <Loader2 className="w-6 h-6 animate-spin mx-auto text-gray-400" />
+                      <p className="text-sm text-gray-400 mt-2">Memuat data...</p>
+                    </TableCell>
+                  </TableRow>
+                ) : !data || data.registrations.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={config.subCategories ? 9 : 8} className="text-center py-12">
+                      <Icon className={`w-10 h-10 mx-auto text-gray-300 mb-2`} />
+                      <p className="text-gray-500 font-medium">Belum ada data pendaftar {config.label}</p>
+                      <p className="text-sm text-gray-400">Import CSV untuk memulai verifikasi</p>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  data.registrations.map((reg) => (
+                    <TableRow key={reg.id} className={
+                      reg.verificationStatus === 'VERIFIED' ? 'bg-emerald-50/40' :
+                      reg.verificationStatus === 'REJECTED' ? 'bg-red-50/40' : ''
+                    }>
+                      <TableCell>
+                        <Checkbox checked={selectedIds.has(reg.id)} onCheckedChange={() => toggleSelect(reg.id)} />
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">{reg.noRegistrasi}</TableCell>
+                      <TableCell className="font-medium">{reg.nama}</TableCell>
+                      <TableCell className="hidden md:table-cell text-sm text-gray-500">{reg.nisn}</TableCell>
+                      {config.subCategories && (
+                        <TableCell>
+                          <Badge variant="outline" className={SUB_JALUR_COLORS[reg.subJalur] || 'bg-gray-100 text-gray-800 border-gray-200'}>
+                            {reg.subJalur}
+                          </Badge>
+                        </TableCell>
+                      )}
+                      <TableCell className="hidden lg:table-cell text-sm">{reg.namaSekolahPilihan}</TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        <Badge variant="secondary">{reg.jurusan}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={STATUS_COLORS[reg.verificationStatus]}>
+                          {reg.verificationStatus === 'PENDING' && <Clock className="w-3 h-3" />}
+                          {reg.verificationStatus === 'VERIFIED' && <CheckCircle2 className="w-3 h-3" />}
+                          {reg.verificationStatus === 'REJECTED' && <XCircle className="w-3 h-3" />}
+                          {reg.verificationStatus === 'PENDING' ? 'Menunggu' :
+                           reg.verificationStatus === 'VERIFIED' ? 'Diterima' : 'Ditolak'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => onViewDetail(reg)}>
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          {reg.verificationStatus !== 'VERIFIED' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-emerald-600 hover:text-white hover:bg-emerald-600"
+                              title="Terima Pendaftar"
+                              onClick={() => {
+                                setVerifyTargetId(reg.id)
+                                setVerifyAction('VERIFIED')
+                                setVerifyNote('')
+                                setVerifyDialogOpen(true)
+                              }}
+                            >
+                              <ThumbsUp className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {reg.verificationStatus !== 'REJECTED' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-600 hover:text-white hover:bg-red-600"
+                              title="Tolak Pendaftar"
+                              onClick={() => {
+                                setVerifyTargetId(reg.id)
+                                setVerifyAction('REJECTED')
+                                setVerifyNote('')
+                                setVerifyDialogOpen(true)
+                              }}
+                            >
+                              <ThumbsDown className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {reg.verificationStatus === 'VERIFIED' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-yellow-600 hover:text-white hover:bg-yellow-500"
+                              title="Kembalikan ke Menunggu"
+                              onClick={() => {
+                                setVerifyTargetId(reg.id)
+                                setVerifyAction('REJECTED')
+                                setVerifyNote('')
+                                setVerifyDialogOpen(true)
+                              }}
+                            >
+                              <RotateCcw className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {reg.verificationStatus === 'REJECTED' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-emerald-600 hover:text-white hover:bg-emerald-600"
+                              title="Terima Ulang"
+                              onClick={() => {
+                                setVerifyTargetId(reg.id)
+                                setVerifyAction('VERIFIED')
+                                setVerifyNote('')
+                                setVerifyDialogOpen(true)
+                              }}
+                            >
+                              <RotateCcw className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Pagination */}
+          {data && data.pagination.totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t">
+              <p className="text-sm text-gray-500">
+                Menampilkan {(data.pagination.page - 1) * data.pagination.limit + 1}-
+                {Math.min(data.pagination.page * data.pagination.limit, data.pagination.total)} dari {data.pagination.total} pendaftar
+              </p>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <span className="text-sm text-gray-600">Hal {page} / {data.pagination.totalPages}</span>
+                <Button variant="outline" size="sm" disabled={page >= data.pagination.totalPages} onClick={() => setPage(p => p + 1)}>
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Single Verify Dialog */}
+      <Dialog open={verifyDialogOpen} onOpenChange={setVerifyDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {verifyAction === 'VERIFIED' ? (
+                <><ThumbsUp className="w-5 h-5 text-emerald-600" /> Terima Pendaftar</>
+              ) : (
+                <><ThumbsDown className="w-5 h-5 text-red-600" /> Tolak Pendaftar</>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {verifyAction === 'VERIFIED'
+                ? `Apakah Anda yakin ingin MENERIMA pendaftar ini di jalur ${config.label}?`
+                : `Apakah Anda yakin ingin MENOLAK pendaftar ini di jalur ${config.label}?`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {verifyAction === 'REJECTED' && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-red-800">Perhatian!</p>
+                    <p className="text-sm text-red-700">Pendaftar yang ditolak tetap dapat diterima kembali nanti.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1.5 block">
+                {verifyAction === 'VERIFIED' ? 'Catatan Verifikasi' : 'Alasan Penolakan'}
+              </label>
+              <Textarea
+                placeholder={verifyAction === 'VERIFIED' ? 'Catatan tambahan (opsional)...' : 'Tuliskan alasan penolakan...'}
+                value={verifyNote}
+                onChange={(e) => setVerifyNote(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setVerifyDialogOpen(false)}>Batal</Button>
+            <Button
+              onClick={handleVerify}
+              disabled={verifying}
+              className={verifyAction === 'VERIFIED' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+              variant={verifyAction === 'REJECTED' ? 'destructive' : 'default'}
+            >
+              {verifying ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Memproses...</>
+              ) : verifyAction === 'VERIFIED' ? (
+                <><ThumbsUp className="w-4 h-4" /> Terima</>
+              ) : (
+                <><ThumbsDown className="w-4 h-4" /> Tolak</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Verify Dialog */}
+      <Dialog open={bulkVerifyDialogOpen} onOpenChange={setBulkVerifyDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {verifyAction === 'VERIFIED' ? (
+                <><ThumbsUp className="w-5 h-5 text-emerald-600" /> Terima {selectedIds.size} Pendaftar</>
+              ) : (
+                <><ThumbsDown className="w-5 h-5 text-red-600" /> Tolak {selectedIds.size} Pendaftar</>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {verifyAction === 'VERIFIED'
+                ? `Terima ${selectedIds.size} pendaftar jalur ${config.label} yang dipilih?`
+                : `Tolak ${selectedIds.size} pendaftar jalur ${config.label} yang dipilih?`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {verifyAction === 'REJECTED' && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-red-800">Perhatian!</p>
+                    <p className="text-sm text-red-700">Pendaftar yang ditolak tetap dapat diterima kembali nanti.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1.5 block">
+                {verifyAction === 'VERIFIED' ? 'Catatan Verifikasi' : 'Alasan Penolakan'}
+              </label>
+              <Textarea
+                placeholder={verifyAction === 'VERIFIED' ? 'Catatan untuk semua pendaftar (opsional)...' : 'Alasan penolakan untuk semua...'}
+                value={verifyNote}
+                onChange={(e) => setVerifyNote(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkVerifyDialogOpen(false)}>Batal</Button>
+            <Button
+              onClick={handleBulkVerify}
+              disabled={verifying}
+              className={verifyAction === 'VERIFIED' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+              variant={verifyAction === 'REJECTED' ? 'destructive' : 'default'}
+            >
+              {verifying ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Memproses...</>
+              ) : verifyAction === 'VERIFIED' ? (
+                <><ThumbsUp className="w-4 h-4" /> Terima Semua</>
+              ) : (
+                <><ThumbsDown className="w-4 h-4" /> Tolak Semua</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -189,6 +917,9 @@ export default function Home() {
 
   // Active tab
   const [activeTab, setActiveTab] = useState('dashboard')
+
+  // Lembar verifikasi sub-tab
+  const [lembarTab, setLembarTab] = useState('domisili')
 
   const fetchRegistrations = useCallback(async () => {
     setLoading(true)
@@ -447,6 +1178,25 @@ export default function Home() {
   const rejectedPercent = stats && stats.total > 0 ? Math.round((stats.rejected / stats.total) * 100) : 0
   const pendingPercent = stats && stats.total > 0 ? Math.round((stats.pending / stats.total) * 100) : 0
 
+  // Get pending count per lembar verifikasi for badges
+  const getPendingForLembar = (subJalurFilter: string) => {
+    if (!stats) return 0
+    const jalurNames = subJalurFilter.split(',').map(s => s.trim())
+    const relevantPending = stats.bySubJalur
+      .filter(item => jalurNames.includes(item.name))
+      .reduce((acc, item) => {
+        const verified = stats.verifiedBySubJalur.find(v => v.name === item.name)?.count || 0
+        const rejected = stats.rejectedBySubJalur.find(r => r.name === item.name)?.count || 0
+        return acc + item.count - verified - rejected
+      }, 0)
+    return relevantPending
+  }
+
+  const handleViewDetail = (reg: Registration) => {
+    setDetailTarget(reg)
+    setDetailDialogOpen(true)
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50/50">
       {/* Header */}
@@ -482,6 +1232,15 @@ export default function Home() {
             <TabsTrigger value="dashboard" className="gap-1.5">
               <Eye className="w-4 h-4" />
               Dashboard
+            </TabsTrigger>
+            <TabsTrigger value="lembar-verifikasi" className="gap-1.5 data-[state=active]:bg-amber-100 data-[state=active]:text-amber-800">
+              <ClipboardCheck className="w-4 h-4" />
+              Lembar Verifikasi
+              {stats && stats.pending > 0 && (
+                <Badge className="ml-1 bg-amber-500 text-white text-xs px-1.5 py-0 min-w-[20px] h-5 flex items-center justify-center">
+                  {stats.pending}
+                </Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="data" className="gap-1.5">
               <FileSpreadsheet className="w-4 h-4" />
@@ -674,6 +1433,78 @@ export default function Home() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Lembar Verifikasi Quick Links */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <ClipboardCheck className="w-4 h-4" />
+                  Lembar Verifikasi per Jalur
+                </CardTitle>
+                <CardDescription>Klik untuk membuka lembar verifikasi masing-masing jalur</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {LEMBAR_VERIFIKASI.map((lv) => {
+                    const LvIcon = lv.icon
+                    const pendingCount = getPendingForLembar(lv.subJalurFilter)
+                    return (
+                      <Card
+                        key={lv.key}
+                        className={`border-2 cursor-pointer hover:shadow-lg transition-all ${lv.borderColor} ${lv.bgColor}`}
+                        onClick={() => { setActiveTab('lembar-verifikasi'); setLembarTab(lv.key) }}
+                      >
+                        <CardContent className="p-4 text-center">
+                          <LvIcon className={`w-8 h-8 mx-auto mb-2 ${lv.iconColor}`} />
+                          <p className="font-semibold text-gray-900">{lv.label}</p>
+                          <p className="text-xs text-gray-500 mt-1">{pendingCount} menunggu verifikasi</p>
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ==================== LEMBAR VERIFIKASI TAB ==================== */}
+          <TabsContent value="lembar-verifikasi" className="space-y-6">
+            <Tabs value={lembarTab} onValueChange={setLembarTab}>
+              <TabsList className="grid grid-cols-4 w-full">
+                {LEMBAR_VERIFIKASI.map((lv) => {
+                  const LvIcon = lv.icon
+                  const pendingCount = getPendingForLembar(lv.subJalurFilter)
+                  return (
+                    <TabsTrigger
+                      key={lv.key}
+                      value={lv.key}
+                      className="gap-1.5 text-xs sm:text-sm"
+                    >
+                      <LvIcon className="w-4 h-4" />
+                      <span className="hidden sm:inline">{lv.label}</span>
+                      <span className="sm:hidden">{lv.key.charAt(0).toUpperCase() + lv.key.slice(1, 4)}</span>
+                      {pendingCount > 0 && (
+                        <Badge className="ml-1 bg-amber-500 text-white text-xs px-1.5 py-0 min-w-[18px] h-4 flex items-center justify-center">
+                          {pendingCount}
+                        </Badge>
+                      )}
+                    </TabsTrigger>
+                  )
+                })}
+              </TabsList>
+
+              {LEMBAR_VERIFIKASI.map((lv) => (
+                <TabsContent key={lv.key} value={lv.key} className="mt-6">
+                  <LembarVerifikasiSheet
+                    config={lv}
+                    onVerify={() => {}}
+                    onBulkVerify={() => {}}
+                    onViewDetail={handleViewDetail}
+                    toast={toast}
+                  />
+                </TabsContent>
+              ))}
+            </Tabs>
           </TabsContent>
 
           {/* ==================== DATA PENDAFTAR TAB ==================== */}
@@ -1212,7 +2043,7 @@ export default function Home() {
       <footer className="border-t bg-white mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
-            <p className="text-sm text-gray-500">© 2026 SPMB Verifikasi System</p>
+            <p className="text-sm text-gray-500">&copy; 2026 SPMB Verifikasi System</p>
             <p className="text-xs text-gray-400">Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
           </div>
         </div>

@@ -23,7 +23,13 @@ export async function GET(request: NextRequest) {
     }
 
     if (subJalur) {
-      where.subJalur = subJalur;
+      // Support comma-separated subJalur for grouping (e.g. Afirmasi = KTM + Anak Guru)
+      const jalurValues = subJalur.split(',').map(s => s.trim()).filter(Boolean);
+      if (jalurValues.length === 1) {
+        where.subJalur = jalurValues[0];
+      } else if (jalurValues.length > 1) {
+        where.subJalur = { in: jalurValues };
+      }
     }
 
     if (verificationStatus) {
