@@ -2009,9 +2009,10 @@ export default function Home() {
       })
       const data = await res.json()
       if (data.success) {
+        const nisnLabel = portalParsedData.nisn ? ` (NISN: ${portalParsedData.nisn})` : ''
         toast({
-          title: data.action === 'created' ? 'Data Disimpan' : 'Data Diperbarui',
-          description: `Data ${portalParsedData.nama || 'pendaftar'} berhasil ${data.action === 'created' ? 'disimpan' : 'diperbarui'}`,
+          title: data.action === 'created' ? 'Data Baru Disimpan' : 'Data Diperbarui',
+          description: data.message || `Data ${portalParsedData.nama || 'pendaftar'}${nisnLabel} berhasil ${data.action === 'created' ? 'disimpan' : 'diperbarui'}`,
         })
         setPortalPasteOpen(false)
         setPortalRawText('')
@@ -2139,9 +2140,12 @@ export default function Home() {
       const importData = await importRes.json()
 
       if (importData.success) {
+        const createdCount = importData.created || 0
+        const updatedCount = importData.updated || 0
+        const skippedCount = importData.skipped || 0
         toast({
           title: 'Import Berhasil',
-          description: `${importData.imported} data diimpor, ${importData.skipped} dilewati`,
+          description: `${createdCount} data baru, ${updatedCount} data diperbarui, ${skippedCount} dilewati`,
         })
         setImportDialogOpen(false)
         setCsvFile(null)

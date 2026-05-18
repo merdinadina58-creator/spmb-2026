@@ -39,26 +39,23 @@ export async function POST(request: NextRequest) {
     }
 
     let imported = 0;
+    let updated = 0;
+    let created = 0;
     let skipped = 0;
     const errors: string[] = [];
 
     for (const row of rows) {
       try {
         const noRegistrasi = row.noRegistrasi;
-        const npsnSekolahPilihan = row.npsnSekolahPilihan;
+        const nisn = row.nisn;
+        const npsnSekolahPilihan = row.npsnSekolahPilihan || '0';
 
-        if (!noRegistrasi || !npsnSekolahPilihan) {
+        if (!noRegistrasi && !nisn) {
           skipped++;
           continue;
         }
 
-        const existing = await db.registration.findFirst({
-          where: {
-            noRegistrasi,
-            npsnSekolahPilihan,
-          },
-        });
-
+        // Build optional portal data - only include non-empty values
         const portalData: Record<string, string> = {};
         const optFields = ['nik', 'tanggalLahir', 'alamat', 'alamatLengkap', 'noTelpSiswa', 'noTelpOrangtua', 'latitude', 'longitude', 'lokasiJarak', 'nilaiRataRata', 'skorJarak', 'skor', 'nilaiRapor'] as const;
         for (const f of optFields) {
@@ -68,12 +65,35 @@ export async function POST(request: NextRequest) {
           }
         }
 
+        // STEP 1: Try to find existing record by NISN + npsnSekolahPilihan (primary dedup)
+        let existing = null;
+        if (nisn && nisn.trim()) {
+          existing = await db.registration.findFirst({
+            where: {
+              nisn: nisn.trim(),
+              npsnSekolahPilihan,
+            },
+          });
+        }
+
+        // STEP 2: Fallback - try by noRegistrasi + npsnSekolahPilihan
+        if (!existing && noRegistrasi && noRegistrasi.trim()) {
+          existing = await db.registration.findFirst({
+            where: {
+              noRegistrasi: noRegistrasi.trim(),
+              npsnSekolahPilihan,
+            },
+          });
+        }
+
         if (existing) {
+          // UPDATE existing record - merge new data, don't overwrite with empty
           await db.registration.update({
             where: { id: existing.id },
             data: {
+              noRegistrasi: noRegistrasi || existing.noRegistrasi,
               nama: row.nama || existing.nama,
-              nisn: row.nisn || existing.nisn,
+              nisn: nisn || existing.nisn,
               subJalur: row.subJalur || existing.subJalur,
               namaSekolahPilihan: row.namaSekolahPilihan || existing.namaSekolahPilihan,
               jurusan: row.jurusan || existing.jurusan,
@@ -81,16 +101,19 @@ export async function POST(request: NextRequest) {
               namaSekolahAsal: row.namaSekolahAsal || existing.namaSekolahAsal,
               status: row.status || existing.status,
               waktuDaftar: row.waktuDaftar || existing.waktuDaftar,
+              // Only update portal fields if new values are provided
               ...portalData,
             },
           });
+          updated++;
           imported++;
         } else {
+          // CREATE new record
           await db.registration.create({
             data: {
-              noRegistrasi,
+              noRegistrasi: noRegistrasi || '',
               nama: row.nama || '',
-              nisn: row.nisn || '',
+              nisn: nisn || '',
               subJalur: row.subJalur || '',
               npsnSekolahPilihan,
               namaSekolahPilihan: row.namaSekolahPilihan || '',
@@ -103,10 +126,11 @@ export async function POST(request: NextRequest) {
               ...portalData,
             },
           });
+          created++;
           imported++;
         }
       } catch (err) {
-        errors.push(`Row ${row.noRegistrasi}: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        errors.push(`Row ${row.noRegistrasi || row.nisn}: ${err instanceof Error ? err.message : 'Unknown error'}`);
         skipped++;
       }
     }
@@ -114,6 +138,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       imported,
+      created,
+      updated,
       skipped,
       errors: errors.length > 0 ? errors : undefined,
     });

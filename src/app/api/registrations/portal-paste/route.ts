@@ -40,24 +40,17 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const data = body as PortalPastePayload;
 
-    if (!data.noRegistrasi) {
-      return NextResponse.json({ error: 'No. Registrasi wajib diisi' }, { status: 400 });
+    if (!data.noRegistrasi && !data.nisn) {
+      return NextResponse.json({ error: 'No. Registrasi atau NISN wajib diisi' }, { status: 400 });
     }
 
     if (!data.nama) {
       return NextResponse.json({ error: 'Nama wajib diisi' }, { status: 400 });
     }
 
-    // Use noRegistrasi as unique identifier, with npsnSekolahPilihan
     const npsnSekolahPilihan = data.npsnSekolahPilihan || '0';
 
-    const existing = await db.registration.findFirst({
-      where: {
-        noRegistrasi: data.noRegistrasi,
-        npsnSekolahPilihan,
-      },
-    });
-
+    // Build optional portal fields - only include non-empty values
     const portalFields: Record<string, string> = {};
     const optionalFields = [
       'nik', 'tanggalLahir', 'alamat', 'alamatLengkap',
@@ -74,29 +67,65 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (existing) {
-      // Update existing record with portal data
-      const updated = await db.registration.update({
-        where: { id: existing.id },
-        data: {
-          nama: data.nama || existing.nama,
-          nisn: data.nisn || existing.nisn,
-          subJalur: data.subJalur || existing.subJalur,
-          namaSekolahPilihan: data.namaSekolahPilihan || existing.namaSekolahPilihan,
-          jurusan: data.jurusan || existing.jurusan,
-          npsnSekolahAsal: data.npsnSekolahAsal || existing.npsnSekolahAsal,
-          namaSekolahAsal: data.namaSekolahAsal || existing.namaSekolahAsal,
-          status: data.status || existing.status,
-          waktuDaftar: data.waktuDaftar || existing.waktuDaftar,
-          ...portalFields,
+    // STEP 1: Try to find existing record by NISN + npsnSekolahPilihan (primary dedup)
+    let existing = null;
+    if (data.nisn && data.nisn.trim()) {
+      existing = await db.registration.findFirst({
+        where: {
+          nisn: data.nisn.trim(),
+          npsnSekolahPilihan,
         },
       });
-      return NextResponse.json({ success: true, action: 'updated', data: updated });
+    }
+
+    // STEP 2: Fallback - try by noRegistrasi + npsnSekolahPilihan
+    if (!existing && data.noRegistrasi && data.noRegistrasi.trim()) {
+      existing = await db.registration.findFirst({
+        where: {
+          noRegistrasi: data.noRegistrasi.trim(),
+          npsnSekolahPilihan,
+        },
+      });
+    }
+
+    if (existing) {
+      // UPDATE existing record - merge new data, don't overwrite verification fields with empty
+      const updateData: Record<string, string | null> = {
+        noRegistrasi: data.noRegistrasi || existing.noRegistrasi,
+        nama: data.nama || existing.nama,
+        nisn: data.nisn || existing.nisn,
+        subJalur: data.subJalur || existing.subJalur,
+        namaSekolahPilihan: data.namaSekolahPilihan || existing.namaSekolahPilihan,
+        jurusan: data.jurusan || existing.jurusan,
+        npsnSekolahAsal: data.npsnSekolahAsal || existing.npsnSekolahAsal,
+        namaSekolahAsal: data.namaSekolahAsal || existing.namaSekolahAsal,
+        status: data.status || existing.status,
+        waktuDaftar: data.waktuDaftar || existing.waktuDaftar,
+      };
+
+      // Only update portal fields if new values are provided (don't erase existing data)
+      for (const [key, value] of Object.entries(portalFields)) {
+        if (value && value.trim()) {
+          updateData[key] = value;
+        }
+      }
+
+      const updated = await db.registration.update({
+        where: { id: existing.id },
+        data: updateData,
+      });
+
+      return NextResponse.json({
+        success: true,
+        action: 'updated',
+        data: updated,
+        message: `Data NISN ${data.nisn} berhasil diperbarui`,
+      });
     } else {
-      // Create new record
+      // CREATE new record
       const created = await db.registration.create({
         data: {
-          noRegistrasi: data.noRegistrasi,
+          noRegistrasi: data.noRegistrasi || '',
           nama: data.nama || '',
           nisn: data.nisn || '',
           subJalur: data.subJalur || '',
@@ -111,7 +140,13 @@ export async function POST(request: NextRequest) {
           ...portalFields,
         },
       });
-      return NextResponse.json({ success: true, action: 'created', data: created });
+
+      return NextResponse.json({
+        success: true,
+        action: 'created',
+        data: created,
+        message: `Data baru NISN ${data.nisn} berhasil ditambahkan`,
+      });
     }
   } catch (error) {
     console.error('Error saving portal paste data:', error);

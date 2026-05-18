@@ -53,4 +53,5 @@ model Registration {
   dokumen             String?  // JSON string for uploaded documents
 
   @@unique([noRegistrasi, npsnSekolahPilihan])
+  @@unique([nisn, npsnSekolahPilihan])
 }
