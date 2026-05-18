@@ -28,5 +28,20 @@ model Registration {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
+  // Portal SPMB additional fields
+  nik                 String?
+  tanggalLahir        String?
+  alamat              String?
+  alamatLengkap       String?
+  noTelpSiswa         String?
+  noTelpOrangtua      String?
+  latitude            String?
+  longitude           String?
+  lokasiJarak         String?
+  nilaiRataRata       String?
+  skorJarak           String?
+  skor                String?
+  nilaiRapor          String?  // JSON string for subject grades
+
   @@unique([noRegistrasi, npsnSekolahPilihan])
 }

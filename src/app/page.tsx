@@ -75,6 +75,11 @@ import {
   ArrowLeftRight,
   Trophy,
   UserCog,
+  ClipboardPaste,
+  MapPinned,
+  Phone,
+  CalendarDays,
+  IdCard,
 } from 'lucide-react'
 
 interface Registration {
@@ -94,6 +99,20 @@ interface Registration {
   verificationNote: string | null
   createdAt: string
   updatedAt: string
+  // Portal SPMB fields
+  nik?: string | null
+  tanggalLahir?: string | null
+  alamat?: string | null
+  alamatLengkap?: string | null
+  noTelpSiswa?: string | null
+  noTelpOrangtua?: string | null
+  latitude?: string | null
+  longitude?: string | null
+  lokasiJarak?: string | null
+  nilaiRataRata?: string | null
+  skorJarak?: string | null
+  skor?: string | null
+  nilaiRapor?: string | null
 }
 
 interface DashboardStats {
@@ -967,6 +986,214 @@ export default function Home() {
   // Lembar verifikasi sub-tab
   const [lembarTab, setLembarTab] = useState('domisili')
 
+  // Portal paste state
+  const [portalPasteOpen, setPortalPasteOpen] = useState(false)
+  const [portalRawText, setPortalRawText] = useState('')
+  const [portalParsedData, setPortalParsedData] = useState<Record<string, string> | null>(null)
+  const [portalParsing, setPortalParsing] = useState(false)
+
+  // Portal SPMB text parser
+  const parsePortalText = (text: string): Record<string, string> => {
+    const result: Record<string, string> = {}
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
+
+    // Helper: find value after a label line
+    const findValueAfter = (label: string, startFrom = 0): { value: string; index: number } | null => {
+      for (let i = startFrom; i < lines.length; i++) {
+        if (lines[i].toLowerCase().includes(label.toLowerCase())) {
+          // Check if value is on same line after ":"
+          const colonIdx = lines[i].indexOf(':')
+          if (colonIdx !== -1 && lines[i].length > colonIdx + 1) {
+            return { value: lines[i].substring(colonIdx + 1).trim(), index: i }
+          }
+          // Value is on the next line
+          if (i + 1 < lines.length) {
+            return { value: lines[i + 1].trim(), index: i + 1 }
+          }
+        }
+      }
+      return null
+    }
+
+    // Helper: find value for a label that's on its own line
+    const findNextLine = (label: string): string => {
+      const found = findValueAfter(label)
+      return found?.value || ''
+    }
+
+    // No. Registrasi - from "No. Registrasi:" pattern
+    const noRegMatch = text.match(/No\.\s*Registrasi\s*:\s*(\S+)/i)
+    if (noRegMatch) result['noRegistrasi'] = noRegMatch[1]
+
+    // Sub Jalur - detect from the text (Domisili, Afirmasi, Prestasi, etc.)
+    const subJalurOptions = ['Domisili', 'Afirmasi', 'Prestasi Non Akademik', 'Prestasi', 'Zonasi', 'Mutasi', 'Anak Guru', 'Keluarga Tidak Mampu']
+    for (const jalur of subJalurOptions) {
+      // Check if the jalur name appears as a standalone line (section header)
+      for (const line of lines) {
+        if (line === jalur || line.toLowerCase() === jalur.toLowerCase()) {
+          result['subJalur'] = jalur
+          break
+        }
+      }
+      if (result['subJalur']) break
+    }
+
+    // Nama - after "Nama Peserta"
+    result['nama'] = findNextLine('Nama Peserta')
+    // Fallback: first line might be the name
+    if (!result['nama'] && lines.length > 0) {
+      // Check if first line looks like a name (not starting with a number or known label)
+      const firstLine = lines[0]
+      if (firstLine && !firstLine.match(/^\d/) && !firstLine.toLowerCase().includes('no.') && !firstLine.toLowerCase().includes('registrasi')) {
+        result['nama'] = firstLine
+      }
+    }
+
+    // Tanggal Lahir
+    result['tanggalLahir'] = findNextLine('Tanggal Lahir')
+
+    // NIK
+    result['nik'] = findNextLine('NIK')
+
+    // NISN
+    result['nisn'] = findNextLine('NISN')
+
+    // Alamat
+    result['alamat'] = findNextLine('Alamat')
+    // But "Alamat Lengkap" should be separate - handle that
+    const alamatLengkap = findNextLine('Alamat Lengkap')
+    if (alamatLengkap) {
+      result['alamatLengkap'] = alamatLengkap
+    }
+
+    // Phone numbers
+    result['noTelpSiswa'] = findNextLine('No.Telp/Hp Siswa') || findNextLine('No. Telp/Hp Siswa') || findNextLine('NoTelp/Hp Siswa')
+    result['noTelpOrangtua'] = findNextLine('No.Telp/Hp Orangtua') || findNextLine('No. Telp/Hp Orangtua') || findNextLine('NoTelp/Hp Orangtua/Wali')
+
+    // Asal Sekolah
+    result['namaSekolahAsal'] = findNextLine('Asal Sekolah')
+
+    // Sekolah Pilihan
+    result['namaSekolahPilihan'] = findNextLine('Sekolah Pilihan')
+
+    // Waktu Pendaftaran
+    result['waktuDaftar'] = findNextLine('Waktu Pendaftaran')
+
+    // Lokasi dan Jarak
+    result['lokasiJarak'] = findNextLine('Lokasi dan Jarak')
+
+    // Latitude / Longitude
+    result['latitude'] = findNextLine('Latitude')
+    result['longitude'] = findNextLine('Longitude')
+
+    // Nilai Rapor - parse subject grades
+    const subjects = ['Pendidikan Agama', 'PPKn', 'Bahasa Indonesia', 'Matematika', 'Ilmu Pengetahuan Alam', 'Ilmu Pengetahuan Sosial', 'Bahasa Inggris']
+    const grades: Record<string, string> = {}
+    for (const subject of subjects) {
+      // Find pattern: "Subject\n: value" or "Subject : value"
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i] === subject || lines[i].startsWith(subject)) {
+          // Check if value is on same line after ":"
+          if (lines[i].includes(':')) {
+            const val = lines[i].split(':').pop()?.trim()
+            if (val && val.match(/\d+/)) {
+              grades[subject] = val
+              break
+            }
+          }
+          // Check next line for ": value"
+          if (i + 1 < lines.length) {
+            const nextLine = lines[i + 1]
+            const match = nextLine.match(/:\s*(\d+[\.,]?\d*)/)
+            if (match) {
+              grades[subject] = match[1]
+              break
+            }
+          }
+        }
+      }
+    }
+    if (Object.keys(grades).length > 0) {
+      result['nilaiRapor'] = JSON.stringify(grades)
+    }
+
+    // Nilai Rata-rata
+    const nilaiRataRata = findNextLine('Nilai Rata-rata')
+    if (nilaiRataRata) {
+      // Could be "74.571" or ": 74.571"
+      const match = nilaiRataRata.match(/([\d]+[\.,]?[\d]*)/)
+      result['nilaiRataRata'] = match ? match[1] : nilaiRataRata
+    }
+
+    // Skor Jarak (from Ringkasan section)
+    const skorJarak = findNextLine('Skor Jarak')
+    if (skorJarak) result['skorJarak'] = skorJarak
+
+    // Skor (from Ringkasan section) - need to find the LAST "Skor" line
+    for (let i = lines.length - 1; i >= 0; i--) {
+      if (lines[i] === 'Skor' || lines[i] === 'Skor') {
+        if (i + 1 < lines.length) {
+          const match = lines[i + 1].match(/([\d]+[\.,]?[\d]*)/)
+          if (match) {
+            result['skor'] = match[1]
+            break
+          }
+        }
+      }
+    }
+
+    // NPSN - we don't have this from portal, use empty
+    result['npsnSekolahPilihan'] = ''
+    result['npsnSekolahAsal'] = ''
+    result['jurusan'] = ''
+    result['status'] = 'ON PROGRESS'
+
+    return result
+  }
+
+  const handlePortalPaste = () => {
+    if (!portalRawText.trim()) return
+    setPortalParsing(true)
+    try {
+      const parsed = parsePortalText(portalRawText)
+      setPortalParsedData(parsed)
+    } catch {
+      toast({ title: 'Gagal', description: 'Tidak dapat memparse teks portal', variant: 'destructive' })
+    } finally {
+      setPortalParsing(false)
+    }
+  }
+
+  const handlePortalSave = async () => {
+    if (!portalParsedData) return
+    setImporting(true)
+    try {
+      const res = await fetch('/api/registrations/portal-paste', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(portalParsedData),
+      })
+      const data = await res.json()
+      if (data.success) {
+        toast({
+          title: data.action === 'created' ? 'Data Disimpan' : 'Data Diperbarui',
+          description: `Data ${portalParsedData.nama || 'pendaftar'} berhasil ${data.action === 'created' ? 'disimpan' : 'diperbarui'}`,
+        })
+        setPortalPasteOpen(false)
+        setPortalRawText('')
+        setPortalParsedData(null)
+        fetchRegistrations()
+        fetchStats()
+      } else {
+        toast({ title: 'Gagal', description: data.error || 'Terjadi kesalahan', variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Gagal', description: 'Terjadi kesalahan', variant: 'destructive' })
+    } finally {
+      setImporting(false)
+    }
+  }
+
   const fetchRegistrations = useCallback(async () => {
     setLoading(true)
     try {
@@ -1259,6 +1486,14 @@ export default function Home() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                onClick={() => setPortalPasteOpen(true)}
+                variant="outline"
+                className="border-emerald-600 text-emerald-600 hover:bg-emerald-50"
+              >
+                <ClipboardPaste className="w-4 h-4" />
+                <span className="hidden sm:inline">Paste Portal</span>
+              </Button>
               <Button
                 onClick={() => setImportDialogOpen(true)}
                 className="bg-emerald-600 hover:bg-emerald-700"
@@ -2162,6 +2397,229 @@ export default function Home() {
         </DialogContent>
       </Dialog>
 
+      {/* ==================== PORTAL PASTE DIALOG ==================== */}
+      <Dialog open={portalPasteOpen} onOpenChange={(open) => {
+        setPortalPasteOpen(open)
+        if (!open) { setPortalRawText(''); setPortalParsedData(null) }
+      }}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ClipboardPaste className="w-5 h-5 text-emerald-600" />
+              Paste dari Portal SPMB
+            </DialogTitle>
+            <DialogDescription>
+              Copy data dari halaman detail peserta di portal SPMB Sumut, lalu paste di sini. Sistem akan otomatis mengenali dan memparse data.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {!portalParsedData ? (
+              <>
+                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                  <div className="flex gap-2">
+                    <ClipboardCheck className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+                    <div className="text-sm text-emerald-700">
+                      <p className="font-medium">Cara penggunaan:</p>
+                      <ol className="mt-1 list-decimal list-inside space-y-0.5">
+                        <li>Buka portal SPMB Sumut</li>
+                        <li>Buka halaman detail peserta</li>
+                        <li>Select all (Ctrl+A) lalu Copy (Ctrl+C)</li>
+                        <li>Paste (Ctrl+V) di kotak di bawah ini</li>
+                        <li>Klik &quot;Parse Data&quot; untuk memproses</li>
+                      </ol>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-1.5 block">
+                    Data dari Portal SPMB
+                  </label>
+                  <Textarea
+                    placeholder="Paste data dari portal SPMB di sini...&#10;&#10;Contoh format yang dikenali:&#10;SANDYON ARTHUR NAVORA WAU&#10;No. Registrasi: 6&#10;&#10;Domisili&#10;Data Peserta&#10;Nama Peserta&#10;SANDYON ARTHUR NAVORA WAU&#10;..."
+                    value={portalRawText}
+                    onChange={(e) => setPortalRawText(e.target.value)}
+                    rows={12}
+                    className="font-mono text-xs"
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                    <div className="text-sm text-emerald-700">
+                      <p className="font-medium">Data berhasil diparse!</p>
+                      <p>Periksa data di bawah sebelum menyimpan.</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Parsed Data Preview */}
+                <div className="space-y-3">
+                  {/* Header with name and sub jalur */}
+                  <Card className="border-2 border-emerald-200 bg-gradient-to-br from-emerald-50 to-white">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-emerald-100 rounded-lg">
+                          <Users className="w-6 h-6 text-emerald-600" />
+                        </div>
+                        <div>
+                          <p className="text-lg font-bold text-gray-900">{portalParsedData.nama || '-'}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge variant="outline" className="font-mono">No. Reg: {portalParsedData.noRegistrasi || '-'}</Badge>
+                            {portalParsedData.subJalur && (
+                              <Badge variant="outline" className={SUB_JALUR_COLORS[portalParsedData.subJalur] || 'bg-gray-100 text-gray-800'}>
+                                {portalParsedData.subJalur}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Data Details Grid */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {portalParsedData.nisn && (
+                      <div className="bg-gray-50 rounded-lg p-2.5">
+                        <label className="text-xs text-gray-500 font-medium flex items-center gap-1"><IdCard className="w-3 h-3" /> NISN</label>
+                        <p className="text-sm font-mono font-medium mt-0.5">{portalParsedData.nisn}</p>
+                      </div>
+                    )}
+                    {portalParsedData.nik && (
+                      <div className="bg-gray-50 rounded-lg p-2.5">
+                        <label className="text-xs text-gray-500 font-medium flex items-center gap-1"><IdCard className="w-3 h-3" /> NIK</label>
+                        <p className="text-sm font-mono font-medium mt-0.5">{portalParsedData.nik}</p>
+                      </div>
+                    )}
+                    {portalParsedData.tanggalLahir && (
+                      <div className="bg-gray-50 rounded-lg p-2.5">
+                        <label className="text-xs text-gray-500 font-medium flex items-center gap-1"><CalendarDays className="w-3 h-3" /> Tanggal Lahir</label>
+                        <p className="text-sm mt-0.5">{portalParsedData.tanggalLahir}</p>
+                      </div>
+                    )}
+                    {portalParsedData.noTelpSiswa && (
+                      <div className="bg-gray-50 rounded-lg p-2.5">
+                        <label className="text-xs text-gray-500 font-medium flex items-center gap-1"><Phone className="w-3 h-3" /> Telp Siswa</label>
+                        <p className="text-sm font-mono mt-0.5">{portalParsedData.noTelpSiswa}</p>
+                      </div>
+                    )}
+                    {portalParsedData.noTelpOrangtua && (
+                      <div className="bg-gray-50 rounded-lg p-2.5">
+                        <label className="text-xs text-gray-500 font-medium flex items-center gap-1"><Phone className="w-3 h-3" /> Telp Orangtua</label>
+                        <p className="text-sm font-mono mt-0.5">{portalParsedData.noTelpOrangtua}</p>
+                      </div>
+                    )}
+                    {portalParsedData.lokasiJarak && (
+                      <div className="bg-gray-50 rounded-lg p-2.5">
+                        <label className="text-xs text-gray-500 font-medium flex items-center gap-1"><MapPinned className="w-3 h-3" /> Jarak</label>
+                        <p className="text-sm mt-0.5">{portalParsedData.lokasiJarak}</p>
+                      </div>
+                    )}
+                    {portalParsedData.nilaiRataRata && (
+                      <div className="bg-gray-50 rounded-lg p-2.5">
+                        <label className="text-xs text-gray-500 font-medium flex items-center gap-1"><Award className="w-3 h-3" /> Nilai Rata-rata</label>
+                        <p className="text-sm font-bold text-emerald-600 mt-0.5">{portalParsedData.nilaiRataRata}</p>
+                      </div>
+                    )}
+                    {portalParsedData.skor && (
+                      <div className="bg-gray-50 rounded-lg p-2.5">
+                        <label className="text-xs text-gray-500 font-medium flex items-center gap-1"><Award className="w-3 h-3" /> Skor</label>
+                        <p className="text-sm font-bold text-amber-600 mt-0.5">{portalParsedData.skor}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Schools */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {portalParsedData.namaSekolahAsal && (
+                      <div className="bg-gray-50 rounded-lg p-2.5">
+                        <label className="text-xs text-gray-500 font-medium">Asal Sekolah</label>
+                        <p className="text-sm font-medium mt-0.5">{portalParsedData.namaSekolahAsal}</p>
+                      </div>
+                    )}
+                    {portalParsedData.namaSekolahPilihan && (
+                      <div className="bg-sky-50 rounded-lg p-2.5">
+                        <label className="text-xs text-sky-600 font-medium">Sekolah Pilihan</label>
+                        <p className="text-sm font-medium text-sky-800 mt-0.5">{portalParsedData.namaSekolahPilihan}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Address */}
+                  {(portalParsedData.alamat || portalParsedData.alamatLengkap) && (
+                    <div className="bg-gray-50 rounded-lg p-2.5">
+                      <label className="text-xs text-gray-500 font-medium">Alamat</label>
+                      <p className="text-sm mt-0.5">{portalParsedData.alamat}</p>
+                      {portalParsedData.alamatLengkap && portalParsedData.alamatLengkap !== portalParsedData.alamat && (
+                        <p className="text-xs text-gray-500 mt-0.5">{portalParsedData.alamatLengkap}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Nilai Rapor */}
+                  {portalParsedData.nilaiRapor && (() => {
+                    try {
+                      const grades = JSON.parse(portalParsedData.nilaiRapor)
+                      return (
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                          <h4 className="text-sm font-medium text-amber-800 mb-2 flex items-center gap-1">
+                            <GraduationCap className="w-4 h-4" /> Nilai Rapor
+                          </h4>
+                          <div className="grid grid-cols-2 gap-2">
+                            {Object.entries(grades).map(([subject, value]) => (
+                              <div key={subject} className="flex justify-between text-sm bg-white rounded px-2 py-1">
+                                <span className="text-gray-600 text-xs">{subject}</span>
+                                <span className="font-bold text-amber-700">{String(value)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    } catch { return null }
+                  })()}
+
+                  {/* Coordinates */}
+                  {(portalParsedData.latitude || portalParsedData.longitude) && (
+                    <div className="bg-gray-50 rounded-lg p-2.5">
+                      <label className="text-xs text-gray-500 font-medium">Koordinat</label>
+                      <p className="text-xs font-mono mt-0.5">{portalParsedData.latitude}, {portalParsedData.longitude}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setPortalParsedData(null)}>
+                    <RotateCcw className="w-4 h-4" />
+                    Parse Ulang
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+
+          <DialogFooter>
+            {!portalParsedData ? (
+              <Button onClick={handlePortalPaste} disabled={!portalRawText.trim() || portalParsing} className="bg-emerald-600 hover:bg-emerald-700">
+                {portalParsing ? (<><Loader2 className="w-4 h-4 animate-spin" /> Memproses...</>) : (<><ClipboardCheck className="w-4 h-4" /> Parse Data</>)}
+              </Button>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => { setPortalParsedData(null); setPortalRawText('') }}>
+                  Batal
+                </Button>
+                <Button onClick={handlePortalSave} disabled={importing} className="bg-emerald-600 hover:bg-emerald-700">
+                  {importing ? (<><Loader2 className="w-4 h-4 animate-spin" /> Menyimpan...</>) : (<><Check className="w-4 h-4" /> Simpan Data</>)}
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* ==================== SINGLE VERIFY DIALOG ==================== */}
       <Dialog open={verifyDialogOpen} onOpenChange={setVerifyDialogOpen}>
         <DialogContent>
@@ -2356,6 +2814,103 @@ export default function Home() {
                   <p className="text-xs text-gray-500">NPSN: {detailTarget.npsnSekolahAsal}</p>
                 </div>
               </div>
+
+              {/* Portal SPMB Data */}
+              {(detailTarget.nik || detailTarget.tanggalLahir || detailTarget.alamat || detailTarget.noTelpSiswa || detailTarget.noTelpOrangtua || detailTarget.lokasiJarak || detailTarget.nilaiRataRata || detailTarget.skor || detailTarget.nilaiRapor) && (
+                <div className="border-t pt-4">
+                  <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-1.5">
+                    <ClipboardCheck className="w-4 h-4 text-emerald-600" />
+                    Data Portal SPMB
+                  </h4>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    {detailTarget.nik && (
+                      <div className="bg-gray-50 rounded-lg p-2">
+                        <label className="text-xs text-gray-500 font-medium">NIK</label>
+                        <p className="text-sm font-mono">{detailTarget.nik}</p>
+                      </div>
+                    )}
+                    {detailTarget.tanggalLahir && (
+                      <div className="bg-gray-50 rounded-lg p-2">
+                        <label className="text-xs text-gray-500 font-medium">Tanggal Lahir</label>
+                        <p className="text-sm">{detailTarget.tanggalLahir}</p>
+                      </div>
+                    )}
+                    {detailTarget.noTelpSiswa && (
+                      <div className="bg-gray-50 rounded-lg p-2">
+                        <label className="text-xs text-gray-500 font-medium">Telp Siswa</label>
+                        <p className="text-sm font-mono">{detailTarget.noTelpSiswa}</p>
+                      </div>
+                    )}
+                    {detailTarget.noTelpOrangtua && (
+                      <div className="bg-gray-50 rounded-lg p-2">
+                        <label className="text-xs text-gray-500 font-medium">Telp Orangtua</label>
+                        <p className="text-sm font-mono">{detailTarget.noTelpOrangtua}</p>
+                      </div>
+                    )}
+                    {detailTarget.lokasiJarak && (
+                      <div className="bg-gray-50 rounded-lg p-2">
+                        <label className="text-xs text-gray-500 font-medium">Jarak</label>
+                        <p className="text-sm">{detailTarget.lokasiJarak}</p>
+                      </div>
+                    )}
+                    {detailTarget.nilaiRataRata && (
+                      <div className="bg-emerald-50 rounded-lg p-2">
+                        <label className="text-xs text-emerald-600 font-medium">Nilai Rata-rata</label>
+                        <p className="text-sm font-bold text-emerald-700">{detailTarget.nilaiRataRata}</p>
+                      </div>
+                    )}
+                    {detailTarget.skor && (
+                      <div className="bg-amber-50 rounded-lg p-2">
+                        <label className="text-xs text-amber-600 font-medium">Skor</label>
+                        <p className="text-sm font-bold text-amber-700">{detailTarget.skor}</p>
+                      </div>
+                    )}
+                    {detailTarget.skorJarak && (
+                      <div className="bg-gray-50 rounded-lg p-2">
+                        <label className="text-xs text-gray-500 font-medium">Skor Jarak</label>
+                        <p className="text-sm">{detailTarget.skorJarak}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {detailTarget.alamat && (
+                    <div className="mt-3 bg-gray-50 rounded-lg p-2">
+                      <label className="text-xs text-gray-500 font-medium">Alamat</label>
+                      <p className="text-sm">{detailTarget.alamat}</p>
+                      {detailTarget.alamatLengkap && <p className="text-xs text-gray-400">{detailTarget.alamatLengkap}</p>}
+                    </div>
+                  )}
+
+                  {detailTarget.nilaiRapor && (() => {
+                    try {
+                      const grades = JSON.parse(detailTarget.nilaiRapor)
+                      return (
+                        <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                          <h5 className="text-xs font-medium text-amber-800 mb-2 flex items-center gap-1">
+                            <GraduationCap className="w-3.5 h-3.5" /> Nilai Rapor
+                          </h5>
+                          <div className="grid grid-cols-2 gap-1.5">
+                            {Object.entries(grades).map(([subject, value]) => (
+                              <div key={subject} className="flex justify-between text-xs bg-white rounded px-2 py-1">
+                                <span className="text-gray-600">{subject}</span>
+                                <span className="font-bold text-amber-700">{String(value)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    } catch { return null }
+                  })()}
+
+                  {(detailTarget.latitude || detailTarget.longitude) && (
+                    <div className="mt-3 bg-gray-50 rounded-lg p-2">
+                      <label className="text-xs text-gray-500 font-medium">Koordinat</label>
+                      <p className="text-xs font-mono">{detailTarget.latitude}, {detailTarget.longitude}</p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="border-t pt-4">
                 <div className="grid grid-cols-2 gap-4">

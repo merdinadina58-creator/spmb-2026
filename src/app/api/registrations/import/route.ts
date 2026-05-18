@@ -13,6 +13,20 @@ interface CSVPayload {
   namaSekolahAsal: string;
   status: string;
   waktuDaftar: string;
+  // Portal fields
+  nik?: string;
+  tanggalLahir?: string;
+  alamat?: string;
+  alamatLengkap?: string;
+  noTelpSiswa?: string;
+  noTelpOrangtua?: string;
+  latitude?: string;
+  longitude?: string;
+  lokasiJarak?: string;
+  nilaiRataRata?: string;
+  skorJarak?: string;
+  skor?: string;
+  nilaiRapor?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -45,6 +59,15 @@ export async function POST(request: NextRequest) {
           },
         });
 
+        const portalData: Record<string, string> = {};
+        const optFields = ['nik', 'tanggalLahir', 'alamat', 'alamatLengkap', 'noTelpSiswa', 'noTelpOrangtua', 'latitude', 'longitude', 'lokasiJarak', 'nilaiRataRata', 'skorJarak', 'skor', 'nilaiRapor'] as const;
+        for (const f of optFields) {
+          const val = (row as Record<string, unknown>)[f];
+          if (val && typeof val === 'string' && (val as string).trim()) {
+            portalData[f] = (val as string).trim();
+          }
+        }
+
         if (existing) {
           await db.registration.update({
             where: { id: existing.id },
@@ -58,6 +81,7 @@ export async function POST(request: NextRequest) {
               namaSekolahAsal: row.namaSekolahAsal || existing.namaSekolahAsal,
               status: row.status || existing.status,
               waktuDaftar: row.waktuDaftar || existing.waktuDaftar,
+              ...portalData,
             },
           });
           imported++;
@@ -76,6 +100,7 @@ export async function POST(request: NextRequest) {
               status: row.status || 'ON PROGRESS',
               waktuDaftar: row.waktuDaftar || '',
               verificationStatus: 'PENDING',
+              ...portalData,
             },
           });
           imported++;
