@@ -85,6 +85,7 @@ import {
   CalendarClock,
   Printer,
   AlertCircle,
+  X,
 } from 'lucide-react'
 
 interface Registration {
@@ -637,7 +638,7 @@ function LembarVerifikasiSheet({
 
   // Commit terbitKK and auto-calculate lamaKK at once
   const commitTerbitKK = (regId: string, newDate: string) => {
-    const calculatedLama = hitungLamaKK(newDate)
+    const calculatedLama = newDate ? hitungLamaKK(newDate) : ''
     // Immediately update local state for instant UI feedback
     if (data) {
       setData({
@@ -1227,28 +1228,42 @@ function LembarVerifikasiSheet({
                       {/* Terbit KK */}
                       <TableCell className="text-sm">
                         {editingCell === `${reg.id}-terbitKK` ? (
-                          <input
-                            type="date"
-                            className="w-32 px-1.5 py-0.5 text-sm border border-sky-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
-                            value={editingValue}
-                            onChange={(e) => {
-                              setEditingValue(e.target.value)
-                            }}
-                            onBlur={() => {
-                              if (editingValue) {
-                                commitTerbitKK(reg.id, editingValue)
-                              } else {
-                                cancelEdit()
-                              }
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' && editingValue) {
-                                commitTerbitKK(reg.id, editingValue)
-                              }
-                              if (e.key === 'Escape') cancelEdit()
-                            }}
-                            autoFocus
-                          />
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="date"
+                              className="w-28 px-1.5 py-0.5 text-sm border border-sky-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
+                              value={editingValue}
+                              onChange={(e) => {
+                                setEditingValue(e.target.value)
+                              }}
+                              onBlur={() => {
+                                // Small delay to allow clear button click to register
+                                setTimeout(() => {
+                                  if (editingCell === `${reg.id}-terbitKK`) {
+                                    commitTerbitKK(reg.id, editingValue)
+                                  }
+                                }, 150)
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  commitTerbitKK(reg.id, editingValue)
+                                }
+                                if (e.key === 'Escape') cancelEdit()
+                              }}
+                              autoFocus
+                            />
+                            <button
+                              type="button"
+                              className="p-0.5 rounded hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors"
+                              title="Kosongkan tanggal"
+                              onMouseDown={(e) => {
+                                e.preventDefault() // Prevent blur from firing on the date input
+                                commitTerbitKK(reg.id, '')
+                              }}
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         ) : (
                           <span
                             className="cursor-pointer hover:bg-sky-50 px-1 py-0.5 rounded inline-flex items-center gap-1 group"
@@ -1666,7 +1681,21 @@ function LembarVerifikasiSheet({
                   </div>
                   <div>
                     <label className="text-xs text-gray-500 font-medium">Terbit KK</label>
-                    <Input type="date" value={editForm.terbitKK || ''} onChange={e => setEditForm({...editForm, terbitKK: e.target.value})} className="mt-1" />
+                    <div className="flex items-center gap-1 mt-1">
+                      <Input type="date" value={editForm.terbitKK || ''} onChange={e => setEditForm({...editForm, terbitKK: e.target.value})} className="flex-1" />
+                      {editForm.terbitKK && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 h-9 px-2"
+                          onClick={() => setEditForm({...editForm, terbitKK: ''})}
+                          title="Kosongkan"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   <div>
                     <label className="text-xs text-gray-500 font-medium">Lama KK</label>
@@ -4299,7 +4328,21 @@ export default function Home() {
                   </div>
                   <div>
                     <label className="text-xs text-gray-500 font-medium">Terbit KK</label>
-                    <Input type="date" value={editForm.terbitKK || ''} onChange={e => setEditForm({...editForm, terbitKK: e.target.value})} className="mt-1" />
+                    <div className="flex items-center gap-1 mt-1">
+                      <Input type="date" value={editForm.terbitKK || ''} onChange={e => setEditForm({...editForm, terbitKK: e.target.value})} className="flex-1" />
+                      {editForm.terbitKK && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 h-9 px-2"
+                          onClick={() => setEditForm({...editForm, terbitKK: ''})}
+                          title="Kosongkan"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   <div>
                     <label className="text-xs text-gray-500 font-medium">Lama KK</label>

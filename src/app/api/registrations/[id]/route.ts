@@ -88,10 +88,15 @@ export async function PATCH(
     }
 
     // Auto-calculate lamaKK when terbitKK is provided
-    if ('terbitKK' in updateData && updateData.terbitKK) {
-      const calculatedLama = hitungLamaKK(updateData.terbitKK);
-      if (calculatedLama) {
-        updateData['lamaKK'] = calculatedLama;
+    if ('terbitKK' in updateData) {
+      if (updateData.terbitKK) {
+        const calculatedLama = hitungLamaKK(updateData.terbitKK);
+        if (calculatedLama) {
+          updateData['lamaKK'] = calculatedLama;
+        }
+      } else {
+        // When terbitKK is cleared, also clear lamaKK
+        updateData['lamaKK'] = null;
       }
     }
 
