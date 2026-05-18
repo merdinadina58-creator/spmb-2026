@@ -39,6 +39,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useToast } from '@/hooks/use-toast'
 import {
   Upload,
@@ -166,6 +167,109 @@ const STATUS_COLORS: Record<string, string> = {
   VERIFIED: 'bg-emerald-100 text-emerald-800 border-emerald-300',
   REJECTED: 'bg-red-100 text-red-800 border-red-300',
 }
+
+// 99 Kategori Kekurangan Verifikasi
+const KEKURANGAN_VERIFIKASI_OPTIONS = [
+  '1. Tidak Ada Kendala',
+  '2. Titik Koordinat tidak sesuai dengan Alamat di Kartu Keluarga',
+  '3. Tidak Foto Rapor Semester 2',
+  '4. Tidak Foto Rapor Semester 3',
+  '5. Tidak Foto Rapor Semester 4',
+  '6. Tidak Foto Rapor Semester 5',
+  '7. Foto KK Buram tidak dapat dibaca',
+  '8. Perubahan tempat dan tanggal tanda tangan pada surat pernyataan orang tua',
+  '9. Foto Surat Keterangan Keabsahan Nilai Buram/ tidak dapat dibaca',
+  '10. Tidak Ada Foto Surat Keterangan Kepala Sekolah (Keabsahan Nilai)',
+  '11. Nilai Raport yang dientri tidak sesuai dengan foto nilai Per Semester',
+  '12. Salah Input Nilai Raport Semester 1',
+  '13. Salah Input Nilai Raport Semester 2',
+  '14. Salah Input Nilai Raport Semester 3',
+  '15. Salah Input Nilai Raport Semester 4',
+  '16. Salah Input Nilai Raport Semester 5',
+  '17. Tidak Ada Foto Rapor Sem 1, Sem 2, Sem 3, Sem 4',
+  '18. Tidak Ada Foto Rapor Sem 1, Sem 2, Sem 3',
+  '19. Tidak Ada Foto Rapor Sem 1, Sem 2',
+  '20. Tidak Ada Foto Rapor Sem 1',
+  '21. Tidak Ada Foto Rapor Sem 2',
+  '22. Tidak Ada Foto Rapor Sem 3',
+  '23. Tidak Ada Foto Rapor Sem 4',
+  '24. Tidak Ada Foto Rapor Sem 5',
+  '25. Tidak Ada Foto Rapor Samasekali',
+  '26. Foto KK dan Surat Keterangan Buram',
+  '27. Foto KK dan Rapor Buram',
+  '28. Foto Surat Keterangan Kepala Sekolah dan Foto Rapor Buram',
+  '29. Surat Pernyataan Orangtua/ Wali Tidak Dibubuhi Materai 10.000',
+  '30. Titik Koordinat dan alamat di KK tidak sinkron',
+  '31. Umur KK Baru 13 Hari',
+  '32. Usia KK Masih Belum Setahun Silahkan Upload KK yang Diatas Satu tahun',
+  '33. Umur KK Belum 1 Tahun',
+  '34. Buram Foto Rapor Semester 2, 3, 4 dan 5',
+  '35. Buram Foto Rapor Semester 3, 4 dan 5',
+  '36. Buram Foto Rapor Semester 4 dan 5',
+  '37. Surat pernyataan orang tua salah',
+  '38. Foto raport yang di upload adalah foto raport asli dan bukan daftar kumpul',
+  '39. Salah Upload bukti dokumen PIP',
+  '40. Ditolak dinas',
+  '41. KK tidak aktif segera aktifkan ke dukcapil serta surat keterangan tidak mampu',
+  '42. KK tidak aktif segera aktifkan ke dukcapil supaya bisa mendaftar kembali',
+  '43. Titik koordinat berbeda dan kartu keluarga tidak dapat di scan',
+  '44. Kartu PKH sudah tidak aktif',
+  '45. Titik koordinat salah dan KK tidak aktif',
+  '46. Foto KK tidak dapat di scan',
+  '47. Dokumen PKH yang diunggah salah dan surat pernyataan tidak sesuai form',
+  '48. KK kurang dari 1 tahun dan nilai raport yang di input tidak sesuai dengan foto',
+  '49. Nilai raport yang di input tidak sesuai dengan yang di upload',
+  '50. KK tidak aktif, tidak ada kartu PKH, format pernyataan orang tua salah',
+  '51. KK tidak aktif dan ket. Tempat dan tanggal surat pernyataan orang tua tidak sesuai',
+  '52. KK tidak dapat dibaca dan hasil scan kartu KIP eror',
+  '53. Dokumen KIP salah dan surat pernyataan orang tua kurang jelas',
+  '54. KK tidak aktif dan titik koordinat salah',
+  '55. KK kurang 1 tahun, dokumen KIP buram dan surat pernyataan orang tua tidak sesuai',
+  '56. KK tidak aktif, foto raport tidak jelas dan tidak rapi',
+  '57. Foto raport salah di upload',
+  '58. KK blm 1 tahun, foto KIP buram dan tidak rapi',
+  '59. Foto KK tidak dapat di baca',
+  '60. Foto raport yang di upload pada semester 5 salah',
+  '61. Alamat titik koordinat tidak sesuai dengan alamat di KK dan surat pernyataan',
+  '62. Foto kartu KIP terpotong',
+  '63. KK dan KIP tidak ditemukan serta tanda tangan tidak mengenai materai',
+  '64. Nilai yang di input sem. 2 tidak sesuai dengan foto yang di upload',
+  '65. Umur KK kurang dari 1 tahun dan foto raport tidak sesuai',
+  '66. Nilai yang di input tidak sesuai dengan surat keabsahan nilai dari kasek',
+  '67. KK tidak aktif',
+  '68. Foto KK tdk dapat di scan',
+  '69. Nilai raport sem. 1 yang di upload berbeda dengan surat keabsahan nilai raport',
+  '70. Foto KK Buram tidak dapat dibaca',
+  '71. Titik koordinat tidak sesuai, umur KK kurang dari 1 tahun, dokumen PKH salah',
+  '72. KK tidak dapat di scan, titik koordinat tidak sesuai KK, kartu KIP tidak dapat di scan',
+  '73. KK tidak dapat di baca dan kartu KIP eror saat di scan',
+  '74. KK tidak dapat di baca dan titik koordinat tidak sesuai (titik di hutan)',
+  '75. Foto raport semester 5 tidak lengkap dan KK tidak dapat discan',
+  '76. KK buram dan salah upload foto raport',
+  '77. KK tidak jelas, surat pernyataan salah',
+  '78. KK dan kartu KIP tidak ditemukan',
+  '79. Surat pernyataan keabsahan nilai raport salah',
+  '80. Foto KK',
+  '81. Kartu KIP tidak di upload',
+  '82. Nilai sem. 4 dan 5 yang di input tidak sesuai dengan foto raport, umur KK kurang 1 tahun',
+  '83. Titik koordinat tidak sesuai dengan KK, foto raport yang di upload tidak sesuai',
+  '84. Foto raport tidak lengkap',
+  '85. KK kurang 1 tahun dan surat keabsahan raport tidak sesuai',
+  '86. KK tidak aktif',
+  '87. Surat pernyataan dan kartu PKH tidak sesuai',
+  '88. Umur KK kurang 1 tahun dan foto raport yang di upload salah',
+  '89. KK kurang 1 tahun dan surat pernyataan tidak sesuai',
+  '90. KK tidak aktif dan foto raport tidak lengkap',
+  '91. Umur KK kurang 1 tahun dan nilai raport tidak sesuai dengan yang di input',
+  '92. Foto raport semester 5 tidak lengkap',
+  '93. Dokumen surat tugas tidak lengkap dan KK tidak aktif',
+  '94. Foto raport terpotong',
+  '95. Umur KK kurang 1 tahun',
+  '96. Surat keabsahan yang di upload tidak sesuai',
+  '97. KK tidak dapat di baca dan hasil scan kartu KIP eror',
+  '98. KK tidak dapat di baca dan kartu KIP eror saat di scan',
+  '99. KK tidak dapat di baca dan titik koordinat tidak sesuai (titik di hutan)',
+]
 
 const SUB_JALUR_COLORS: Record<string, string> = {
   'Domisili': 'bg-sky-100 text-sky-800 border-sky-200',
@@ -297,6 +401,87 @@ function StatBar({ label, count, total, color }: { label: string; count: number;
   )
 }
 
+// Searchable Kekurangan Verifikasi Dropdown
+function KekuranganVerifSelect({ value, onChange }: { value: string; onChange: (val: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+
+  const filtered = search
+    ? KEKURANGAN_VERIFIKASI_OPTIONS.filter(opt => opt.toLowerCase().includes(search.toLowerCase()))
+    : KEKURANGAN_VERIFIKASI_OPTIONS
+
+  // Display short version in the cell (just the number or first 20 chars)
+  const displayValue = value || '-'
+  const shortDisplay = value
+    ? value.length > 18
+      ? value.substring(0, 16) + '…'
+      : value
+    : '-'
+
+  return (
+    <Popover open={open} onOpenChange={(v) => { setOpen(v); if (!v) setSearch('') }}>
+      <PopoverTrigger asChild>
+        <span
+          className="cursor-pointer hover:bg-sky-50 px-1 py-0.5 rounded inline-flex items-center gap-1 group min-h-[24px] text-xs"
+          title={displayValue}
+        >
+          <span className={value ? 'text-gray-800' : 'text-gray-400'}>
+            {shortDisplay}
+          </span>
+          <Pencil className="w-3 h-3 text-gray-300 group-hover:text-sky-500 shrink-0" />
+        </span>
+      </PopoverTrigger>
+      <PopoverContent className="w-80 p-0" align="start" side="bottom">
+        <div className="flex items-center border-b px-3 py-2">
+          <Search className="w-4 h-4 text-gray-400 mr-2 shrink-0" />
+          <input
+            placeholder="Cari kategori kekurangan..."
+            className="flex-1 text-sm outline-none bg-transparent"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            autoFocus
+          />
+        </div>
+        <div className="max-h-64 overflow-y-auto">
+          {filtered.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-4">Tidak ditemukan</p>
+          ) : (
+            filtered.map((opt) => (
+              <div
+                key={opt}
+                className={`px-3 py-1.5 text-xs cursor-pointer hover:bg-sky-50 transition-colors ${
+                  value === opt ? 'bg-sky-100 font-medium' : ''
+                }`}
+                onClick={() => {
+                  onChange(opt === value ? '' : opt)
+                  setOpen(false)
+                  setSearch('')
+                }}
+              >
+                {opt}
+              </div>
+            ))
+          )}
+        </div>
+        {value && (
+          <div className="border-t px-3 py-2">
+            <button
+              className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1"
+              onClick={() => {
+                onChange('')
+                setOpen(false)
+                setSearch('')
+              }}
+            >
+              <XCircle className="w-3 h-3" /> Hapus pilihan
+            </button>
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
+  )
+}
+
 // Lembar Verifikasi Sheet Component
 function LembarVerifikasiSheet({
   config,
@@ -365,6 +550,10 @@ function LembarVerifikasiSheet({
     handleFieldUpdate(regId, field, editingValue)
     setEditingCell(null)
     setEditingValue('')
+  }
+
+  const commitEditDirect = (regId: string, field: string, value: string) => {
+    handleFieldUpdate(regId, field, value)
   }
 
   const cancelEdit = () => {
@@ -787,30 +976,12 @@ function LembarVerifikasiSheet({
                           </span>
                         )}
                       </TableCell>
-                      {/* Kekurangan Verifikasi */}
+                      {/* Kekurangan Verifikasi - Searchable Dropdown */}
                       <TableCell className="text-sm">
-                        {editingCell === `${reg.id}-kekuranganVerifikasi` ? (
-                          <input
-                            type="text"
-                            className="w-32 px-1.5 py-0.5 text-sm border border-sky-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
-                            value={editingValue}
-                            onChange={(e) => setEditingValue(e.target.value)}
-                            onBlur={() => commitEdit(reg.id, 'kekuranganVerifikasi')}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') commitEdit(reg.id, 'kekuranganVerifikasi')
-                              if (e.key === 'Escape') cancelEdit()
-                            }}
-                            autoFocus
-                          />
-                        ) : (
-                          <span
-                            className="cursor-pointer hover:bg-sky-50 px-1 py-0.5 rounded inline-flex items-center gap-1 group"
-                            onClick={() => startEditing(reg.id, 'kekuranganVerifikasi', reg.kekuranganVerifikasi || '')}
-                          >
-                            {reg.kekuranganVerifikasi || '-'}
-                            <Pencil className="w-3 h-3 text-gray-300 group-hover:text-sky-500" />
-                          </span>
-                        )}
+                        <KekuranganVerifSelect
+                          value={reg.kekuranganVerifikasi || ''}
+                          onChange={(val) => commitEditDirect(reg.id, 'kekuranganVerifikasi', val)}
+                        />
                       </TableCell>
                       {/* Tanggal Verif */}
                       <TableCell className="text-sm">
