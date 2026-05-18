@@ -55,3 +55,20 @@ model Registration {
   @@unique([noRegistrasi, npsnSekolahPilihan])
   @@unique([nisn, npsnSekolahPilihan])
 }
+
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model JalurConfig {
+  id          String   @id @default(cuid())
+  nama        String   @unique  // Nama jalur, e.g. "Domisili", "Afirmasi (KTM)"
+  persentase  Float    @default(0)  // Persentase kuota
+  urutan      Int      @default(0)  // Urutan tampilan
+  aktif       Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
