@@ -1083,9 +1083,9 @@ function LembarVerifikasiSheet({
       {/* Verification Table */}
       <Card>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-h-[60vh] overflow-y-auto">
             <Table>
-              <TableHeader>
+              <TableHeader className="sticky top-0 z-10 bg-white">
                 <TableRow className={config.headerBg}>
                   <TableHead className="w-10 text-center">No</TableHead>
                   <TableHead className="w-10 text-center">
@@ -2843,9 +2843,9 @@ export default function Home() {
             {/* Table */}
             <Card>
               <CardContent className="p-0">
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto max-h-[60vh] overflow-y-auto">
                   <Table>
-                    <TableHeader>
+                    <TableHeader className="sticky top-0 z-10 bg-white">
                       <TableRow className="bg-gray-50/80">
                         <TableHead className="w-12">
                           <Checkbox
@@ -3100,9 +3100,9 @@ export default function Home() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto max-h-[60vh] overflow-y-auto">
                   <Table>
-                    <TableHeader>
+                    <TableHeader className="sticky top-0 z-10 bg-white">
                       <TableRow className="bg-emerald-50/80">
                         <TableHead className="w-12 text-center">No</TableHead>
                         <TableHead>No. Registrasi</TableHead>
@@ -3272,9 +3272,9 @@ export default function Home() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto max-h-[60vh] overflow-y-auto">
                   <Table>
-                    <TableHeader>
+                    <TableHeader className="sticky top-0 z-10 bg-white">
                       <TableRow className="bg-red-50/80">
                         <TableHead className="w-12 text-center">No</TableHead>
                         <TableHead>No. Registrasi</TableHead>
@@ -3797,8 +3797,8 @@ export default function Home() {
 
       {/* ==================== DETAIL DIALOG ==================== */}
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Users className="w-5 h-5 text-emerald-600" />
               Detail Pendaftar
@@ -3807,7 +3807,7 @@ export default function Home() {
           </DialogHeader>
 
           {detailTarget && (
-            <div className="space-y-4">
+            <div className="space-y-4 overflow-y-auto flex-1 min-h-0 pr-1" style={{ scrollbarGutter: 'stable' }}>
               {/* Status badge at top */}
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className={`${STATUS_COLORS[detailTarget.verificationStatus]} text-sm px-3 py-1`}>
