@@ -80,6 +80,7 @@ import {
   Phone,
   CalendarDays,
   IdCard,
+  Pencil,
 } from 'lucide-react'
 
 interface Registration {
@@ -113,6 +114,14 @@ interface Registration {
   skorJarak?: string | null
   skor?: string | null
   nilaiRapor?: string | null
+  // Verification-specific fields
+  skorNilaiRaport?: string | null
+  kekuranganVerifikasi?: string | null
+  tanggalVerif?: string | null
+  jamVerif?: string | null
+  terbitKK?: string | null
+  lamaKK?: string | null
+  dokumen?: string | null
 }
 
 interface DashboardStats {
@@ -314,6 +323,53 @@ function LembarVerifikasiSheet({
   const [verifyAction, setVerifyAction] = useState<'VERIFIED' | 'REJECTED'>('VERIFIED')
   const [verifyNote, setVerifyNote] = useState('')
   const [verifyTargetId, setVerifyTargetId] = useState<string | null>(null)
+
+  // Inline editing state: key = "regId-fieldName"
+  const [editingCell, setEditingCell] = useState<string | null>(null)
+  const [editingValue, setEditingValue] = useState('')
+
+  const handleFieldUpdate = async (regId: string, field: string, value: string) => {
+    try {
+      const res = await fetch(`/api/registrations/${regId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ field, value }),
+      })
+      const result = await res.json()
+      if (result.success) {
+        // Update local data optimistically
+        if (data) {
+          setData({
+            ...data,
+            registrations: data.registrations.map(r =>
+              r.id === regId ? { ...r, [field]: value || null } : r
+            ),
+          })
+        }
+        toast({ title: 'Tersimpan', description: `Data ${field} berhasil diperbarui` })
+      } else {
+        toast({ title: 'Gagal', description: result.error || 'Gagal menyimpan', variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Gagal', description: 'Terjadi kesalahan', variant: 'destructive' })
+    }
+  }
+
+  const startEditing = (regId: string, field: string, currentValue: string) => {
+    setEditingCell(`${regId}-${field}`)
+    setEditingValue(currentValue || '')
+  }
+
+  const commitEdit = (regId: string, field: string) => {
+    handleFieldUpdate(regId, field, editingValue)
+    setEditingCell(null)
+    setEditingValue('')
+  }
+
+  const cancelEdit = () => {
+    setEditingCell(null)
+    setEditingValue('')
+  }
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -650,18 +706,23 @@ function LembarVerifikasiSheet({
             <Table>
               <TableHeader>
                 <TableRow className={config.headerBg}>
-                  <TableHead className="w-12">
+                  <TableHead className="w-10 text-center">No</TableHead>
+                  <TableHead className="w-10 text-center">
                     <Checkbox
                       checked={data ? data.registrations.length > 0 && selectedIds.size === data.registrations.length : false}
                       onCheckedChange={toggleSelectAll}
                     />
                   </TableHead>
-                  <TableHead>No. Reg</TableHead>
-                  <TableHead>Nama</TableHead>
-                  <TableHead className="hidden md:table-cell">NISN</TableHead>
-                  {config.subCategories && <TableHead>Kategori</TableHead>}
-                  <TableHead className="hidden lg:table-cell">Sekolah Pilihan</TableHead>
-                  <TableHead className="hidden lg:table-cell">Jurusan</TableHead>
+                  <TableHead>Skor Jarak</TableHead>
+                  <TableHead>Skor Nilai Raport</TableHead>
+                  <TableHead>Kekurangan Verifikasi</TableHead>
+                  <TableHead>Tanggal Verif</TableHead>
+                  <TableHead>Jam Verif</TableHead>
+                  <TableHead>Terbit KK</TableHead>
+                  <TableHead>Lama KK</TableHead>
+                  <TableHead>No. Registrasi</TableHead>
+                  <TableHead>Nama Peserta</TableHead>
+                  <TableHead>Asal Sekolah</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
@@ -669,42 +730,194 @@ function LembarVerifikasiSheet({
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={config.subCategories ? 9 : 8} className="text-center py-12">
+                    <TableCell colSpan={14} className="text-center py-12">
                       <Loader2 className="w-6 h-6 animate-spin mx-auto text-gray-400" />
                       <p className="text-sm text-gray-400 mt-2">Memuat data...</p>
                     </TableCell>
                   </TableRow>
                 ) : !data || data.registrations.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={config.subCategories ? 9 : 8} className="text-center py-12">
+                    <TableCell colSpan={14} className="text-center py-12">
                       <Icon className={`w-10 h-10 mx-auto text-gray-300 mb-2`} />
                       <p className="text-gray-500 font-medium">Belum ada data pendaftar {config.label}</p>
                       <p className="text-sm text-gray-400">Import CSV untuk memulai verifikasi</p>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  data.registrations.map((reg) => (
+                  data.registrations.map((reg, idx) => (
                     <TableRow key={reg.id} className={
                       reg.verificationStatus === 'VERIFIED' ? 'bg-emerald-50/40' :
                       reg.verificationStatus === 'REJECTED' ? 'bg-red-50/40' : ''
                     }>
-                      <TableCell>
+                      {/* No */}
+                      <TableCell className="text-center text-sm text-gray-500">
+                        {(data.pagination.page - 1) * data.pagination.limit + idx + 1}
+                      </TableCell>
+                      {/* Checkbox */}
+                      <TableCell className="text-center">
                         <Checkbox checked={selectedIds.has(reg.id)} onCheckedChange={() => toggleSelect(reg.id)} />
                       </TableCell>
-                      <TableCell className="font-mono text-sm">{reg.noRegistrasi}</TableCell>
-                      <TableCell className="font-medium">{reg.nama}</TableCell>
-                      <TableCell className="hidden md:table-cell text-sm text-gray-500">{reg.nisn}</TableCell>
-                      {config.subCategories && (
-                        <TableCell>
-                          <Badge variant="outline" className={SUB_JALUR_COLORS[reg.subJalur] || 'bg-gray-100 text-gray-800 border-gray-200'}>
-                            {reg.subJalur}
-                          </Badge>
-                        </TableCell>
-                      )}
-                      <TableCell className="hidden lg:table-cell text-sm">{reg.namaSekolahPilihan}</TableCell>
-                      <TableCell className="hidden lg:table-cell">
-                        <Badge variant="secondary">{reg.jurusan}</Badge>
+                      {/* Skor Jarak */}
+                      <TableCell className="text-sm text-center">
+                        {reg.skorJarak || '-'}
                       </TableCell>
+                      {/* Skor Nilai Raport */}
+                      <TableCell className="text-sm text-center">
+                        {editingCell === `${reg.id}-skorNilaiRaport` ? (
+                          <input
+                            type="text"
+                            className="w-20 px-1.5 py-0.5 text-sm border border-sky-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
+                            value={editingValue}
+                            onChange={(e) => setEditingValue(e.target.value)}
+                            onBlur={() => commitEdit(reg.id, 'skorNilaiRaport')}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') commitEdit(reg.id, 'skorNilaiRaport')
+                              if (e.key === 'Escape') cancelEdit()
+                            }}
+                            autoFocus
+                          />
+                        ) : (
+                          <span
+                            className="cursor-pointer hover:bg-sky-50 px-1 py-0.5 rounded inline-flex items-center gap-1 group"
+                            onClick={() => startEditing(reg.id, 'skorNilaiRaport', reg.skorNilaiRaport || reg.nilaiRataRata || '')}
+                          >
+                            {reg.skorNilaiRaport || reg.nilaiRataRata || '-'}
+                            <Pencil className="w-3 h-3 text-gray-300 group-hover:text-sky-500" />
+                          </span>
+                        )}
+                      </TableCell>
+                      {/* Kekurangan Verifikasi */}
+                      <TableCell className="text-sm">
+                        {editingCell === `${reg.id}-kekuranganVerifikasi` ? (
+                          <input
+                            type="text"
+                            className="w-32 px-1.5 py-0.5 text-sm border border-sky-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
+                            value={editingValue}
+                            onChange={(e) => setEditingValue(e.target.value)}
+                            onBlur={() => commitEdit(reg.id, 'kekuranganVerifikasi')}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') commitEdit(reg.id, 'kekuranganVerifikasi')
+                              if (e.key === 'Escape') cancelEdit()
+                            }}
+                            autoFocus
+                          />
+                        ) : (
+                          <span
+                            className="cursor-pointer hover:bg-sky-50 px-1 py-0.5 rounded inline-flex items-center gap-1 group"
+                            onClick={() => startEditing(reg.id, 'kekuranganVerifikasi', reg.kekuranganVerifikasi || '')}
+                          >
+                            {reg.kekuranganVerifikasi || '-'}
+                            <Pencil className="w-3 h-3 text-gray-300 group-hover:text-sky-500" />
+                          </span>
+                        )}
+                      </TableCell>
+                      {/* Tanggal Verif */}
+                      <TableCell className="text-sm">
+                        {editingCell === `${reg.id}-tanggalVerif` ? (
+                          <input
+                            type="date"
+                            className="w-32 px-1.5 py-0.5 text-sm border border-sky-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
+                            value={editingValue}
+                            onChange={(e) => setEditingValue(e.target.value)}
+                            onBlur={() => commitEdit(reg.id, 'tanggalVerif')}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') commitEdit(reg.id, 'tanggalVerif')
+                              if (e.key === 'Escape') cancelEdit()
+                            }}
+                            autoFocus
+                          />
+                        ) : (
+                          <span
+                            className="cursor-pointer hover:bg-sky-50 px-1 py-0.5 rounded inline-flex items-center gap-1 group"
+                            onClick={() => startEditing(reg.id, 'tanggalVerif', reg.tanggalVerif || '')}
+                          >
+                            {reg.tanggalVerif || '-'}
+                            <Pencil className="w-3 h-3 text-gray-300 group-hover:text-sky-500" />
+                          </span>
+                        )}
+                      </TableCell>
+                      {/* Jam Verif */}
+                      <TableCell className="text-sm">
+                        {editingCell === `${reg.id}-jamVerif` ? (
+                          <input
+                            type="time"
+                            className="w-24 px-1.5 py-0.5 text-sm border border-sky-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
+                            value={editingValue}
+                            onChange={(e) => setEditingValue(e.target.value)}
+                            onBlur={() => commitEdit(reg.id, 'jamVerif')}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') commitEdit(reg.id, 'jamVerif')
+                              if (e.key === 'Escape') cancelEdit()
+                            }}
+                            autoFocus
+                          />
+                        ) : (
+                          <span
+                            className="cursor-pointer hover:bg-sky-50 px-1 py-0.5 rounded inline-flex items-center gap-1 group"
+                            onClick={() => startEditing(reg.id, 'jamVerif', reg.jamVerif || '')}
+                          >
+                            {reg.jamVerif || '-'}
+                            <Pencil className="w-3 h-3 text-gray-300 group-hover:text-sky-500" />
+                          </span>
+                        )}
+                      </TableCell>
+                      {/* Terbit KK */}
+                      <TableCell className="text-sm">
+                        {editingCell === `${reg.id}-terbitKK` ? (
+                          <input
+                            type="date"
+                            className="w-32 px-1.5 py-0.5 text-sm border border-sky-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
+                            value={editingValue}
+                            onChange={(e) => setEditingValue(e.target.value)}
+                            onBlur={() => commitEdit(reg.id, 'terbitKK')}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') commitEdit(reg.id, 'terbitKK')
+                              if (e.key === 'Escape') cancelEdit()
+                            }}
+                            autoFocus
+                          />
+                        ) : (
+                          <span
+                            className="cursor-pointer hover:bg-sky-50 px-1 py-0.5 rounded inline-flex items-center gap-1 group"
+                            onClick={() => startEditing(reg.id, 'terbitKK', reg.terbitKK || '')}
+                          >
+                            {reg.terbitKK || '-'}
+                            <Pencil className="w-3 h-3 text-gray-300 group-hover:text-sky-500" />
+                          </span>
+                        )}
+                      </TableCell>
+                      {/* Lama KK */}
+                      <TableCell className="text-sm">
+                        {editingCell === `${reg.id}-lamaKK` ? (
+                          <input
+                            type="text"
+                            className="w-20 px-1.5 py-0.5 text-sm border border-sky-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
+                            value={editingValue}
+                            onChange={(e) => setEditingValue(e.target.value)}
+                            onBlur={() => commitEdit(reg.id, 'lamaKK')}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') commitEdit(reg.id, 'lamaKK')
+                              if (e.key === 'Escape') cancelEdit()
+                            }}
+                            autoFocus
+                          />
+                        ) : (
+                          <span
+                            className="cursor-pointer hover:bg-sky-50 px-1 py-0.5 rounded inline-flex items-center gap-1 group"
+                            onClick={() => startEditing(reg.id, 'lamaKK', reg.lamaKK || '')}
+                          >
+                            {reg.lamaKK || '-'}
+                            <Pencil className="w-3 h-3 text-gray-300 group-hover:text-sky-500" />
+                          </span>
+                        )}
+                      </TableCell>
+                      {/* No. Registrasi */}
+                      <TableCell className="font-mono text-sm">{reg.noRegistrasi}</TableCell>
+                      {/* Nama Peserta */}
+                      <TableCell className="font-medium text-sm">{reg.nama}</TableCell>
+                      {/* Asal Sekolah */}
+                      <TableCell className="text-sm text-gray-600">{reg.namaSekolahAsal}</TableCell>
+                      {/* Status */}
                       <TableCell>
                         <Badge variant="outline" className={STATUS_COLORS[reg.verificationStatus]}>
                           {reg.verificationStatus === 'PENDING' && <Clock className="w-3 h-3" />}
@@ -714,6 +927,7 @@ function LembarVerifikasiSheet({
                            reg.verificationStatus === 'VERIFIED' ? 'Diterima' : 'Ditolak'}
                         </Badge>
                       </TableCell>
+                      {/* Aksi */}
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
                           <Button variant="ghost" size="sm" onClick={() => onViewDetail(reg)}>
@@ -1140,6 +1354,22 @@ export default function Home() {
           }
         }
       }
+    }
+
+    // Skor Nilai Raport - from "Skor Nilai Raport" or derive from nilaiRataRata
+    const skorNilaiRaport = findNextLine('Skor Nilai Raport')
+    if (skorNilaiRaport) {
+      const match = skorNilaiRaport.match(/([\d]+[\.,]?[\d]*)/)
+      result['skorNilaiRaport'] = match ? match[1] : skorNilaiRaport
+    } else if (result['nilaiRataRata']) {
+      // If no explicit Skor Nilai Raport, use nilaiRataRata as fallback
+      result['skorNilaiRaport'] = result['nilaiRataRata']
+    }
+
+    // Dokumen - parse from "Dokumen" section
+    const dokumenSection = findNextLine('Dokumen')
+    if (dokumenSection) {
+      result['dokumen'] = dokumenSection
     }
 
     // NPSN - we don't have this from portal, use empty
@@ -2531,6 +2761,18 @@ export default function Home() {
                         <p className="text-sm font-bold text-amber-600 mt-0.5">{portalParsedData.skor}</p>
                       </div>
                     )}
+                    {portalParsedData.skorJarak && (
+                      <div className="bg-gray-50 rounded-lg p-2.5">
+                        <label className="text-xs text-gray-500 font-medium flex items-center gap-1"><MapPinned className="w-3 h-3" /> Skor Jarak</label>
+                        <p className="text-sm mt-0.5">{portalParsedData.skorJarak}</p>
+                      </div>
+                    )}
+                    {portalParsedData.skorNilaiRaport && (
+                      <div className="bg-sky-50 rounded-lg p-2.5">
+                        <label className="text-xs text-sky-600 font-medium flex items-center gap-1"><Award className="w-3 h-3" /> Skor Nilai Raport</label>
+                        <p className="text-sm font-bold text-sky-700 mt-0.5">{portalParsedData.skorNilaiRaport}</p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Schools */}
@@ -2587,6 +2829,23 @@ export default function Home() {
                     <div className="bg-gray-50 rounded-lg p-2.5">
                       <label className="text-xs text-gray-500 font-medium">Koordinat</label>
                       <p className="text-xs font-mono mt-0.5">{portalParsedData.latitude}, {portalParsedData.longitude}</p>
+                    </div>
+                  )}
+
+                  {/* Verification Data */}
+                  {portalParsedData.dokumen && (
+                    <div className="bg-sky-50 border border-sky-200 rounded-lg p-3">
+                      <h4 className="text-sm font-medium text-sky-800 mb-2 flex items-center gap-1">
+                        <ClipboardCheck className="w-4 h-4" /> Data Verifikasi
+                      </h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        {portalParsedData.dokumen && (
+                          <div className="col-span-2 bg-white rounded px-2 py-1.5">
+                            <label className="text-xs text-gray-500 font-medium">Dokumen</label>
+                            <p className="text-sm">{portalParsedData.dokumen}</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -2816,7 +3075,7 @@ export default function Home() {
               </div>
 
               {/* Portal SPMB Data */}
-              {(detailTarget.nik || detailTarget.tanggalLahir || detailTarget.alamat || detailTarget.noTelpSiswa || detailTarget.noTelpOrangtua || detailTarget.lokasiJarak || detailTarget.nilaiRataRata || detailTarget.skor || detailTarget.nilaiRapor) && (
+              {(detailTarget.nik || detailTarget.tanggalLahir || detailTarget.alamat || detailTarget.noTelpSiswa || detailTarget.noTelpOrangtua || detailTarget.lokasiJarak || detailTarget.nilaiRataRata || detailTarget.skor || detailTarget.nilaiRapor || detailTarget.skorJarak || detailTarget.skorNilaiRaport) && (
                 <div className="border-t pt-4">
                   <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-1.5">
                     <ClipboardCheck className="w-4 h-4 text-emerald-600" />
@@ -2872,6 +3131,12 @@ export default function Home() {
                         <p className="text-sm">{detailTarget.skorJarak}</p>
                       </div>
                     )}
+                    {detailTarget.skorNilaiRaport && (
+                      <div className="bg-sky-50 rounded-lg p-2">
+                        <label className="text-xs text-sky-600 font-medium">Skor Nilai Raport</label>
+                        <p className="text-sm font-bold text-sky-700">{detailTarget.skorNilaiRaport}</p>
+                      </div>
+                    )}
                   </div>
 
                   {detailTarget.alamat && (
@@ -2909,6 +3174,60 @@ export default function Home() {
                       <p className="text-xs font-mono">{detailTarget.latitude}, {detailTarget.longitude}</p>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Data Verifikasi */}
+              {(detailTarget.skorNilaiRaport || detailTarget.kekuranganVerifikasi || detailTarget.tanggalVerif || detailTarget.jamVerif || detailTarget.terbitKK || detailTarget.lamaKK || detailTarget.dokumen) && (
+                <div className="border-t pt-4">
+                  <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-1.5">
+                    <ClipboardCheck className="w-4 h-4 text-sky-600" />
+                    Data Verifikasi
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    {detailTarget.skorNilaiRaport && (
+                      <div className="bg-sky-50 rounded-lg p-2">
+                        <label className="text-xs text-sky-600 font-medium">Skor Nilai Raport</label>
+                        <p className="text-sm font-bold text-sky-700">{detailTarget.skorNilaiRaport}</p>
+                      </div>
+                    )}
+                    {detailTarget.kekuranganVerifikasi && (
+                      <div className="bg-red-50 rounded-lg p-2">
+                        <label className="text-xs text-red-600 font-medium">Kekurangan Verifikasi</label>
+                        <p className="text-sm text-red-700">{detailTarget.kekuranganVerifikasi}</p>
+                      </div>
+                    )}
+                    {detailTarget.tanggalVerif && (
+                      <div className="bg-gray-50 rounded-lg p-2">
+                        <label className="text-xs text-gray-500 font-medium flex items-center gap-1"><CalendarDays className="w-3 h-3" /> Tanggal Verifikasi</label>
+                        <p className="text-sm">{detailTarget.tanggalVerif}</p>
+                      </div>
+                    )}
+                    {detailTarget.jamVerif && (
+                      <div className="bg-gray-50 rounded-lg p-2">
+                        <label className="text-xs text-gray-500 font-medium">Jam Verifikasi</label>
+                        <p className="text-sm">{detailTarget.jamVerif}</p>
+                      </div>
+                    )}
+                    {detailTarget.terbitKK && (
+                      <div className="bg-gray-50 rounded-lg p-2">
+                        <label className="text-xs text-gray-500 font-medium flex items-center gap-1"><IdCard className="w-3 h-3" /> Terbit KK</label>
+                        <p className="text-sm">{detailTarget.terbitKK}</p>
+                      </div>
+                    )}
+                    {detailTarget.lamaKK && (
+                      <div className="bg-gray-50 rounded-lg p-2">
+                        <label className="text-xs text-gray-500 font-medium">Lama KK</label>
+                        <p className="text-sm">{detailTarget.lamaKK}</p>
+                      </div>
+                    )}
+                    {detailTarget.dokumen && (
+                      <div className="bg-gray-50 rounded-lg p-2 col-span-2">
+                        <label className="text-xs text-gray-500 font-medium">Dokumen</label>
+                        <p className="text-sm">{detailTarget.dokumen}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 

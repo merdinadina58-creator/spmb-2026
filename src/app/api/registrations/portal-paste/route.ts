@@ -24,8 +24,15 @@ interface PortalPastePayload {
   lokasiJarak?: string;
   nilaiRataRata?: string;
   skorJarak?: string;
+  skorNilaiRaport?: string;
   skor?: string;
   nilaiRapor?: string;
+  kekuranganVerifikasi?: string;
+  tanggalVerif?: string;
+  jamVerif?: string;
+  terbitKK?: string;
+  lamaKK?: string;
+  dokumen?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -52,7 +59,14 @@ export async function POST(request: NextRequest) {
     });
 
     const portalFields: Record<string, string> = {};
-    const optionalFields = ['nik', 'tanggalLahir', 'alamat', 'alamatLengkap', 'noTelpSiswa', 'noTelpOrangtua', 'latitude', 'longitude', 'lokasiJarak', 'nilaiRataRata', 'skorJarak', 'skor', 'nilaiRapor'] as const;
+    const optionalFields = [
+      'nik', 'tanggalLahir', 'alamat', 'alamatLengkap',
+      'noTelpSiswa', 'noTelpOrangtua', 'latitude', 'longitude',
+      'lokasiJarak', 'nilaiRataRata', 'skorJarak', 'skorNilaiRaport',
+      'skor', 'nilaiRapor',
+      'kekuranganVerifikasi', 'tanggalVerif', 'jamVerif',
+      'terbitKK', 'lamaKK', 'dokumen',
+    ] as const;
     for (const field of optionalFields) {
       const value = (data as Record<string, unknown>)[field];
       if (value && typeof value === 'string' && value.trim()) {

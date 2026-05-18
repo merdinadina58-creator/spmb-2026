@@ -40,8 +40,17 @@ model Registration {
   lokasiJarak         String?
   nilaiRataRata       String?
   skorJarak           String?
+  skorNilaiRaport     String?
   skor                String?
   nilaiRapor          String?  // JSON string for subject grades
+
+  // Verification-specific fields
+  kekuranganVerifikasi String?  // Missing documents/issues for verification
+  tanggalVerif        String?  // Date of verification
+  jamVerif            String?  // Time of verification
+  terbitKK            String?  // Family card issuance date
+  lamaKK              String?  // Duration since KK issued
+  dokumen             String?  // JSON string for uploaded documents
 
   @@unique([noRegistrasi, npsnSekolahPilihan])
 }
