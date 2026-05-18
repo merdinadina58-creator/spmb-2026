@@ -170,6 +170,7 @@ const STATUS_COLORS: Record<string, string> = {
 const SUB_JALUR_COLORS: Record<string, string> = {
   'Domisili': 'bg-sky-100 text-sky-800 border-sky-200',
   'Keluarga Tidak Mampu': 'bg-orange-100 text-orange-800 border-orange-200',
+  'Afirmasi': 'bg-orange-100 text-orange-800 border-orange-200',
   'Anak Guru': 'bg-violet-100 text-violet-800 border-violet-200',
   'Prestasi': 'bg-emerald-100 text-emerald-800 border-emerald-200',
   'Prestasi Non Akademik': 'bg-teal-100 text-teal-800 border-teal-200',
@@ -195,7 +196,7 @@ const LEMBAR_VERIFIKASI = [
   },
   {
     key: 'afirmasi',
-    label: 'Afirmasi',
+    label: 'Afirmasi (KTM)',
     icon: Heart,
     subJalurFilter: 'Keluarga Tidak Mampu',
     color: 'orange',
@@ -205,7 +206,7 @@ const LEMBAR_VERIFIKASI = [
     iconBg: 'bg-orange-100',
     iconColor: 'text-orange-600',
     btnColor: 'bg-orange-600 hover:bg-orange-700',
-    description: 'Verifikasi pendaftar jalur Afirmasi (Keluarga Tidak Mampu)',
+    description: 'Verifikasi pendaftar jalur Afirmasi — Keluarga Tidak Mampu (KTM)',
   },
   {
     key: 'mutasi',
@@ -1240,12 +1241,15 @@ export default function Home() {
     if (noRegMatch) result['noRegistrasi'] = noRegMatch[1]
 
     // Sub Jalur - detect from the text (Domisili, Afirmasi, Prestasi, etc.)
-    const subJalurOptions = ['Domisili', 'Afirmasi', 'Prestasi Non Akademik', 'Prestasi', 'Zonasi', 'Mutasi', 'Anak Guru', 'Keluarga Tidak Mampu']
+    const subJalurOptions = ['Domisili', 'Afirmasi', 'Keluarga Tidak Mampu', 'Prestasi Non Akademik', 'Prestasi', 'Zonasi', 'Mutasi', 'Anak Guru']
+    // Afirmasi = Keluarga Tidak Mampu, so map it
+    const afirmasiMap: Record<string, string> = { 'Afirmasi': 'Keluarga Tidak Mampu' }
     for (const jalur of subJalurOptions) {
       // Check if the jalur name appears as a standalone line (section header)
       for (const line of lines) {
         if (line === jalur || line.toLowerCase() === jalur.toLowerCase()) {
-          result['subJalur'] = jalur
+          // Afirmasi = Keluarga Tidak Mampu
+          result['subJalur'] = afirmasiMap[jalur] || jalur
           break
         }
       }
