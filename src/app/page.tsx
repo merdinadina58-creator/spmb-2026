@@ -3820,7 +3820,7 @@ export default function Home() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Semua Jalur</SelectItem>
-                        {rankingFilters.jalurOptions.map((j: string) => (
+                        {rankingFilters.jalurOptions.filter((j: string) => j && j.trim() !== '').map((j: string) => (
                           <SelectItem key={j} value={j}>{j}</SelectItem>
                         ))}
                       </SelectContent>
@@ -3850,7 +3850,7 @@ export default function Home() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Semua Jurusan</SelectItem>
-                        {rankingFilters.jurusanOptions.map((j: string) => (
+                        {rankingFilters.jurusanOptions.filter((j: string) => j && j.trim() !== '').map((j: string) => (
                           <SelectItem key={j} value={j}>{j}</SelectItem>
                         ))}
                       </SelectContent>
