@@ -561,7 +561,7 @@ function LembarVerifikasiSheet({
       })
       const result = await res.json()
       if (result.success) {
-        // Update local data optimistically
+        // Update local data
         if (data) {
           setData({
             ...data,
@@ -571,6 +571,34 @@ function LembarVerifikasiSheet({
           })
         }
         toast({ title: 'Tersimpan', description: `Data ${field} berhasil diperbarui` })
+      } else {
+        toast({ title: 'Gagal', description: result.error || 'Gagal menyimpan', variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Gagal', description: 'Terjadi kesalahan', variant: 'destructive' })
+    }
+  }
+
+  // Update multiple fields at once (e.g. terbitKK + lamaKK)
+  const handleMultiFieldUpdate = async (regId: string, fields: Record<string, string>) => {
+    try {
+      const res = await fetch(`/api/registrations/${regId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(fields),
+      })
+      const result = await res.json()
+      if (result.success) {
+        // Update local data with all fields
+        if (data) {
+          setData({
+            ...data,
+            registrations: data.registrations.map(r =>
+              r.id === regId ? { ...r, ...Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, v || null])) } : r
+            ),
+          })
+        }
+        toast({ title: 'Tersimpan', description: 'Data berhasil diperbarui' })
       } else {
         toast({ title: 'Gagal', description: result.error || 'Gagal menyimpan', variant: 'destructive' })
       }
@@ -592,6 +620,24 @@ function LembarVerifikasiSheet({
 
   const commitEditDirect = (regId: string, field: string, value: string) => {
     handleFieldUpdate(regId, field, value)
+  }
+
+  // Commit terbitKK and auto-calculate lamaKK at once
+  const commitTerbitKK = (regId: string, newDate: string) => {
+    const calculatedLama = hitungLamaKK(newDate)
+    // Immediately update local state for instant UI feedback
+    if (data) {
+      setData({
+        ...data,
+        registrations: data.registrations.map(r =>
+          r.id === regId ? { ...r, terbitKK: newDate || null, lamaKK: calculatedLama || null } : r
+        ),
+      })
+    }
+    // Save both fields to backend in one request
+    handleMultiFieldUpdate(regId, { terbitKK: newDate, lamaKK: calculatedLama })
+    setEditingCell(null)
+    setEditingValue('')
   }
 
   const cancelEdit = () => {
@@ -1078,23 +1124,15 @@ function LembarVerifikasiSheet({
                             type="date"
                             className="w-32 px-1.5 py-0.5 text-sm border border-sky-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
                             value={editingValue}
-                            onChange={(e) => setEditingValue(e.target.value)}
-                            onBlur={() => {
-                              commitEdit(reg.id, 'terbitKK')
-                              // Auto-calculate and save lamaKK
-                              const calculated = hitungLamaKK(editingValue)
-                              if (calculated) {
-                                commitEditDirect(reg.id, 'lamaKK', calculated)
+                            onChange={(e) => {
+                              const newDate = e.target.value
+                              setEditingValue(newDate)
+                              // Auto-commit when date is selected
+                              if (newDate) {
+                                commitTerbitKK(reg.id, newDate)
                               }
                             }}
                             onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                commitEdit(reg.id, 'terbitKK')
-                                const calculated = hitungLamaKK(editingValue)
-                                if (calculated) {
-                                  commitEditDirect(reg.id, 'lamaKK', calculated)
-                                }
-                              }
                               if (e.key === 'Escape') cancelEdit()
                             }}
                             autoFocus
