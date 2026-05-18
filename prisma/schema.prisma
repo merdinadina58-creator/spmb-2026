@@ -72,3 +72,15 @@ model JalurConfig {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+model User {
+  id          String   @id @default(cuid())
+  username    String   @unique
+  password    String   // Hashed password
+  namaLengkap String
+  role        String   @default("admin")  // admin, operator
+  aktif       Boolean  @default(true)
+  lastLogin   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

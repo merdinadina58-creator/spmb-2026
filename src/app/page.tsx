@@ -1789,6 +1789,54 @@ function LembarVerifikasiSheet({
 
 export default function Home() {
   const { toast } = useToast()
+
+  // ==================== AUTH STATE ====================
+  const [authLoading, setAuthLoading] = useState(true)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [authUser, setAuthUser] = useState<{ id: string; username: string; namaLengkap: string; role: string } | null>(null)
+  const [needsSetup, setNeedsSetup] = useState(false)
+
+  // Login form state
+  const [loginUsername, setLoginUsername] = useState('')
+  const [loginPassword, setLoginPassword] = useState('')
+  const [loginLoading, setLoginLoading] = useState(false)
+  const [loginError, setLoginError] = useState('')
+
+  // Setup form state
+  const [setupUsername, setSetupUsername] = useState('')
+  const [setupPassword, setSetupPassword] = useState('')
+  const [setupNamaLengkap, setSetupNamaLengkap] = useState('')
+  const [setupLoading, setSetupLoading] = useState(false)
+  const [setupError, setSetupError] = useState('')
+
+  // Check auth on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const setupRes = await fetch('/api/auth/setup')
+        const setupData = await setupRes.json()
+        if (setupData.needsSetup) {
+          setNeedsSetup(true)
+          setAuthLoading(false)
+          return
+        }
+
+        const meRes = await fetch('/api/auth/me')
+        const meData = await meRes.json()
+        if (meData.authenticated) {
+          setIsAuthenticated(true)
+          setAuthUser(meData.user)
+        }
+      } catch {
+        // If API fails, show login
+      } finally {
+        setAuthLoading(false)
+      }
+    }
+    checkAuth()
+  }, [])
+
+  // ==================== MAIN APP STATE (must be before conditional returns) ====================
   const [registrations, setRegistrations] = useState<Registration[]>([])
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [pagination, setPagination] = useState<PaginationInfo>({
@@ -1856,7 +1904,7 @@ export default function Home() {
   const [portalRawText, setPortalRawText] = useState('')
   const [portalParsedData, setPortalParsedData] = useState<Record<string, string> | null>(null)
   const [portalParsing, setPortalParsing] = useState(false)
-  const [portalSelectedJalur, setPortalSelectedJalur] = useState('') // jalur config nama selected in paste portal
+  const [portalSelectedJalur, setPortalSelectedJalur] = useState('')
 
   // Pengaturan state
   const [kuota, setKuota] = useState(0)
@@ -1867,14 +1915,13 @@ export default function Home() {
   const [newJalurPersentase, setNewJalurPersentase] = useState(0)
   const [addJalurOpen, setAddJalurOpen] = useState(false)
 
-  // Build lembar verifikasi from jalurConfigs (must be after jalurConfigs declaration)
+  // Build lembar verifikasi from jalurConfigs
   const lembarVerifikasi = buildLembarVerifikasi(jalurConfigs)
 
-  // Available subJalur options for dropdowns (derived from jalurConfigs)
+  // Available subJalur options for dropdowns
   const subJalurOptions = jalurConfigs
     .filter(j => j.aktif)
     .map(j => {
-      // Map jalur nama to the subJalur value used in data
       const filter = getJalurSubFilter(j.nama)
       return { label: j.nama, value: filter }
     })
@@ -1895,6 +1942,336 @@ export default function Home() {
   const [portalSyncPages, setPortalSyncPages] = useState(10)
   const [portalSyncing, setPortalSyncing] = useState(false)
   const [portalSyncResult, setPortalSyncResult] = useState<{ success: boolean; message: string; created?: number; updated?: number; unchanged?: number; total?: number } | null>(null)
+
+  // ==================== AUTH HANDLERS ====================
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoginLoading(true)
+    setLoginError('')
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: loginUsername, password: loginPassword }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setIsAuthenticated(true)
+        setAuthUser(data.user)
+        setLoginUsername('')
+        setLoginPassword('')
+        toast({ title: 'Login Berhasil', description: `Selamat datang, ${data.user.namaLengkap}!` })
+      } else {
+        setLoginError(data.error || 'Login gagal')
+      }
+    } catch {
+      setLoginError('Terjadi kesalahan koneksi')
+    } finally {
+      setLoginLoading(false)
+    }
+  }
+
+  const handleSetup = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSetupLoading(true)
+    setSetupError('')
+    try {
+      const res = await fetch('/api/auth/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: setupUsername, password: setupPassword, namaLengkap: setupNamaLengkap }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setNeedsSetup(false)
+        const loginRes = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: setupUsername, password: setupPassword }),
+        })
+        const loginData = await loginRes.json()
+        if (loginData.success) {
+          setIsAuthenticated(true)
+          setAuthUser(loginData.user)
+          toast({ title: 'Setup Berhasil', description: `Akun admin berhasil dibuat. Selamat datang, ${loginData.user.namaLengkap}!` })
+        }
+        setSetupUsername('')
+        setSetupPassword('')
+        setSetupNamaLengkap('')
+      } else {
+        setSetupError(data.error || 'Setup gagal')
+      }
+    } catch {
+      setSetupError('Terjadi kesalahan koneksi')
+    } finally {
+      setSetupLoading(false)
+    }
+  }
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+      setIsAuthenticated(false)
+      setAuthUser(null)
+      toast({ title: 'Logout Berhasil', description: 'Anda telah keluar dari sistem' })
+    } catch {
+      toast({ title: 'Gagal Logout', description: 'Terjadi kesalahan', variant: 'destructive' })
+    }
+  }
+
+  // ==================== DATA FETCHING HOOKS (must be before conditional returns) ====================
+  const fetchRegistrations = useCallback(async () => {
+    setLoading(true)
+    try {
+      const params = new URLSearchParams()
+      params.set('page', pagination.page.toString())
+      params.set('limit', pagination.limit.toString())
+      if (search) params.set('search', search)
+      if (subJalurFilter !== 'all') params.set('subJalur', subJalurFilter)
+      if (verificationFilter !== 'all') params.set('verificationStatus', verificationFilter)
+      if (jurusanFilter !== 'all') params.set('jurusan', jurusanFilter)
+
+      const res = await fetch(`/api/registrations?${params}`)
+      const data = await res.json()
+      setRegistrations(data.data || [])
+      setPagination(prev => ({ ...prev, ...data.pagination }))
+    } catch {
+      toast({ title: 'Error', description: 'Gagal memuat data pendaftar', variant: 'destructive' })
+    } finally {
+      setLoading(false)
+    }
+  }, [pagination.page, pagination.limit, search, subJalurFilter, verificationFilter, jurusanFilter, toast])
+
+  const fetchStats = useCallback(async () => {
+    try {
+      const res = await fetch('/api/dashboard')
+      const data = await res.json()
+      setStats(data)
+    } catch {
+      toast({ title: 'Error', description: 'Gagal memuat statistik', variant: 'destructive' })
+    }
+  }, [toast])
+
+  const fetchSettings = useCallback(async () => {
+    setSettingsLoading(true)
+    try {
+      const res = await fetch('/api/settings')
+      const data = await res.json()
+      setKuota(data.kuota || 0)
+      setJalurConfigs(data.jalurConfigs || [])
+    } catch {
+      toast({ title: 'Error', description: 'Gagal memuat pengaturan', variant: 'destructive' })
+    } finally {
+      setSettingsLoading(false)
+    }
+  }, [toast])
+
+  useEffect(() => {
+    fetchRegistrations()
+  }, [fetchRegistrations])
+
+  useEffect(() => {
+    fetchStats()
+  }, [fetchStats])
+
+  useEffect(() => {
+    fetchSettings()
+  }, [fetchSettings])
+
+  // ==================== CONDITIONAL RENDERS ====================
+  // Auth loading screen
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900">
+        <div className="text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-emerald-600/20 flex items-center justify-center animate-pulse">
+            <ShieldCheck className="w-8 h-8 text-emerald-400" />
+          </div>
+          <p className="text-emerald-200 text-sm">Memuat sistem...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // ==================== SETUP SCREEN (First Time) ====================
+  if (needsSetup) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 p-4">
+        <div className="w-full max-w-md">
+          {/* Logo & Title */}
+          <div className="text-center mb-8">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-2xl shadow-emerald-500/30">
+              <ShieldCheck className="w-10 h-10 text-white" />
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">SPMB 2026</h1>
+            <p className="text-emerald-200/80 text-sm">Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
+            <div className="mt-4 inline-flex items-center gap-2 bg-amber-500/20 border border-amber-400/30 rounded-full px-4 py-1.5">
+              <AlertCircle className="w-4 h-4 text-amber-300" />
+              <span className="text-amber-200 text-xs font-medium">Pengaturan Awal — Buat Akun Admin</span>
+            </div>
+          </div>
+
+          {/* Setup Form */}
+          <Card className="bg-white/10 backdrop-blur-xl border-white/20 shadow-2xl">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-white text-lg">Buat Akun Administrator</CardTitle>
+              <CardDescription className="text-emerald-200/60 text-xs">
+                Ini adalah akun pertama yang akan digunakan untuk mengelola sistem verifikasi SPMB 2026.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSetup} className="space-y-4">
+                {setupError && (
+                  <div className="bg-red-500/20 border border-red-400/30 rounded-lg p-3 flex items-center gap-2">
+                    <XCircle className="w-4 h-4 text-red-300 shrink-0" />
+                    <p className="text-red-200 text-sm">{setupError}</p>
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-emerald-100">Nama Lengkap</label>
+                  <div className="relative">
+                    <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-300/50" />
+                    <Input
+                      value={setupNamaLengkap}
+                      onChange={(e) => setSetupNamaLengkap(e.target.value)}
+                      placeholder="Nama lengkap Anda"
+                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-emerald-200/40 focus:border-emerald-400/50 focus:ring-emerald-400/30"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-emerald-100">Username</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-300/50" />
+                    <Input
+                      value={setupUsername}
+                      onChange={(e) => setSetupUsername(e.target.value)}
+                      placeholder="Username untuk login"
+                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-emerald-200/40 focus:border-emerald-400/50 focus:ring-emerald-400/30"
+                      required
+                      minLength={3}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-emerald-100">Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-300/50" />
+                    <Input
+                      type="password"
+                      value={setupPassword}
+                      onChange={(e) => setSetupPassword(e.target.value)}
+                      placeholder="Minimal 6 karakter"
+                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-emerald-200/40 focus:border-emerald-400/50 focus:ring-emerald-400/30"
+                      required
+                      minLength={6}
+                    />
+                  </div>
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg shadow-emerald-500/30 h-11"
+                  disabled={setupLoading}
+                >
+                  {setupLoading ? (
+                    <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Membuat Akun...</>
+                  ) : (
+                    <><Save className="w-4 h-4 mr-2" /> Buat Akun & Mulai</>
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
+  // ==================== LOGIN SCREEN ====================
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 p-4">
+        <div className="w-full max-w-md">
+          {/* Logo & Title */}
+          <div className="text-center mb-8">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-2xl shadow-emerald-500/30">
+              <ShieldCheck className="w-10 h-10 text-white" />
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">SPMB 2026</h1>
+            <p className="text-emerald-200/80 text-sm">Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
+          </div>
+
+          {/* Login Form */}
+          <Card className="bg-white/10 backdrop-blur-xl border-white/20 shadow-2xl">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-white text-lg flex items-center gap-2">
+                <Lock className="w-5 h-5 text-emerald-400" />
+                Masuk ke Sistem
+              </CardTitle>
+              <CardDescription className="text-emerald-200/60 text-xs">
+                Masukkan username dan password untuk mengakses sistem verifikasi.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleLogin} className="space-y-4">
+                {loginError && (
+                  <div className="bg-red-500/20 border border-red-400/30 rounded-lg p-3 flex items-center gap-2">
+                    <XCircle className="w-4 h-4 text-red-300 shrink-0" />
+                    <p className="text-red-200 text-sm">{loginError}</p>
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-emerald-100">Username</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-300/50" />
+                    <Input
+                      value={loginUsername}
+                      onChange={(e) => setLoginUsername(e.target.value)}
+                      placeholder="Masukkan username"
+                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-emerald-200/40 focus:border-emerald-400/50 focus:ring-emerald-400/30"
+                      required
+                      autoFocus
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-emerald-100">Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-300/50" />
+                    <Input
+                      type="password"
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      placeholder="Masukkan password"
+                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-emerald-200/40 focus:border-emerald-400/50 focus:ring-emerald-400/30"
+                      required
+                    />
+                  </div>
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg shadow-emerald-500/30 h-11"
+                  disabled={loginLoading}
+                >
+                  {loginLoading ? (
+                    <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Memproses...</>
+                  ) : (
+                    <><Lock className="w-4 h-4 mr-2" /> Masuk</>
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          {/* Footer */}
+          <p className="text-center text-emerald-200/40 text-xs mt-6">
+            &copy; 2026 SPMB Verifikasi System
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   // Portal SPMB text parser
   const parsePortalText = (text: string): Record<string, string> => {
@@ -2172,53 +2549,6 @@ export default function Home() {
     }
   }
 
-  const fetchRegistrations = useCallback(async () => {
-    setLoading(true)
-    try {
-      const params = new URLSearchParams()
-      params.set('page', pagination.page.toString())
-      params.set('limit', pagination.limit.toString())
-      if (search) params.set('search', search)
-      if (subJalurFilter !== 'all') params.set('subJalur', subJalurFilter)
-      if (verificationFilter !== 'all') params.set('verificationStatus', verificationFilter)
-      if (jurusanFilter !== 'all') params.set('jurusan', jurusanFilter)
-
-      const res = await fetch(`/api/registrations?${params}`)
-      const data = await res.json()
-      setRegistrations(data.data || [])
-      setPagination(prev => ({ ...prev, ...data.pagination }))
-    } catch {
-      toast({ title: 'Error', description: 'Gagal memuat data pendaftar', variant: 'destructive' })
-    } finally {
-      setLoading(false)
-    }
-  }, [pagination.page, pagination.limit, search, subJalurFilter, verificationFilter, jurusanFilter, toast])
-
-  const fetchStats = useCallback(async () => {
-    try {
-      const res = await fetch('/api/dashboard')
-      const data = await res.json()
-      setStats(data)
-    } catch {
-      toast({ title: 'Error', description: 'Gagal memuat statistik', variant: 'destructive' })
-    }
-  }, [toast])
-
-  // Fetch settings
-  const fetchSettings = useCallback(async () => {
-    setSettingsLoading(true)
-    try {
-      const res = await fetch('/api/settings')
-      const data = await res.json()
-      setKuota(data.kuota || 0)
-      setJalurConfigs(data.jalurConfigs || [])
-    } catch {
-      toast({ title: 'Error', description: 'Gagal memuat pengaturan', variant: 'destructive' })
-    } finally {
-      setSettingsLoading(false)
-    }
-  }, [toast])
-
   // Save kuota
   const saveKuota = async () => {
     setSettingsSaving(true)
@@ -2364,18 +2694,6 @@ export default function Home() {
       setPortalSyncing(false)
     }
   }
-
-  useEffect(() => {
-    fetchRegistrations()
-  }, [fetchRegistrations])
-
-  useEffect(() => {
-    fetchStats()
-  }, [fetchStats])
-
-  useEffect(() => {
-    fetchSettings()
-  }, [fetchSettings])
 
   const parseCSVClientSide = (text: string) => {
     const lines = text.trim().split('\n')
@@ -2769,6 +3087,28 @@ export default function Home() {
               >
                 <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 <span className="hidden sm:inline">Import CSV</span>
+              </Button>
+              {/* User info & Logout */}
+              <div className="hidden sm:flex items-center gap-2 ml-1 pl-2 border-l border-white/20">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-7 h-7 rounded-full bg-emerald-600/40 flex items-center justify-center">
+                    <span className="text-xs font-bold text-white">{authUser?.namaLengkap?.charAt(0) || 'U'}</span>
+                  </div>
+                  <div className="hidden md:block">
+                    <p className="text-xs font-medium text-white leading-tight">{authUser?.namaLengkap}</p>
+                    <p className="text-[10px] text-emerald-200/60 leading-tight">{authUser?.role === 'admin' ? 'Administrator' : 'Operator'}</p>
+                  </div>
+                </div>
+              </div>
+              <Button
+                onClick={handleLogout}
+                variant="outline"
+                size="sm"
+                className="bg-white/5 hover:bg-red-500/20 text-white/70 hover:text-red-300 border-white/10 hover:border-red-400/30 h-8 sm:h-9 px-2"
+                title="Keluar"
+              >
+                <Lock className="w-3.5 h-3.5" />
+                <span className="hidden lg:inline ml-1">Keluar</span>
               </Button>
             </div>
           </div>
