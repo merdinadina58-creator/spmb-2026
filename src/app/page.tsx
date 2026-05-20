@@ -93,6 +93,9 @@ import {
   RefreshCw,
   Lock,
   Mail,
+  ArrowUpDown,
+  ArrowUpAZ,
+  ArrowDownAZ,
 } from 'lucide-react'
 
 interface Registration {
@@ -570,6 +573,9 @@ function LembarVerifikasiSheet({
   const [verifyAction, setVerifyAction] = useState<'VERIFIED' | 'REJECTED'>('VERIFIED')
   const [verifyNote, setVerifyNote] = useState('')
   const [verifyTargetId, setVerifyTargetId] = useState<string | null>(null)
+
+  // Sort by nama
+  const [namaSortLembar, setNamaSortLembar] = useState<'none' | 'asc' | 'desc'>('none')
 
   // Inline editing state: key = "regId-fieldName"
   const [editingCell, setEditingCell] = useState<string | null>(null)
@@ -1123,7 +1129,11 @@ function LembarVerifikasiSheet({
                   <TableHead>Terbit KK</TableHead>
                   <TableHead>Lama KK</TableHead>
                   <TableHead>No. Registrasi</TableHead>
-                  <TableHead>Nama Peserta</TableHead>
+                  <TableHead>Nama Peserta
+                    <span className="ml-1 cursor-pointer inline-flex align-middle" onClick={() => setNamaSortLembar(namaSortLembar === 'none' ? 'asc' : namaSortLembar === 'asc' ? 'desc' : 'none')}>
+                      {namaSortLembar === 'none' ? <ArrowUpDown className="w-3 h-3 text-gray-400" /> : namaSortLembar === 'asc' ? <ArrowUpAZ className="w-3 h-3 text-emerald-600" /> : <ArrowDownAZ className="w-3 h-3 text-emerald-600" />}
+                    </span>
+                  </TableHead>
                   <TableHead>Asal Sekolah</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Aksi</TableHead>
@@ -1146,7 +1156,11 @@ function LembarVerifikasiSheet({
                     </TableCell>
                   </TableRow>
                 ) : (
-                  data.registrations.map((reg, idx) => (
+                  [...data.registrations].sort((a, b) => {
+                    if (namaSortLembar === 'asc') return (a.nama || '').localeCompare(b.nama || '')
+                    if (namaSortLembar === 'desc') return (b.nama || '').localeCompare(a.nama || '')
+                    return 0
+                  }).map((reg, idx) => (
                     <TableRow key={reg.id} className={
                       reg.verificationStatus === 'VERIFIED' ? 'bg-emerald-50/40' :
                       reg.verificationStatus === 'REJECTED' ? 'bg-red-50/40' : ''
@@ -1937,6 +1951,12 @@ export default function Home() {
   const [subJalurFilter, setSubJalurFilter] = useState('all')
   const [verificationFilter, setVerificationFilter] = useState('all')
   const [jurusanFilter, setJurusanFilter] = useState('all')
+
+  // Sort by nama state for each tab
+  const [namaSortData, setNamaSortData] = useState<'none' | 'asc' | 'desc'>('none')
+  const [namaSortRanking, setNamaSortRanking] = useState<'none' | 'asc' | 'desc'>('none')
+  const [namaSortDiterima, setNamaSortDiterima] = useState<'none' | 'asc' | 'desc'>('none')
+  const [namaSortDitolak, setNamaSortDitolak] = useState<'none' | 'asc' | 'desc'>('none')
 
   // Selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -3681,7 +3701,11 @@ export default function Home() {
                           />
                         </TableHead>
                         <TableHead>No. Reg</TableHead>
-                        <TableHead>Nama</TableHead>
+                        <TableHead>Nama
+                          <span className="ml-1 cursor-pointer inline-flex align-middle" onClick={() => setNamaSortData(namaSortData === 'none' ? 'asc' : namaSortData === 'asc' ? 'desc' : 'none')}>
+                            {namaSortData === 'none' ? <ArrowUpDown className="w-3 h-3 text-gray-400" /> : namaSortData === 'asc' ? <ArrowUpAZ className="w-3 h-3 text-emerald-600" /> : <ArrowDownAZ className="w-3 h-3 text-emerald-600" />}
+                          </span>
+                        </TableHead>
                         <TableHead className="hidden md:table-cell">NISN</TableHead>
                         <TableHead>Sub Jalur</TableHead>
                         <TableHead className="hidden lg:table-cell">Sekolah Pilihan</TableHead>
@@ -3711,7 +3735,11 @@ export default function Home() {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        registrations.map((reg, idx) => (
+                        [...registrations].sort((a, b) => {
+                          if (namaSortData === 'asc') return (a.nama || '').localeCompare(b.nama || '')
+                          if (namaSortData === 'desc') return (b.nama || '').localeCompare(a.nama || '')
+                          return 0
+                        }).map((reg, idx) => (
                           <TableRow key={reg.id} className={
                             reg.verificationStatus === 'VERIFIED' ? 'bg-emerald-50/40' :
                             reg.verificationStatus === 'REJECTED' ? 'bg-red-50/40' : ''
@@ -4070,7 +4098,11 @@ export default function Home() {
                         <TableRow className="bg-gray-50/80">
                           <TableHead className="w-10 text-center font-semibold text-xs">No</TableHead>
                           <TableHead className="w-10 text-center font-semibold text-xs">Jalur</TableHead>
-                          <TableHead className="font-semibold text-xs">Nama Pendaftar</TableHead>
+                          <TableHead className="font-semibold text-xs">Nama Pendaftar
+                            <span className="ml-1 cursor-pointer inline-flex align-middle" onClick={() => setNamaSortRanking(namaSortRanking === 'none' ? 'asc' : namaSortRanking === 'asc' ? 'desc' : 'none')}>
+                              {namaSortRanking === 'none' ? <ArrowUpDown className="w-3 h-3 text-gray-400" /> : namaSortRanking === 'asc' ? <ArrowUpAZ className="w-3 h-3 text-amber-600" /> : <ArrowDownAZ className="w-3 h-3 text-amber-600" />}
+                            </span>
+                          </TableHead>
                           <TableHead className="font-semibold text-xs">Sekolah Pilihan</TableHead>
                           <TableHead className="font-semibold text-xs">Jurusan</TableHead>
                           <TableHead className="text-right font-semibold text-xs">Jarak</TableHead>
@@ -4080,7 +4112,11 @@ export default function Home() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {rankingData.map((r: Record<string, unknown>, idx: number) => {
+                        {[...rankingData].sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
+                          if (namaSortRanking === 'asc') return String(a.nama || '').localeCompare(String(b.nama || ''))
+                          if (namaSortRanking === 'desc') return String(b.nama || '').localeCompare(String(a.nama || ''))
+                          return 0
+                        }).map((r: Record<string, unknown>, idx: number) => {
                           const rankNum = (r._ranking as number) || (idx + 1)
                           const jalurRank = (r._jalurRank as number) || -1
                           const jarakNum = r._jarakNum as number
@@ -4286,7 +4322,11 @@ export default function Home() {
                       <TableRow className="bg-emerald-50/80">
                         <TableHead className="w-12 text-center">No</TableHead>
                         <TableHead>No. Registrasi</TableHead>
-                        <TableHead>Nama</TableHead>
+                        <TableHead>Nama
+                          <span className="ml-1 cursor-pointer inline-flex align-middle" onClick={() => setNamaSortDiterima(namaSortDiterima === 'none' ? 'asc' : namaSortDiterima === 'asc' ? 'desc' : 'none')}>
+                            {namaSortDiterima === 'none' ? <ArrowUpDown className="w-3 h-3 text-gray-400" /> : namaSortDiterima === 'asc' ? <ArrowUpAZ className="w-3 h-3 text-emerald-600" /> : <ArrowDownAZ className="w-3 h-3 text-emerald-600" />}
+                          </span>
+                        </TableHead>
                         <TableHead className="hidden md:table-cell">NISN</TableHead>
                         <TableHead>Sub Jalur</TableHead>
                         <TableHead className="hidden lg:table-cell">Sekolah Pilihan</TableHead>
@@ -4302,7 +4342,12 @@ export default function Home() {
                           (diterimaFilterJalur === 'all' || r.subJalur === diterimaFilterJalur) &&
                           (diterimaFilterSekolah === 'all' || r.namaSekolahPilihan === diterimaFilterSekolah)
                         )
-                        return filtered.length > 0 ? filtered.map((reg, idx) => (
+                        const sorted = [...filtered].sort((a, b) => {
+                          if (namaSortDiterima === 'asc') return (a.nama || '').localeCompare(b.nama || '')
+                          if (namaSortDiterima === 'desc') return (b.nama || '').localeCompare(a.nama || '')
+                          return 0
+                        })
+                        return sorted.length > 0 ? sorted.map((reg, idx) => (
                           <TableRow key={reg.id} className="hover:bg-emerald-50/30">
                             <TableCell className="text-center text-sm text-gray-500">{idx + 1}</TableCell>
                             <TableCell className="font-mono text-sm">{reg.noRegistrasi}</TableCell>
@@ -4454,7 +4499,11 @@ export default function Home() {
                       <TableRow className="bg-red-50/80">
                         <TableHead className="w-12 text-center">No</TableHead>
                         <TableHead>No. Registrasi</TableHead>
-                        <TableHead>Nama</TableHead>
+                        <TableHead>Nama
+                          <span className="ml-1 cursor-pointer inline-flex align-middle" onClick={() => setNamaSortDitolak(namaSortDitolak === 'none' ? 'asc' : namaSortDitolak === 'asc' ? 'desc' : 'none')}>
+                            {namaSortDitolak === 'none' ? <ArrowUpDown className="w-3 h-3 text-gray-400" /> : namaSortDitolak === 'asc' ? <ArrowUpAZ className="w-3 h-3 text-red-600" /> : <ArrowDownAZ className="w-3 h-3 text-red-600" />}
+                          </span>
+                        </TableHead>
                         <TableHead className="hidden md:table-cell">NISN</TableHead>
                         <TableHead>Sub Jalur</TableHead>
                         <TableHead className="hidden lg:table-cell">Sekolah Pilihan</TableHead>
@@ -4467,7 +4516,12 @@ export default function Home() {
                       {(() => {
                         const list = stats?.rejectedList || []
                         const filtered = list.filter(r => ditolakFilterJalur === 'all' || r.subJalur === ditolakFilterJalur)
-                        return filtered.length > 0 ? filtered.map((reg, idx) => (
+                        const sorted = [...filtered].sort((a, b) => {
+                          if (namaSortDitolak === 'asc') return (a.nama || '').localeCompare(b.nama || '')
+                          if (namaSortDitolak === 'desc') return (b.nama || '').localeCompare(a.nama || '')
+                          return 0
+                        })
+                        return sorted.length > 0 ? sorted.map((reg, idx) => (
                           <TableRow key={reg.id} className="hover:bg-red-50/30">
                             <TableCell className="text-center text-sm text-gray-500">{idx + 1}</TableCell>
                             <TableCell className="font-mono text-sm">{reg.noRegistrasi}</TableCell>
