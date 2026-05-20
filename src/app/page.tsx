@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, Component } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   Card,
   CardContent,
@@ -59,6 +59,7 @@ import {
   Loader2,
   Trash2,
   Eye,
+  EyeOff,
   UserCheck,
   UserX,
   ArrowRightLeft,
@@ -566,7 +567,7 @@ function LembarVerifikasiSheet({
   const [verificationFilter, setVerificationFilter] = useState('all')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [page, setPage] = useState(1)
-  const limit = 20
+  const [lembarLimit, setLembarLimit] = useState(20)
   const [verifying, setVerifying] = useState(false)
   const [verifyDialogOpen, setVerifyDialogOpen] = useState(false)
   const [bulkVerifyDialogOpen, setBulkVerifyDialogOpen] = useState(false)
@@ -784,7 +785,7 @@ function LembarVerifikasiSheet({
     try {
       const params = new URLSearchParams()
       params.set('page', page.toString())
-      params.set('limit', limit.toString())
+      params.set('limit', lembarLimit.toString())
       params.set('subJalur', config.subJalurFilter)
       if (search) params.set('search', search)
       if (verificationFilter !== 'all') params.set('verificationStatus', verificationFilter)
@@ -793,7 +794,7 @@ function LembarVerifikasiSheet({
       const result = await res.json()
 
       const regs: Registration[] = result.data || []
-      const pag = result.pagination || { page: 1, limit, total: 0, totalPages: 0 }
+      const pag = result.pagination || { page: 1, limit: lembarLimit, total: 0, totalPages: 0 }
 
       // Calculate stats from current data set
       const statsRes = await fetch('/api/dashboard')
@@ -833,7 +834,7 @@ function LembarVerifikasiSheet({
     } finally {
       setLoading(false)
     }
-  }, [page, search, verificationFilter, config.subJalurFilter, toast])
+  }, [page, search, verificationFilter, config.subJalurFilter, lembarLimit, toast])
 
   useEffect(() => {
     fetchData()
@@ -1070,6 +1071,24 @@ function LembarVerifikasiSheet({
                 <SelectItem value="REJECTED">Ditolak</SelectItem>
               </SelectContent>
             </Select>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-500">Tampilkan:</span>
+              <Select value={lembarLimit.toString()} onValueChange={(val) => {
+                const newLimit = val === 'all' ? 9999 : parseInt(val)
+                setLembarLimit(newLimit)
+                setPage(1)
+              }}>
+                <SelectTrigger className="w-24 h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                  <SelectItem value="all">Semua</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             {selectedIds.size > 0 && (
               <div className="flex gap-2">
                 <Button
@@ -1801,43 +1820,6 @@ function LembarVerifikasiSheet({
   )
 }
 
-// Error Boundary — catches render errors, shows recovery UI instead of blank screen
-interface ErrorBoundaryState { hasError: boolean; error: Error | null }
-class AppErrorBoundary extends Component<{ children: React.ReactNode }, ErrorBoundaryState> {
-  constructor(props: { children: React.ReactNode }) {
-    super(props)
-    this.state = { hasError: false, error: null }
-  }
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true, error }
-  }
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 p-4">
-          <div className="text-center max-w-md">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-red-600/20 flex items-center justify-center">
-              <AlertTriangle className="w-8 h-8 text-red-400" />
-            </div>
-            <h2 className="text-xl font-bold text-white mb-2">Terjadi Kesalahan</h2>
-            <p className="text-emerald-200/60 text-sm mb-4">Aplikasi mengalami error. Coba refresh halaman.</p>
-            <Button
-              onClick={() => {
-                this.setState({ hasError: false, error: null })
-                window.location.reload()
-              }}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white"
-            >
-              <RotateCcw className="w-4 h-4 mr-2" /> Refresh Halaman
-            </Button>
-          </div>
-        </div>
-      )
-    }
-    return this.props.children
-  }
-}
-
 export default function Home() {
   const { toast } = useToast()
 
@@ -1859,6 +1841,20 @@ export default function Home() {
   const [setupNamaLengkap, setSetupNamaLengkap] = useState('')
   const [setupLoading, setSetupLoading] = useState(false)
   const [setupError, setSetupError] = useState('')
+
+  // Login/Setup password visibility
+  const [showLoginPassword, setShowLoginPassword] = useState(false)
+  const [showSetupPassword, setShowSetupPassword] = useState(false)
+
+  // Change Password dialog state
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false)
+  const [changePasswordCurrent, setChangePasswordCurrent] = useState('')
+  const [changePasswordNew, setChangePasswordNew] = useState('')
+  const [changePasswordConfirm, setChangePasswordConfirm] = useState('')
+  const [changePasswordLoading, setChangePasswordLoading] = useState(false)
+  const [changePasswordError, setChangePasswordError] = useState('')
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
+  const [showNewPassword, setShowNewPassword] = useState(false)
 
   // Check auth on mount — fast timeout, resilient to offline/cleared data
   useEffect(() => {
@@ -1941,10 +1937,11 @@ export default function Home() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [pagination, setPagination] = useState<PaginationInfo>({
     page: 1,
-    limit: 15,
+    limit: 50,
     total: 0,
     totalPages: 0,
   })
+  const [dataLimit, setDataLimit] = useState(50)
 
   // Filters
   const [search, setSearch] = useState('')
@@ -1963,6 +1960,7 @@ export default function Home() {
 
   // Dialogs
   const [importDialogOpen, setImportDialogOpen] = useState(false)
+  const [importStatus, setImportStatus] = useState('ON PROGRESS')
   const [verifyDialogOpen, setVerifyDialogOpen] = useState(false)
   const [detailDialogOpen, setDetailDialogOpen] = useState(false)
   const [bulkVerifyDialogOpen, setBulkVerifyDialogOpen] = useState(false)
@@ -2137,6 +2135,41 @@ export default function Home() {
     }
   }
 
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setChangePasswordError('')
+    if (changePasswordNew !== changePasswordConfirm) {
+      setChangePasswordError('Password baru tidak cocok')
+      return
+    }
+    if (changePasswordNew.length < 6) {
+      setChangePasswordError('Password baru minimal 6 karakter')
+      return
+    }
+    setChangePasswordLoading(true)
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword: changePasswordCurrent, newPassword: changePasswordNew }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        toast({ title: 'Berhasil', description: 'Password berhasil diubah' })
+        setChangePasswordOpen(false)
+        setChangePasswordCurrent('')
+        setChangePasswordNew('')
+        setChangePasswordConfirm('')
+      } else {
+        setChangePasswordError(data.error || 'Gagal mengubah password')
+      }
+    } catch {
+      setChangePasswordError('Terjadi kesalahan koneksi')
+    } finally {
+      setChangePasswordLoading(false)
+    }
+  }
+
   // ==================== DATA FETCHING HOOKS (must be before conditional returns) ====================
   const fetchRegistrations = useCallback(async () => {
     setLoading(true)
@@ -2195,6 +2228,37 @@ export default function Home() {
   useEffect(() => {
     if (isAuthenticated) fetchSettings()
   }, [fetchSettings, isAuthenticated])
+
+  // Auto-logout on refresh: clear session on every page load
+  useEffect(() => {
+    if (isAuthenticated) {
+      const sessionFlag = sessionStorage.getItem('spmb_session_active')
+      if (!sessionFlag) {
+        // This is a page refresh - logout
+        fetch('/api/auth/logout', { method: 'POST' })
+        setIsAuthenticated(false)
+        setAuthUser(null)
+      }
+    }
+  }, [isAuthenticated])
+
+  // Set session flag when logged in
+  useEffect(() => {
+    if (isAuthenticated) {
+      sessionStorage.setItem('spmb_session_active', 'true')
+    } else {
+      sessionStorage.removeItem('spmb_session_active')
+    }
+  }, [isAuthenticated])
+
+  // Clear session flag on beforeunload so refresh triggers logout
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      sessionStorage.removeItem('spmb_session_active')
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [])
 
   // Fetch ranking data
   const fetchRanking = useCallback(async () => {
@@ -2312,14 +2376,17 @@ export default function Home() {
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-300/50" />
                     <Input
-                      type="password"
+                      type={showSetupPassword ? 'text' : 'password'}
                       value={setupPassword}
                       onChange={(e) => setSetupPassword(e.target.value)}
                       placeholder="Minimal 6 karakter"
-                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-emerald-200/40 focus:border-emerald-400/50 focus:ring-emerald-400/30"
+                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-emerald-200/40 focus:border-emerald-400/50 focus:ring-emerald-400/30 pr-10"
                       required
                       minLength={6}
                     />
+                    <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-200/40 hover:text-emerald-200" onClick={() => setShowSetupPassword(!showSetupPassword)}>
+                      {showSetupPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
                 </div>
                 <Button
@@ -2393,13 +2460,17 @@ export default function Home() {
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-300/50" />
                     <Input
-                      type="password"
+                      type={showLoginPassword ? 'text' : 'password'}
                       value={loginPassword}
                       onChange={(e) => setLoginPassword(e.target.value)}
                       placeholder="Masukkan password"
-                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-emerald-200/40 focus:border-emerald-400/50 focus:ring-emerald-400/30"
+                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-emerald-200/40 focus:border-emerald-400/50 focus:ring-emerald-400/30 pr-10"
                       required
+                      autoFocus
                     />
+                    <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-200/40 hover:text-emerald-200" onClick={() => setShowLoginPassword(!showLoginPassword)}>
+                      {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
                 </div>
                 <Button
@@ -2906,7 +2977,7 @@ export default function Home() {
         jurusan: row['Jurusan'] || '',
         npsnSekolahAsal: row['NPSN Sekolah Asal'] || '',
         namaSekolahAsal: row['Nama Sekolah Asal'] || '',
-        status: row['Status'] || 'ON PROGRESS',
+        status: row['Status'] || importStatus,
         waktuDaftar: row['Waktu Daftar'] || '',
       }))
 
@@ -3260,6 +3331,16 @@ export default function Home() {
                   </div>
                 </div>
               </div>
+              <Button
+                onClick={() => setChangePasswordOpen(true)}
+                variant="outline"
+                size="sm"
+                className="bg-white/5 hover:bg-white/20 text-white/70 hover:text-white border-white/10 h-8 sm:h-9 px-2"
+                title="Ganti Password"
+              >
+                <Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline ml-1">Ganti Password</span>
+              </Button>
               <Button
                 onClick={handleLogout}
                 variant="outline"
@@ -3648,6 +3729,23 @@ export default function Home() {
                       <SelectItem value="REJECTED">Ditolak</SelectItem>
                     </SelectContent>
                   </Select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-500">Tampilkan:</span>
+                    <Select value={dataLimit.toString()} onValueChange={(val) => {
+                      const newLimit = val === 'all' ? 9999 : parseInt(val)
+                      setDataLimit(newLimit)
+                      setPagination(prev => ({ ...prev, page: 1, limit: newLimit }))
+                    }}>
+                      <SelectTrigger className="w-24 h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="50">50</SelectItem>
+                        <SelectItem value="100">100</SelectItem>
+                        <SelectItem value="all">Semua</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   {selectedIds.size > 0 && (
                     <div className="flex gap-2">
@@ -5043,6 +5141,21 @@ export default function Home() {
           </DialogHeader>
 
           <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Status Import</label>
+              <Select value={importStatus} onValueChange={setImportStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ON PROGRESS">On Progress</SelectItem>
+                  <SelectItem value="PENDING">Pending</SelectItem>
+                  <SelectItem value="VERIFIED">Verified (Diterima)</SelectItem>
+                  <SelectItem value="REJECTED">Rejected (Ditolak)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500">Status yang akan diterapkan ke semua data yang diimport</p>
+            </div>
             <div
               className="border-2 border-dashed rounded-lg p-8 text-center hover:border-emerald-400 transition-colors cursor-pointer"
               onClick={() => document.getElementById('csv-upload')?.click()}
@@ -5091,6 +5204,75 @@ export default function Home() {
               {importing ? (<><Loader2 className="w-4 h-4 animate-spin" /> Mengimport...</>) : (<><Upload className="w-4 h-4" /> Import</>)}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ==================== CHANGE PASSWORD DIALOG ==================== */}
+      <Dialog open={changePasswordOpen} onOpenChange={setChangePasswordOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lock className="w-5 h-5 text-emerald-600" />
+              Ganti Password
+            </DialogTitle>
+            <DialogDescription>Ubah password akun Anda</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleChangePassword} className="space-y-4">
+            {changePasswordError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2">
+                <XCircle className="w-4 h-4 text-red-500 shrink-0" />
+                <p className="text-red-700 text-sm">{changePasswordError}</p>
+              </div>
+            )}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Password Lama</label>
+              <div className="relative">
+                <Input
+                  type={showCurrentPassword ? 'text' : 'password'}
+                  value={changePasswordCurrent}
+                  onChange={(e) => setChangePasswordCurrent(e.target.value)}
+                  placeholder="Masukkan password lama"
+                  required
+                />
+                <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600" onClick={() => setShowCurrentPassword(!showCurrentPassword)}>
+                  {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Password Baru</label>
+              <div className="relative">
+                <Input
+                  type={showNewPassword ? 'text' : 'password'}
+                  value={changePasswordNew}
+                  onChange={(e) => setChangePasswordNew(e.target.value)}
+                  placeholder="Minimal 6 karakter"
+                  required
+                  minLength={6}
+                />
+                <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600" onClick={() => setShowNewPassword(!showNewPassword)}>
+                  {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Konfirmasi Password Baru</label>
+              <Input
+                type="password"
+                value={changePasswordConfirm}
+                onChange={(e) => setChangePasswordConfirm(e.target.value)}
+                placeholder="Ulangi password baru"
+                required
+                minLength={6}
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setChangePasswordOpen(false)}>Batal</Button>
+              <Button type="submit" disabled={changePasswordLoading} className="bg-emerald-600 hover:bg-emerald-700">
+                {changePasswordLoading ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Menyimpan...</> : 'Simpan Password'}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
