@@ -107,3 +107,45 @@ Stage Summary:
 - Kuota visualization with green highlight for within-kuota ranks
 - Quick view cards for Domisili and Prestasi
 - All filters working (jalur, sekolah, jurusan, status)
+
+---
+Task ID: 3
+Agent: Main Agent
+Task: Fix blank screen when Chrome history is cleared + Add PWA support
+
+Work Log:
+- Investigated root cause: when Chrome history is cleared, httpOnly session cookie (`spmb_session`) is deleted, and without PWA/service worker support, app has no cached shell to fall back on
+- Created `public/manifest.json` with PWA configuration (name, icons, display: standalone, theme_color)
+- Generated PWA app icon using AI image generation (emerald shield with checkmark)
+- Created `public/sw.js` service worker with:
+  - Cache-first strategy for static assets (JS, CSS, images, fonts)
+  - Network-first strategy for API calls (always get fresh data)
+  - Stale-while-revalidate strategy for navigation (HTML pages)
+  - Offline fallback for `/api/auth/me` (returns `{authenticated: false}` instead of error)
+  - Pre-cache of app shell assets on install
+  - Immediate activation with `skipWaiting()` and `clients.claim()`
+- Updated `src/app/layout.tsx` with:
+  - PWA meta tags (viewport, theme-color, apple-mobile-web-app-capable, etc.)
+  - Manifest link (`/manifest.json`)
+  - Apple touch icon link
+  - Service worker registration script (with update checking)
+  - Viewport configuration (no user scaling for app-like feel)
+- Updated `src/app/page.tsx`:
+  - Auth check now runs setup and me API calls in parallel (was sequential before)
+  - Reduced timeout from 8s to 3s for faster fallback to login screen
+  - Reduced safety timeout from 10s to 4s
+  - Added online/offline detection with `navigator.onLine`
+  - Added offline banner (amber bar) in main app when offline
+  - Improved loading screen with animated dots instead of static text
+  - Added `AppErrorBoundary` class component for render error recovery
+  - Added `Component` import from React for error boundary
+- Created `src/app/error.tsx` - Next.js error boundary page (prevents blank on runtime errors)
+- Updated `src/app/api/auth/me/route.ts` - Added `Cache-Control: no-store` headers to prevent stale auth responses
+
+Stage Summary:
+- PWA fully configured: manifest.json + service worker + meta tags
+- App is now installable on Android (shows "Add to Home Screen" / install prompt)
+- When Chrome history is cleared: service worker caches app shell so page loads, auth check shows login form in <4 seconds
+- Offline mode: service worker serves cached content, API calls fail gracefully, offline banner shows
+- Error boundary: runtime errors show recovery UI instead of blank screen
+- Auth resilience: parallel API checks, fast timeouts, never stuck on loading

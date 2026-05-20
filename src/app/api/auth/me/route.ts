@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     if (!sessionToken) {
       return NextResponse.json(
         { success: false, authenticated: false },
-        { status: 401 }
+        { status: 401, headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
       )
     }
 
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
         namaLengkap: user.namaLengkap,
         role: user.role,
       },
-    })
+    }, { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } })
   } catch (error) {
     console.error('Session check error:', error)
     return NextResponse.json(
