@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import * as XLSX from 'xlsx'
+import { saveAs } from 'file-saver'
 import {
   Card,
   CardContent,
@@ -97,6 +99,8 @@ import {
   ArrowUpDown,
   ArrowUpAZ,
   ArrowDownAZ,
+  FileDown,
+  Maximize2,
 } from 'lucide-react'
 
 interface Registration {
@@ -2006,6 +2010,10 @@ export default function Home() {
   const [rankingKuotaPerJalur, setRankingKuotaPerJalur] = useState<Array<{ nama: string; persentase: number; kuota: number }>>([])
   const [rankingLoading, setRankingLoading] = useState(false)
 
+  // Ranking print/preview state
+  const [rankingPreviewOpen, setRankingPreviewOpen] = useState(false)
+  const [rankingPreviewType, setRankingPreviewType] = useState<'pdf' | 'excel'>('pdf')
+
   // Build lembar verifikasi from jalurConfigs
   const lembarVerifikasi = buildLembarVerifikasi(jalurConfigs)
 
@@ -3273,6 +3281,218 @@ export default function Home() {
     printWindow.print()
   }
 
+  // Ranking: generate print HTML content
+  const getRankingPrintHTML = () => {
+    const sortLabel = rankingTampilan === 'jarak' ? 'Jarak Terdekat' : rankingTampilan === 'nilai' ? 'Nilai Tertinggi' : 'Skor Komposit'
+    const jalurLabel = rankingJalur !== 'all' ? rankingJalur : 'Semua Jalur'
+    const sekolahLabel = rankingSekolah !== 'all' ? rankingSekolah : 'Semua Sekolah'
+    const jurusanLabel = rankingJurusan !== 'all' ? rankingJurusan : 'Semua Jurusan'
+    const statusLabel = rankingStatus !== 'all' ? (rankingStatus === 'VERIFIED' ? 'Diterima' : rankingStatus === 'REJECTED' ? 'Ditolak' : 'Menunggu') : 'Semua Status'
+
+    const rows = rankingData.map((r: Record<string, unknown>, idx: number) => {
+      const rankNum = (r._ranking as number) || (idx + 1)
+      const jalurRank = (r._jalurRank as number) || -1
+      const jarakNum = r._jarakNum as number
+      const nilaiNum = r._nilaiNum as number
+      const skorNum = r._skorNum as number
+
+      // Determine kuota cutoff
+      const currentKuota = rankingKuotaPerJalur.find(k => {
+        const jalurName = (r.subJalur as string || '').toLowerCase()
+        return k.nama.toLowerCase().includes(jalurName) || jalurName.includes(k.nama.toLowerCase())
+          || (k.nama.toLowerCase().includes('prestasi') && jalurName.includes('prestasi'))
+          || (k.nama.toLowerCase().includes('domisili') && jalurName.includes('domisili'))
+          || (k.nama.toLowerCase().includes('mutasi') && jalurName.includes('mutasi'))
+          || (k.nama.toLowerCase().includes('afirmasi') && (jalurName.includes('keluarga') || jalurName.includes('ktm')))
+      })?.kuota || 0
+
+      const sameJalurAbove = rankingData
+        .filter((other: Record<string, unknown>) =>
+          (other.subJalur as string) === (r.subJalur as string) &&
+          ((other._ranking as number) || 0) < rankNum
+        ).length
+
+      const withinKuota = currentKuota > 0 && sameJalurAbove < currentKuota
+      const isVerified = r.verificationStatus === 'VERIFIED'
+
+      const rowBg = withinKuota && !isVerified ? '#f0fdf4' : isVerified ? '#f0fdf4' : ''
+      const rankBg = rankNum === 1 ? '#fbbf24' : rankNum === 2 ? '#d1d5db' : rankNum === 3 ? '#b45309' : withinKuota ? '#d1fae5' : '#f3f4f6'
+      const rankColor = rankNum <= 3 ? '#fff' : withinKuota ? '#047857' : '#6b7280'
+
+      return `<tr style="background:${rowBg}">
+        <td style="padding:6px 8px;border:1px solid #ddd;text-align:center"><span style="display:inline-block;width:26px;height:26px;line-height:26px;border-radius:50%;background:${rankBg};color:${rankColor};font-size:11px;font-weight:bold">${rankNum}</span></td>
+        <td style="padding:6px 8px;border:1px solid #ddd;text-align:center;font-size:11px">${r.subJalur as string}${jalurRank > 0 ? `<br><span style="font-size:9px;color:#0369a1">#${jalurRank}</span>` : ''}</td>
+        <td style="padding:6px 8px;border:1px solid #ddd;font-size:12px"><strong>${r.nama as string}</strong><br><span style="font-size:9px;color:#999">NISN: ${r.nisn as string}</span></td>
+        <td style="padding:6px 8px;border:1px solid #ddd;font-size:11px">${r.namaSekolahPilihan as string}</td>
+        <td style="padding:6px 8px;border:1px solid #ddd;font-size:11px">${r.jurusan as string}</td>
+        <td style="padding:6px 8px;border:1px solid #ddd;text-align:right;font-size:11px;font-weight:${rankingTampilan === 'jarak' ? 'bold' : 'normal'};color:${jarakNum > 0 ? '#0369a1' : '#ccc'}">${r.lokasiJarak as string || '-'}</td>
+        <td style="padding:6px 8px;border:1px solid #ddd;text-align:right;font-size:11px;font-weight:${rankingTampilan === 'nilai' ? 'bold' : 'normal'};color:${nilaiNum > 0 ? '#047857' : '#ccc'}">${r.nilaiRataRata as string || r.skorNilaiRaport as string || '-'}</td>
+        <td style="padding:6px 8px;border:1px solid #ddd;text-align:right;font-size:11px;font-weight:${rankingTampilan === 'komposit' ? 'bold' : 'normal'};color:${skorNum > 0 ? '#b45309' : '#ccc'}">${r.skor as string || '-'}</td>
+        <td style="padding:6px 8px;border:1px solid #ddd;text-align:center;font-size:10px">${r.verificationStatus === 'VERIFIED' ? '<span style="background:#d1fae5;color:#047857;padding:2px 8px;border-radius:10px">Diterima</span>' : r.verificationStatus === 'REJECTED' ? '<span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:10px">Ditolak</span>' : '<span style="background:#fef3c7;color:#b45309;padding:2px 8px;border-radius:10px">Menunggu</span>'}</td>
+      </tr>`
+    }).join('')
+
+    return `<!DOCTYPE html><html><head><title>Perangkingan SPMB 2026 - ${sortLabel}</title>
+      <style>
+        @page { size: A4 landscape; margin: 15mm; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 15px; font-size: 12px; }
+        .header { text-align: center; margin-bottom: 15px; border-bottom: 3px double #333; padding-bottom: 10px; }
+        .header h1 { font-size: 18px; margin: 0 0 4px 0; letter-spacing: 2px; }
+        .header h2 { font-size: 14px; margin: 0 0 4px 0; color: #555; }
+        .header p { font-size: 10px; color: #888; margin: 2px 0; }
+        .filters { display: flex; gap: 15px; justify-content: center; margin-bottom: 10px; font-size: 10px; color: #666; }
+        .filters span { background: #f5f5f5; padding: 2px 8px; border-radius: 4px; border: 1px solid #ddd; }
+        .kuota-info { text-align: center; margin-bottom: 10px; font-size: 11px; }
+        .kuota-info span { background: #dbeafe; color: #1e40af; padding: 3px 10px; border-radius: 4px; margin: 0 4px; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        th { background: #f5f5f5; padding: 8px; border: 1px solid #ddd; text-align: center; font-size: 11px; font-weight: 600; }
+        th.active { background: #fef3c7; }
+        .legend { margin-top: 10px; font-size: 10px; color: #888; text-align: center; }
+        .legend span { margin: 0 8px; }
+        @media print { body { padding: 0; } }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>LAPORAN PERANGKINGAN</h1>
+        <h2>SPMB 2026 — Sistem Penerimaan Madrasah</h2>
+        <p>Diurutkan berdasarkan: <strong>${sortLabel}</strong> · Dicetak pada: ${new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+      </div>
+      <div class="filters">
+        <span>Jalur: ${jalurLabel}</span>
+        <span>Sekolah: ${sekolahLabel}</span>
+        <span>Jurusan: ${jurusanLabel}</span>
+        <span>Status: ${statusLabel}</span>
+      </div>
+      ${rankingKuota > 0 ? `<div class="kuota-info">Total Kuota: <span>${rankingKuota}</span> ${rankingKuotaPerJalur.map(kj => `<span>${kj.nama}: ${kj.kuota} (${kj.persentase}%)</span>`).join('')}</div>` : ''}
+      <table>
+        <thead>
+          <tr>
+            <th style="width:40px">No</th>
+            <th style="width:90px">Jalur</th>
+            <th>Nama Pendaftar</th>
+            <th>Sekolah Pilihan</th>
+            <th>Jurusan</th>
+            <th class="${rankingTampilan === 'jarak' ? 'active' : ''}" style="width:80px">Jarak</th>
+            <th class="${rankingTampilan === 'nilai' ? 'active' : ''}" style="width:70px">Nilai</th>
+            <th class="${rankingTampilan === 'komposit' ? 'active' : ''}" style="width:60px">Skor</th>
+            <th style="width:75px">Status</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div class="legend">
+        <span>🟡 Rangking 1</span> <span>⚪ Rangking 2</span> <span>🟤 Rangking 3</span> <span>🟢 Masuk Kuota</span>
+        <span>Total: ${rankingData.length} pendaftar</span>
+      </div>
+    </body></html>`
+  }
+
+  // Ranking: open preview dialog
+  const handleRankingPreview = (type: 'pdf' | 'excel') => {
+    setRankingPreviewType(type)
+    setRankingPreviewOpen(true)
+  }
+
+  // Ranking: print to PDF via print dialog
+  const handleRankingPrintPDF = () => {
+    const html = getRankingPrintHTML()
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) return
+    printWindow.document.write(html)
+    printWindow.document.close()
+    setTimeout(() => { printWindow.print() }, 500)
+  }
+
+  // Ranking: export to Excel
+  const handleRankingExportExcel = () => {
+    const sortLabel = rankingTampilan === 'jarak' ? 'Jarak Terdekat' : rankingTampilan === 'nilai' ? 'Nilai Tertinggi' : 'Skor Komposit'
+
+    const excelData = rankingData.map((r: Record<string, unknown>, idx: number) => {
+      const rankNum = (r._ranking as number) || (idx + 1)
+      const jalurRank = (r._jalurRank as number) || -1
+      const jarakNum = r._jarakNum as number
+      const nilaiNum = r._nilaiNum as number
+      const skorNum = r._skorNum as number
+
+      const currentKuota = rankingKuotaPerJalur.find(k => {
+        const jalurName = (r.subJalur as string || '').toLowerCase()
+        return k.nama.toLowerCase().includes(jalurName) || jalurName.includes(k.nama.toLowerCase())
+          || (k.nama.toLowerCase().includes('prestasi') && jalurName.includes('prestasi'))
+          || (k.nama.toLowerCase().includes('domisili') && jalurName.includes('domisili'))
+          || (k.nama.toLowerCase().includes('mutasi') && jalurName.includes('mutasi'))
+          || (k.nama.toLowerCase().includes('afirmasi') && (jalurName.includes('keluarga') || jalurName.includes('ktm')))
+      })?.kuota || 0
+
+      const sameJalurAbove = rankingData
+        .filter((other: Record<string, unknown>) =>
+          (other.subJalur as string) === (r.subJalur as string) &&
+          ((other._ranking as number) || 0) < rankNum
+        ).length
+
+      const withinKuota = currentKuota > 0 && sameJalurAbove < currentKuota
+
+      return {
+        'Rangking': rankNum,
+        'Rangking Jalur': jalurRank > 0 ? jalurRank : '-',
+        'Jalur': r.subJalur as string,
+        'No. Registrasi': r.noRegistrasi as string,
+        'Nama': r.nama as string,
+        'NISN': r.nisn as string,
+        'Sekolah Pilihan': r.namaSekolahPilihan as string,
+        'Jurusan': r.jurusan as string,
+        'Sekolah Asal': r.namaSekolahAsal as string,
+        'Jarak': r.lokasiJarak as string || '-',
+        'Skor Jarak': r.skorJarak as string || '-',
+        'Nilai Rata-Rata': r.nilaiRataRata as string || '-',
+        'Skor Nilai Raport': r.skorNilaiRaport as string || '-',
+        'Skor Komposit': r.skor as string || '-',
+        'Status Verifikasi': r.verificationStatus === 'VERIFIED' ? 'Diterima' : r.verificationStatus === 'REJECTED' ? 'Ditolak' : 'Menunggu',
+        'Masuk Kuota': withinKuota ? 'Ya' : 'Tidak',
+      }
+    })
+
+    const ws = XLSX.utils.json_to_sheet(excelData)
+
+    // Set column widths
+    ws['!cols'] = [
+      { wch: 10 }, { wch: 14 }, { wch: 20 }, { wch: 18 }, { wch: 25 },
+      { wch: 16 }, { wch: 22 }, { wch: 14 }, { wch: 22 }, { wch: 14 },
+      { wch: 12 }, { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 16 },
+      { wch: 16 }, { wch: 12 },
+    ]
+
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Perangkingan')
+
+    // Add a summary sheet
+    const summaryData = [
+      { 'Keterangan': 'LAPORAN PERANGKINGAN SPMB 2026', 'Nilai': '' },
+      { 'Keterangan': 'Diurutkan Berdasarkan', 'Nilai': sortLabel },
+      { 'Keterangan': 'Jalur', 'Nilai': rankingJalur !== 'all' ? rankingJalur : 'Semua Jalur' },
+      { 'Keterangan': 'Sekolah Pilihan', 'Nilai': rankingSekolah !== 'all' ? rankingSekolah : 'Semua Sekolah' },
+      { 'Keterangan': 'Jurusan', 'Nilai': rankingJurusan !== 'all' ? rankingJurusan : 'Semua Jurusan' },
+      { 'Keterangan': 'Status Verifikasi', 'Nilai': rankingStatus !== 'all' ? (rankingStatus === 'VERIFIED' ? 'Diterima' : rankingStatus === 'REJECTED' ? 'Ditolak' : 'Menunggu') : 'Semua Status' },
+      { 'Keterangan': 'Total Pendaftar', 'Nilai': rankingData.length.toString() },
+      { 'Keterangan': 'Total Kuota', 'Nilai': rankingKuota.toString() },
+      { 'Keterangan': '', 'Nilai': '' },
+      { 'Keterangan': 'Kuota Per Jalur', 'Nilai': '' },
+      ...rankingKuotaPerJalur.map(kj => ({ 'Keterangan': `  ${kj.nama}`, 'Nilai': `${kj.kuota} (${kj.persentase}%)` })),
+      { 'Keterangan': '', 'Nilai': '' },
+      { 'Keterangan': 'Dicetak pada', 'Nilai': new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) },
+    ]
+    const ws2 = XLSX.utils.json_to_sheet(summaryData)
+    ws2['!cols'] = [{ wch: 30 }, { wch: 25 }]
+    XLSX.utils.book_append_sheet(wb, ws2, 'Ringkasan')
+
+    const fileName = `Perangkingan_SPMB2026_${sortLabel.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+    const blob = new Blob([wbout], { type: 'application/octet-stream' })
+    saveAs(blob, fileName)
+
+    toast({ title: 'Berhasil', description: `File Excel berhasil diunduh: ${fileName}` })
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-gray-50 to-emerald-50/30">
       {/* Header */}
@@ -4158,10 +4378,32 @@ export default function Home() {
                       {rankingJalur !== 'all' && ` · Jalur: ${rankingJalur}`}
                     </CardDescription>
                   </div>
-                  <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => fetchRanking()}>
-                    <RefreshCw className="w-3 h-3" />
-                    Refresh
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs gap-1 border-red-200 text-red-700 hover:bg-red-50"
+                      onClick={() => handleRankingPreview('pdf')}
+                      disabled={rankingData.length === 0}
+                    >
+                      <Printer className="w-3 h-3" />
+                      <span className="hidden sm:inline">Cetak PDF</span>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs gap-1 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                      onClick={() => handleRankingPreview('excel')}
+                      disabled={rankingData.length === 0}
+                    >
+                      <FileSpreadsheet className="w-3 h-3" />
+                      <span className="hidden sm:inline">Cetak Excel</span>
+                    </Button>
+                    <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => fetchRanking()}>
+                      <RefreshCw className="w-3 h-3" />
+                      <span className="hidden sm:inline">Refresh</span>
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="p-0">
@@ -5293,6 +5535,206 @@ export default function Home() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ==================== RANKING PREVIEW DIALOG ==================== */}
+      <Dialog open={rankingPreviewOpen} onOpenChange={setRankingPreviewOpen}>
+        <DialogContent className="sm:max-w-6xl max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {rankingPreviewType === 'pdf' ? (
+                <><Printer className="w-5 h-5 text-red-600" /> Preview Cetak PDF</>
+              ) : (
+                <><FileSpreadsheet className="w-5 h-5 text-emerald-600" /> Preview Cetak Excel</>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {rankingPreviewType === 'pdf'
+                ? 'Pratinjau hasil cetak perangkingan. Klik "Cetak PDF" untuk membuka dialog cetak.'
+                : 'Pratinjau data yang akan diekspor ke Excel. Klik "Unduh Excel" untuk mengunduh file.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Preview Content */}
+          <div className="flex-1 min-h-0 overflow-auto border rounded-lg bg-white">
+            <div className="p-4">
+              {/* Header Preview */}
+              <div className="text-center mb-4 pb-3 border-b-4 border-double border-gray-300">
+                <h2 className="text-lg font-bold tracking-wider">LAPORAN PERANGKINGAN</h2>
+                <p className="text-sm text-gray-500">SPMB 2026 — Sistem Penerimaan Madrasah</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  Diurutkan berdasarkan: <strong>{rankingTampilan === 'jarak' ? 'Jarak Terdekat' : rankingTampilan === 'nilai' ? 'Nilai Tertinggi' : 'Skor Komposit'}</strong>
+                  {' · '}Dicetak pada: {new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </div>
+
+              {/* Filters Preview */}
+              <div className="flex flex-wrap gap-2 justify-center mb-3">
+                <span className="text-xs bg-gray-100 px-2 py-1 rounded border">Jalur: {rankingJalur !== 'all' ? rankingJalur : 'Semua'}</span>
+                <span className="text-xs bg-gray-100 px-2 py-1 rounded border">Sekolah: {rankingSekolah !== 'all' ? rankingSekolah : 'Semua'}</span>
+                <span className="text-xs bg-gray-100 px-2 py-1 rounded border">Jurusan: {rankingJurusan !== 'all' ? rankingJurusan : 'Semua'}</span>
+                <span className="text-xs bg-gray-100 px-2 py-1 rounded border">Status: {rankingStatus !== 'all' ? (rankingStatus === 'VERIFIED' ? 'Diterima' : rankingStatus === 'REJECTED' ? 'Ditolak' : 'Menunggu') : 'Semua'}</span>
+              </div>
+
+              {/* Kuota Preview */}
+              {rankingKuota > 0 && (
+                <div className="text-center mb-3 text-xs">
+                  <span className="bg-sky-100 text-sky-700 px-3 py-1 rounded mr-2">Total Kuota: <strong>{rankingKuota}</strong></span>
+                  {rankingKuotaPerJalur.map(kj => (
+                    <span key={kj.nama} className="bg-sky-50 text-sky-600 px-2 py-1 rounded mr-1">{kj.nama}: {kj.kuota} ({kj.persentase}%)</span>
+                  ))}
+                </div>
+              )}
+
+              {/* Table Preview */}
+              <div className="overflow-x-auto border rounded">
+                <Table className="text-xs">
+                  <TableHeader>
+                    <TableRow className="bg-gray-50">
+                      <TableHead className="w-10 text-center font-semibold">No</TableHead>
+                      <TableHead className="w-20 text-center font-semibold">Jalur</TableHead>
+                      <TableHead className="font-semibold">Nama Pendaftar</TableHead>
+                      <TableHead className="font-semibold">Sekolah Pilihan</TableHead>
+                      <TableHead className="font-semibold">Jurusan</TableHead>
+                      <TableHead className={`text-right font-semibold ${rankingTampilan === 'jarak' ? 'bg-amber-50' : ''}`}>Jarak</TableHead>
+                      <TableHead className={`text-right font-semibold ${rankingTampilan === 'nilai' ? 'bg-amber-50' : ''}`}>Nilai</TableHead>
+                      <TableHead className={`text-right font-semibold ${rankingTampilan === 'komposit' ? 'bg-amber-50' : ''}`}>Skor</TableHead>
+                      <TableHead className="text-center font-semibold">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {rankingData.slice(0, 20).map((r: Record<string, unknown>, idx: number) => {
+                      const rankNum = (r._ranking as number) || (idx + 1)
+                      const jalurRank = (r._jalurRank as number) || -1
+                      const jarakNum = r._jarakNum as number
+                      const nilaiNum = r._nilaiNum as number
+                      const skorNum = r._skorNum as number
+
+                      const currentKuota = rankingKuotaPerJalur.find(k => {
+                        const jalurName = (r.subJalur as string || '').toLowerCase()
+                        return k.nama.toLowerCase().includes(jalurName) || jalurName.includes(k.nama.toLowerCase())
+                          || (k.nama.toLowerCase().includes('prestasi') && jalurName.includes('prestasi'))
+                          || (k.nama.toLowerCase().includes('domisili') && jalurName.includes('domisili'))
+                          || (k.nama.toLowerCase().includes('mutasi') && jalurName.includes('mutasi'))
+                          || (k.nama.toLowerCase().includes('afirmasi') && (jalurName.includes('keluarga') || jalurName.includes('ktm')))
+                      })?.kuota || 0
+
+                      const sameJalurAbove = rankingData
+                        .filter((other: Record<string, unknown>) =>
+                          (other.subJalur as string) === (r.subJalur as string) &&
+                          ((other._ranking as number) || 0) < rankNum
+                        ).length
+
+                      const withinKuota = currentKuota > 0 && sameJalurAbove < currentKuota
+                      const isVerified = r.verificationStatus === 'VERIFIED'
+
+                      return (
+                        <TableRow key={r.id as string} className={`${withinKuota && !isVerified ? 'bg-emerald-50/50' : ''} ${isVerified ? 'bg-emerald-50' : ''}`}>
+                          <TableCell className="text-center p-1">
+                            <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold ${
+                              rankNum === 1 ? 'bg-amber-400 text-white' :
+                              rankNum === 2 ? 'bg-gray-300 text-gray-700' :
+                              rankNum === 3 ? 'bg-amber-700 text-white' :
+                              withinKuota ? 'bg-emerald-100 text-emerald-700' :
+                              'bg-gray-100 text-gray-500'
+                            }`}>{rankNum}</span>
+                          </TableCell>
+                          <TableCell className="text-center p-1">
+                            <Badge variant="outline" className={`text-[9px] ${SUB_JALUR_COLORS[r.subJalur as string] || 'bg-gray-100 text-gray-700 border-gray-200'}`}>
+                              {r.subJalur as string}
+                            </Badge>
+                            {jalurRank > 0 && <span className="block text-[8px] text-sky-600">#{jalurRank}</span>}
+                          </TableCell>
+                          <TableCell className="p-1">
+                            <p className="text-xs font-medium">{r.nama as string}</p>
+                            <p className="text-[9px] text-gray-400">NISN: {r.nisn as string}</p>
+                          </TableCell>
+                          <TableCell className="text-xs p-1">{r.namaSekolahPilihan as string}</TableCell>
+                          <TableCell className="text-xs p-1 text-gray-600">{r.jurusan as string}</TableCell>
+                          <TableCell className={`text-right p-1 ${rankingTampilan === 'jarak' ? 'bg-sky-50/50 font-bold' : ''}`}>
+                            <span className={`text-xs ${jarakNum > 0 ? 'text-sky-700' : 'text-gray-300'}`}>{r.lokasiJarak as string || '-'}</span>
+                          </TableCell>
+                          <TableCell className={`text-right p-1 ${rankingTampilan === 'nilai' ? 'bg-emerald-50/50 font-bold' : ''}`}>
+                            <span className={`text-xs ${nilaiNum > 0 ? 'text-emerald-700' : 'text-gray-300'}`}>{r.nilaiRataRata as string || r.skorNilaiRaport as string || '-'}</span>
+                          </TableCell>
+                          <TableCell className={`text-right p-1 ${rankingTampilan === 'komposit' ? 'bg-amber-50/50 font-bold' : ''}`}>
+                            <span className={`text-xs ${skorNum > 0 ? 'text-amber-700' : 'text-gray-300'}`}>{r.skor as string || '-'}</span>
+                          </TableCell>
+                          <TableCell className="text-center p-1">
+                            <Badge className={`text-[9px] ${STATUS_COLORS[r.verificationStatus as string] || 'bg-gray-100 text-gray-700'}`}>
+                              {r.verificationStatus === 'VERIFIED' ? 'Diterima' : r.verificationStatus === 'REJECTED' ? 'Ditolak' : 'Menunggu'}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+                {rankingData.length > 20 && (
+                  <div className="text-center py-2 text-xs text-gray-400 border-t">
+                    ... dan {rankingData.length - 20} data lainnya (total: {rankingData.length} pendaftar)
+                  </div>
+                )}
+              </div>
+
+              {/* Legend */}
+              <div className="text-center mt-3 text-xs text-gray-400">
+                🟡 Rangking 1 · ⚪ Rangking 2 · 🟤 Rangking 3 · 🟢 Masuk Kuota · Total: {rankingData.length} pendaftar
+              </div>
+
+              {/* Excel Data Preview */}
+              {rankingPreviewType === 'excel' && (
+                <div className="mt-4 p-3 bg-emerald-50 rounded-lg border border-emerald-200">
+                  <h4 className="text-xs font-semibold text-emerald-800 mb-2">📋 Data yang akan diekspor ke Excel:</h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px]">
+                    <div className="bg-white rounded p-2 border">
+                      <span className="text-gray-500">Kolom Data</span>
+                      <p className="font-bold text-gray-800">17 kolom</p>
+                    </div>
+                    <div className="bg-white rounded p-2 border">
+                      <span className="text-gray-500">Baris Data</span>
+                      <p className="font-bold text-gray-800">{rankingData.length} baris</p>
+                    </div>
+                    <div className="bg-white rounded p-2 border">
+                      <span className="text-gray-500">Sheet</span>
+                      <p className="font-bold text-gray-800">2 sheet</p>
+                    </div>
+                    <div className="bg-white rounded p-2 border">
+                      <span className="text-gray-500">Format</span>
+                      <p className="font-bold text-gray-800">.xlsx</p>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-emerald-600 mt-2">
+                    Sheet 1: Perangkingan (data lengkap) · Sheet 2: Ringkasan (filter & kuota)
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter className="flex-row gap-2 sm:justify-end">
+            <Button variant="outline" onClick={() => setRankingPreviewOpen(false)}>
+              Batal
+            </Button>
+            <Button
+              onClick={() => {
+                if (rankingPreviewType === 'pdf') {
+                  handleRankingPrintPDF()
+                } else {
+                  handleRankingExportExcel()
+                }
+                setRankingPreviewOpen(false)
+              }}
+              className={rankingPreviewType === 'pdf' ? 'bg-red-600 hover:bg-red-700' : 'bg-emerald-600 hover:bg-emerald-700'}
+            >
+              {rankingPreviewType === 'pdf' ? (
+                <><Printer className="w-4 h-4 mr-2" /> Cetak PDF</>
+              ) : (
+                <><FileDown className="w-4 h-4 mr-2" /> Unduh Excel</>
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
