@@ -2047,6 +2047,8 @@ export default function Home() {
       })
       const data = await res.json()
       if (data.success) {
+        // Set session flag BEFORE isAuthenticated to prevent auto-logout race condition
+        sessionStorage.setItem('spmb_session_active', 'true')
         setIsAuthenticated(true)
         setAuthUser(data.user)
         setLoginUsername('')
@@ -2082,6 +2084,8 @@ export default function Home() {
         })
         const loginData = await loginRes.json()
         if (loginData.success) {
+          // Set session flag BEFORE isAuthenticated to prevent auto-logout race condition
+          sessionStorage.setItem('spmb_session_active', 'true')
           setIsAuthenticated(true)
           setAuthUser(loginData.user)
           toast({ title: 'Setup Berhasil', description: `Akun admin berhasil dibuat. Selamat datang, ${loginData.user.namaLengkap}!` })
