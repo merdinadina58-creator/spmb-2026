@@ -2312,7 +2312,7 @@ export default function Home() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSetup} className="space-y-4">
+              <form onSubmit={handleSetup} className="space-y-4" autoComplete="off">
                 {setupError && (
                   <div className="bg-red-500/20 border border-red-400/30 rounded-lg p-3 flex items-center gap-2">
                     <XCircle className="w-4 h-4 text-red-300 shrink-0" />
@@ -2324,10 +2324,14 @@ export default function Home() {
                   <div className="relative">
                     <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-300/50" />
                     <Input
+                      name="setup-nama-lengkap"
                       value={setupNamaLengkap}
                       onChange={(e) => setSetupNamaLengkap(e.target.value)}
                       placeholder="Nama lengkap Anda"
                       className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-emerald-200/40 focus:border-emerald-400/50 focus:ring-emerald-400/30"
+                      autoComplete="off"
+                      data-lpignore="true"
+                      data-1p-ignore
                       required
                     />
                   </div>
@@ -2337,10 +2341,14 @@ export default function Home() {
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-300/50" />
                     <Input
+                      name="setup-username"
                       value={setupUsername}
                       onChange={(e) => setSetupUsername(e.target.value)}
                       placeholder="Username untuk login"
                       className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-emerald-200/40 focus:border-emerald-400/50 focus:ring-emerald-400/30"
+                      autoComplete="off"
+                      data-lpignore="true"
+                      data-1p-ignore
                       required
                       minLength={3}
                     />
@@ -2352,10 +2360,14 @@ export default function Home() {
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-300/50" />
                     <Input
                       type={showSetupPassword ? 'text' : 'password'}
+                      name="setup-password"
                       value={setupPassword}
                       onChange={(e) => setSetupPassword(e.target.value)}
                       placeholder="Minimal 6 karakter"
                       className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-emerald-200/40 focus:border-emerald-400/50 focus:ring-emerald-400/30 pr-10"
+                      autoComplete="new-password"
+                      data-lpignore="true"
+                      data-1p-ignore
                       required
                       minLength={6}
                     />
@@ -2409,7 +2421,7 @@ export default function Home() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleLogin} className="space-y-4">
+              <form onSubmit={handleLogin} className="space-y-4" autoComplete="off">
                 {loginError && (
                   <div className="bg-red-500/20 border border-red-400/30 rounded-lg p-3 flex items-center gap-2">
                     <XCircle className="w-4 h-4 text-red-300 shrink-0" />
@@ -2421,10 +2433,14 @@ export default function Home() {
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-300/50" />
                     <Input
+                      name="username"
                       value={loginUsername}
                       onChange={(e) => setLoginUsername(e.target.value)}
                       placeholder="Masukkan username"
                       className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-emerald-200/40 focus:border-emerald-400/50 focus:ring-emerald-400/30"
+                      autoComplete="off"
+                      data-lpignore="true"
+                      data-1p-ignore
                       required
                       autoFocus
                     />
@@ -2436,12 +2452,15 @@ export default function Home() {
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-300/50" />
                     <Input
                       type={showLoginPassword ? 'text' : 'password'}
+                      name="password"
                       value={loginPassword}
                       onChange={(e) => setLoginPassword(e.target.value)}
                       placeholder="Masukkan password"
                       className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-emerald-200/40 focus:border-emerald-400/50 focus:ring-emerald-400/30 pr-10"
+                      autoComplete="current-password"
+                      data-lpignore="true"
+                      data-1p-ignore
                       required
-                      autoFocus
                     />
                     <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-200/40 hover:text-emerald-200" onClick={() => setShowLoginPassword(!showLoginPassword)}>
                       {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -5185,7 +5204,7 @@ export default function Home() {
             </DialogTitle>
             <DialogDescription>Ubah password akun Anda</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleChangePassword} className="space-y-4">
+          <form onSubmit={handleChangePassword} className="space-y-4" autoComplete="off">
             {changePasswordError && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2">
                 <XCircle className="w-4 h-4 text-red-500 shrink-0" />
@@ -5197,9 +5216,11 @@ export default function Home() {
               <div className="relative">
                 <Input
                   type={showCurrentPassword ? 'text' : 'password'}
+                  name="current-password"
                   value={changePasswordCurrent}
                   onChange={(e) => setChangePasswordCurrent(e.target.value)}
                   placeholder="Masukkan password lama"
+                  autoComplete="current-password"
                   required
                 />
                 <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600" onClick={() => setShowCurrentPassword(!showCurrentPassword)}>
@@ -5212,9 +5233,11 @@ export default function Home() {
               <div className="relative">
                 <Input
                   type={showNewPassword ? 'text' : 'password'}
+                  name="new-password"
                   value={changePasswordNew}
                   onChange={(e) => setChangePasswordNew(e.target.value)}
                   placeholder="Minimal 6 karakter"
+                  autoComplete="new-password"
                   required
                   minLength={6}
                 />
@@ -5227,9 +5250,11 @@ export default function Home() {
               <label className="text-sm font-medium">Konfirmasi Password Baru</label>
               <Input
                 type="password"
+                name="confirm-new-password"
                 value={changePasswordConfirm}
                 onChange={(e) => setChangePasswordConfirm(e.target.value)}
                 placeholder="Ulangi password baru"
+                autoComplete="new-password"
                 required
                 minLength={6}
               />
