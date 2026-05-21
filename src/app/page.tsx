@@ -2013,6 +2013,7 @@ export default function Home() {
   // Ranking print/preview state
   const [rankingPreviewOpen, setRankingPreviewOpen] = useState(false)
   const [rankingPreviewType, setRankingPreviewType] = useState<'pdf' | 'excel'>('pdf')
+  const [rankingPreviewJalur, setRankingPreviewJalur] = useState<string>('all') // 'all' or specific jalur name
 
   // Build lembar verifikasi from jalurConfigs
   const lembarVerifikasi = buildLembarVerifikasi(jalurConfigs)
@@ -3282,16 +3283,30 @@ export default function Home() {
   }
 
   // Ranking: generate print HTML content
-  const getRankingPrintHTML = () => {
+  const getRankingPrintHTML = (selectedJalur: string = 'all') => {
     const sortLabel = rankingTampilan === 'jarak' ? 'Jarak Terdekat' : rankingTampilan === 'nilai' ? 'Nilai Tertinggi' : 'Skor Komposit'
-    const jalurLabel = rankingJalur !== 'all' ? rankingJalur : 'Semua Jalur'
+    const jalurLabel = selectedJalur !== 'all' ? selectedJalur : 'Semua Jalur'
     const sekolahLabel = rankingSekolah !== 'all' ? rankingSekolah : 'Semua Sekolah'
     const jurusanLabel = rankingJurusan !== 'all' ? rankingJurusan : 'Semua Jurusan'
     const statusLabel = rankingStatus !== 'all' ? (rankingStatus === 'VERIFIED' ? 'Diterima' : rankingStatus === 'REJECTED' ? 'Ditolak' : 'Menunggu') : 'Semua Status'
 
-    const rows = rankingData.map((r: Record<string, unknown>, idx: number) => {
-      const rankNum = (r._ranking as number) || (idx + 1)
-      const jalurRank = (r._jalurRank as number) || -1
+    // Filter data by selected jalur
+    const filteredData = selectedJalur === 'all'
+      ? rankingData
+      : rankingData.filter((r: Record<string, unknown>) => (r.subJalur as string) === selectedJalur)
+
+    // Re-rank within selected jalur
+    const jalurRankCounters: Record<string, number> = {}
+    const reRanked = filteredData.map((r: Record<string, unknown>, idx: number) => {
+      const jalur = r.subJalur as string
+      if (!jalurRankCounters[jalur]) jalurRankCounters[jalur] = 0
+      jalurRankCounters[jalur]++
+      return { ...r, _newRank: idx + 1, _newJalurRank: jalurRankCounters[jalur] }
+    })
+
+    const rows = reRanked.map((r: Record<string, unknown> & { _newRank: number; _newJalurRank: number }, idx: number) => {
+      const rankNum = r._newRank
+      const jalurRank = r._newJalurRank
       const jarakNum = r._jarakNum as number
       const nilaiNum = r._nilaiNum as number
       const skorNum = r._skorNum as number
@@ -3306,10 +3321,10 @@ export default function Home() {
           || (k.nama.toLowerCase().includes('afirmasi') && (jalurName.includes('keluarga') || jalurName.includes('ktm')))
       })?.kuota || 0
 
-      const sameJalurAbove = rankingData
-        .filter((other: Record<string, unknown>) =>
+      const sameJalurAbove = reRanked
+        .filter((other: Record<string, unknown> & { _newRank: number; _newJalurRank: number }) =>
           (other.subJalur as string) === (r.subJalur as string) &&
-          ((other._ranking as number) || 0) < rankNum
+          other._newJalurRank < jalurRank
         ).length
 
       const withinKuota = currentKuota > 0 && sameJalurAbove < currentKuota
@@ -3383,7 +3398,7 @@ export default function Home() {
       </table>
       <div class="legend">
         <span>🟡 Rangking 1</span> <span>⚪ Rangking 2</span> <span>🟤 Rangking 3</span> <span>🟢 Masuk Kuota</span>
-        <span>Total: ${rankingData.length} pendaftar</span>
+        <span>Total: ${reRanked.length} pendaftar</span>
       </div>
     </body></html>`
   }
@@ -3391,12 +3406,13 @@ export default function Home() {
   // Ranking: open preview dialog
   const handleRankingPreview = (type: 'pdf' | 'excel') => {
     setRankingPreviewType(type)
+    setRankingPreviewJalur('all') // reset to all jalur
     setRankingPreviewOpen(true)
   }
 
   // Ranking: print to PDF via print dialog
   const handleRankingPrintPDF = () => {
-    const html = getRankingPrintHTML()
+    const html = getRankingPrintHTML(rankingPreviewJalur)
     const printWindow = window.open('', '_blank')
     if (!printWindow) return
     printWindow.document.write(html)
@@ -3407,13 +3423,26 @@ export default function Home() {
   // Ranking: export to Excel
   const handleRankingExportExcel = () => {
     const sortLabel = rankingTampilan === 'jarak' ? 'Jarak Terdekat' : rankingTampilan === 'nilai' ? 'Nilai Tertinggi' : 'Skor Komposit'
+    const selectedJalur = rankingPreviewJalur
+    const jalurLabel = selectedJalur !== 'all' ? selectedJalur : 'Semua Jalur'
 
-    const excelData = rankingData.map((r: Record<string, unknown>, idx: number) => {
-      const rankNum = (r._ranking as number) || (idx + 1)
-      const jalurRank = (r._jalurRank as number) || -1
-      const jarakNum = r._jarakNum as number
-      const nilaiNum = r._nilaiNum as number
-      const skorNum = r._skorNum as number
+    // Filter data by selected jalur
+    const filteredData = selectedJalur === 'all'
+      ? rankingData
+      : rankingData.filter((r: Record<string, unknown>) => (r.subJalur as string) === selectedJalur)
+
+    // Re-rank
+    const jalurRankCounters: Record<string, number> = {}
+    const reRanked = filteredData.map((r: Record<string, unknown>, idx: number) => {
+      const jalur = r.subJalur as string
+      if (!jalurRankCounters[jalur]) jalurRankCounters[jalur] = 0
+      jalurRankCounters[jalur]++
+      return { ...r, _newRank: idx + 1, _newJalurRank: jalurRankCounters[jalur] }
+    })
+
+    const excelData = reRanked.map((r: Record<string, unknown> & { _newRank: number; _newJalurRank: number }) => {
+      const rankNum = r._newRank
+      const jalurRank = r._newJalurRank
 
       const currentKuota = rankingKuotaPerJalur.find(k => {
         const jalurName = (r.subJalur as string || '').toLowerCase()
@@ -3424,10 +3453,10 @@ export default function Home() {
           || (k.nama.toLowerCase().includes('afirmasi') && (jalurName.includes('keluarga') || jalurName.includes('ktm')))
       })?.kuota || 0
 
-      const sameJalurAbove = rankingData
-        .filter((other: Record<string, unknown>) =>
+      const sameJalurAbove = reRanked
+        .filter((other: Record<string, unknown> & { _newRank: number; _newJalurRank: number }) =>
           (other.subJalur as string) === (r.subJalur as string) &&
-          ((other._ranking as number) || 0) < rankNum
+          other._newJalurRank < jalurRank
         ).length
 
       const withinKuota = currentKuota > 0 && sameJalurAbove < currentKuota
@@ -3469,11 +3498,11 @@ export default function Home() {
     const summaryData = [
       { 'Keterangan': 'LAPORAN PERANGKINGAN SPMB 2026', 'Nilai': '' },
       { 'Keterangan': 'Diurutkan Berdasarkan', 'Nilai': sortLabel },
-      { 'Keterangan': 'Jalur', 'Nilai': rankingJalur !== 'all' ? rankingJalur : 'Semua Jalur' },
+      { 'Keterangan': 'Jalur', 'Nilai': jalurLabel },
       { 'Keterangan': 'Sekolah Pilihan', 'Nilai': rankingSekolah !== 'all' ? rankingSekolah : 'Semua Sekolah' },
       { 'Keterangan': 'Jurusan', 'Nilai': rankingJurusan !== 'all' ? rankingJurusan : 'Semua Jurusan' },
       { 'Keterangan': 'Status Verifikasi', 'Nilai': rankingStatus !== 'all' ? (rankingStatus === 'VERIFIED' ? 'Diterima' : rankingStatus === 'REJECTED' ? 'Ditolak' : 'Menunggu') : 'Semua Status' },
-      { 'Keterangan': 'Total Pendaftar', 'Nilai': rankingData.length.toString() },
+      { 'Keterangan': 'Total Pendaftar', 'Nilai': reRanked.length.toString() },
       { 'Keterangan': 'Total Kuota', 'Nilai': rankingKuota.toString() },
       { 'Keterangan': '', 'Nilai': '' },
       { 'Keterangan': 'Kuota Per Jalur', 'Nilai': '' },
@@ -3485,7 +3514,8 @@ export default function Home() {
     ws2['!cols'] = [{ wch: 30 }, { wch: 25 }]
     XLSX.utils.book_append_sheet(wb, ws2, 'Ringkasan')
 
-    const fileName = `Perangkingan_SPMB2026_${sortLabel.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`
+    const jalurSuffix = selectedJalur !== 'all' ? `_${selectedJalur.replace(/\s+/g, '_')}` : '_Semua_Jalur'
+    const fileName = `Perangkingan_SPMB2026${jalurSuffix}_${sortLabel.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`
     const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
     const blob = new Blob([wbout], { type: 'application/octet-stream' })
     saveAs(blob, fileName)
@@ -5556,6 +5586,42 @@ export default function Home() {
             </DialogDescription>
           </DialogHeader>
 
+          {/* Jalur Selector */}
+          <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg p-3 border border-amber-200">
+            <div className="flex items-center gap-2 mb-2">
+              <Filter className="w-4 h-4 text-amber-600" />
+              <span className="text-sm font-semibold text-amber-800">Pilih Jalur untuk Dicetak</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium border-2 transition-all ${
+                  rankingPreviewJalur === 'all'
+                    ? 'bg-amber-600 text-white border-amber-600 shadow-md'
+                    : 'bg-white text-amber-700 border-amber-300 hover:border-amber-500 hover:bg-amber-50'
+                }`}
+                onClick={() => setRankingPreviewJalur('all')}
+              >
+                🏆 Semua Jalur ({rankingData.length})
+              </button>
+              {rankingFilters.jalurOptions.filter((j: string) => j && j.trim() !== '').map((j: string) => {
+                const count = rankingData.filter((r: Record<string, unknown>) => (r.subJalur as string) === j).length
+                return (
+                  <button
+                    key={j}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border-2 transition-all ${
+                      rankingPreviewJalur === j
+                        ? 'bg-amber-600 text-white border-amber-600 shadow-md'
+                        : 'bg-white text-gray-700 border-gray-200 hover:border-amber-400 hover:bg-amber-50'
+                    }`}
+                    onClick={() => setRankingPreviewJalur(j)}
+                  >
+                    {j} ({count})
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
           {/* Preview Content */}
           <div className="flex-1 min-h-0 overflow-auto border rounded-lg bg-white">
             <div className="p-4">
@@ -5571,7 +5637,7 @@ export default function Home() {
 
               {/* Filters Preview */}
               <div className="flex flex-wrap gap-2 justify-center mb-3">
-                <span className="text-xs bg-gray-100 px-2 py-1 rounded border">Jalur: {rankingJalur !== 'all' ? rankingJalur : 'Semua'}</span>
+                <span className="text-xs bg-gray-100 px-2 py-1 rounded border">Jalur: {rankingPreviewJalur !== 'all' ? rankingPreviewJalur : 'Semua'}</span>
                 <span className="text-xs bg-gray-100 px-2 py-1 rounded border">Sekolah: {rankingSekolah !== 'all' ? rankingSekolah : 'Semua'}</span>
                 <span className="text-xs bg-gray-100 px-2 py-1 rounded border">Jurusan: {rankingJurusan !== 'all' ? rankingJurusan : 'Semua'}</span>
                 <span className="text-xs bg-gray-100 px-2 py-1 rounded border">Status: {rankingStatus !== 'all' ? (rankingStatus === 'VERIFIED' ? 'Diterima' : rankingStatus === 'REJECTED' ? 'Ditolak' : 'Menunggu') : 'Semua'}</span>
@@ -5604,8 +5670,11 @@ export default function Home() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {rankingData.slice(0, 20).map((r: Record<string, unknown>, idx: number) => {
-                      const rankNum = (r._ranking as number) || (idx + 1)
+                    {(rankingPreviewJalur === 'all'
+                      ? rankingData
+                      : rankingData.filter((r: Record<string, unknown>) => (r.subJalur as string) === rankingPreviewJalur)
+                    ).slice(0, 20).map((r: Record<string, unknown>, idx: number) => {
+                      const rankNum = idx + 1
                       const jalurRank = (r._jalurRank as number) || -1
                       const jarakNum = r._jarakNum as number
                       const nilaiNum = r._nilaiNum as number
@@ -5671,16 +5740,26 @@ export default function Home() {
                     })}
                   </TableBody>
                 </Table>
-                {rankingData.length > 20 && (
-                  <div className="text-center py-2 text-xs text-gray-400 border-t">
-                    ... dan {rankingData.length - 20} data lainnya (total: {rankingData.length} pendaftar)
-                  </div>
-                )}
+                {(() => {
+                  const filteredCount = rankingPreviewJalur === 'all'
+                    ? rankingData.length
+                    : rankingData.filter((r: Record<string, unknown>) => (r.subJalur as string) === rankingPreviewJalur).length
+                  return filteredCount > 20 ? (
+                    <div className="text-center py-2 text-xs text-gray-400 border-t">
+                      {'... dan '}{filteredCount - 20}{' data lainnya (total: '}{filteredCount}{' pendaftar)'}
+                    </div>
+                  ) : null
+                })()}
               </div>
 
               {/* Legend */}
               <div className="text-center mt-3 text-xs text-gray-400">
-                🟡 Rangking 1 · ⚪ Rangking 2 · 🟤 Rangking 3 · 🟢 Masuk Kuota · Total: {rankingData.length} pendaftar
+                🟡 Rangking 1 · ⚪ Rangking 2 · 🟤 Rangking 3 · 🟢 Masuk Kuota · Total: {(() => {
+                  const fc = rankingPreviewJalur === 'all'
+                    ? rankingData.length
+                    : rankingData.filter((r: Record<string, unknown>) => (r.subJalur as string) === rankingPreviewJalur).length
+                  return fc
+                })()} pendaftar
               </div>
 
               {/* Excel Data Preview */}
@@ -5694,7 +5773,12 @@ export default function Home() {
                     </div>
                     <div className="bg-white rounded p-2 border">
                       <span className="text-gray-500">Baris Data</span>
-                      <p className="font-bold text-gray-800">{rankingData.length} baris</p>
+                      <p className="font-bold text-gray-800">{(() => {
+                        const fc = rankingPreviewJalur === 'all'
+                          ? rankingData.length
+                          : rankingData.filter((r: Record<string, unknown>) => (r.subJalur as string) === rankingPreviewJalur).length
+                        return fc
+                      })()} baris</p>
                     </div>
                     <div className="bg-white rounded p-2 border">
                       <span className="text-gray-500">Sheet</span>
