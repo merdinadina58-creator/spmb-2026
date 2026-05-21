@@ -1856,26 +1856,16 @@ export default function Home() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
 
-  // Check auth on mount — fast timeout, resilient to offline/cleared data
+  // Check auth on mount
   useEffect(() => {
     let cancelled = false
 
     const checkAuth = async () => {
       try {
-        // Fast timeout — if API takes >3s, show login (don't leave user on blank screen)
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 3000)
-
-        // Check setup and auth status in parallel for speed
-        const [setupRes, meRes] = await Promise.allSettled([
-          fetch('/api/auth/setup', { signal: controller.signal }),
-          fetch('/api/auth/me', { signal: controller.signal }),
-        ])
-        clearTimeout(timeoutId)
-
-        // Process setup check
-        if (setupRes.status === 'fulfilled' && setupRes.value.ok) {
-          const setupData = await setupRes.value.json()
+        // Check setup status first
+        const setupRes = await fetch('/api/auth/setup')
+        if (setupRes.ok) {
+          const setupData = await setupRes.json()
           if (setupData.needsSetup && !cancelled) {
             setNeedsSetup(true)
             setAuthLoading(false)
@@ -1883,18 +1873,22 @@ export default function Home() {
           }
         }
 
-        // Process auth check
-        if (meRes.status === 'fulfilled' && meRes.value.ok) {
-          const meData = await meRes.value.json()
+        // Check auth status
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 8000)
+
+        const meRes = await fetch('/api/auth/me', { signal: controller.signal })
+        clearTimeout(timeoutId)
+
+        if (meRes.ok) {
+          const meData = await meRes.json()
           if (meData.authenticated && !cancelled) {
             setIsAuthenticated(true)
             setAuthUser(meData.user)
           }
         }
-        // If not authenticated (cookie cleared, session expired, etc.) → login form will show
       } catch {
-        // If API fails (network error, timeout, offline), show login form
-        // Don't leave user stuck on loading/blank screen
+        // If API fails, show login form
       } finally {
         if (!cancelled) setAuthLoading(false)
       }
@@ -1902,33 +1896,14 @@ export default function Home() {
 
     checkAuth()
 
-    // Safety timeout: force auth loading off after 4 seconds no matter what
+    // Safety timeout: force auth loading off after 10 seconds
     const safetyTimeout = setTimeout(() => {
       if (!cancelled) setAuthLoading(false)
-    }, 4000)
+    }, 10000)
 
     return () => {
       cancelled = true
       clearTimeout(safetyTimeout)
-    }
-  }, [])
-
-  // ==================== ONLINE/OFFLINE DETECTION ====================
-  const [isOffline, setIsOffline] = useState(false)
-
-  useEffect(() => {
-    const handleOnline = () => setIsOffline(false)
-    const handleOffline = () => setIsOffline(true)
-
-    // Set initial state
-    setIsOffline(!navigator.onLine)
-
-    window.addEventListener('online', handleOnline)
-    window.addEventListener('offline', handleOffline)
-
-    return () => {
-      window.removeEventListener('online', handleOnline)
-      window.removeEventListener('offline', handleOffline)
     }
   }, [])
 
@@ -2291,20 +2266,16 @@ export default function Home() {
   }, [fetchRanking, isAuthenticated])
 
   // ==================== CONDITIONAL RENDERS ====================
-  // Auth loading screen — very brief, max 4 seconds
+  // Auth loading screen
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900">
         <div className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-emerald-600/20 flex items-center justify-center animate-pulse">
-            <ShieldCheck className="w-8 h-8 text-emerald-400" />
+          <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-2xl shadow-emerald-500/30 animate-pulse">
+            <ShieldCheck className="w-10 h-10 text-white" />
           </div>
-          <p className="text-emerald-200 text-sm mb-2">Memuat sistem...</p>
-          <div className="flex justify-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: '300ms' }} />
-          </div>
+          <h1 className="text-xl font-bold text-white mb-2">SPMB 2026</h1>
+          <p className="text-emerald-200 text-sm">Memuat sistem...</p>
         </div>
       </div>
     )
@@ -3281,13 +3252,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-gray-50 to-emerald-50/30">
-      {/* Offline Banner */}
-      {isOffline && (
-        <div className="bg-amber-500 text-amber-950 px-4 py-2 text-center text-sm font-medium flex items-center justify-center gap-2 sticky top-0 z-50">
-          <AlertCircle className="w-4 h-4" />
-          Anda sedang offline — beberapa fitur mungkin tidak tersedia
-        </div>
-      )}
       {/* Header */}
       <header className="sticky top-0 z-40 bg-gradient-to-r from-slate-900 via-emerald-900 to-slate-900 border-b border-emerald-400/20 shadow-lg">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
