@@ -4190,9 +4190,36 @@ export default function Home() {
                           </TableHead>
                           <TableHead className="font-semibold text-xs">Sekolah Pilihan</TableHead>
                           <TableHead className="font-semibold text-xs">Jurusan</TableHead>
-                          <TableHead className="text-right font-semibold text-xs">Jarak</TableHead>
-                          <TableHead className="text-right font-semibold text-xs">Nilai</TableHead>
-                          <TableHead className="text-right font-semibold text-xs">Skor</TableHead>
+                          <TableHead className="text-right font-semibold text-xs cursor-pointer select-none group" onClick={() => setRankingTampilan('jarak')}>
+                            <span className="inline-flex items-center gap-1">
+                              Jarak
+                              {rankingTampilan === 'jarak' ? (
+                                <span className="text-sky-600" title="Diurutkan berdasarkan jarak">📍</span>
+                              ) : (
+                                <ArrowUpDown className="w-3 h-3 text-gray-300 group-hover:text-sky-500 transition-colors" />
+                              )}
+                            </span>
+                          </TableHead>
+                          <TableHead className="text-right font-semibold text-xs cursor-pointer select-none group" onClick={() => setRankingTampilan('nilai')}>
+                            <span className="inline-flex items-center gap-1">
+                              Nilai
+                              {rankingTampilan === 'nilai' ? (
+                                <span className="text-emerald-600" title="Diurutkan berdasarkan nilai">📍</span>
+                              ) : (
+                                <ArrowUpDown className="w-3 h-3 text-gray-300 group-hover:text-emerald-500 transition-colors" />
+                              )}
+                            </span>
+                          </TableHead>
+                          <TableHead className="text-right font-semibold text-xs cursor-pointer select-none group" onClick={() => setRankingTampilan('komposit')}>
+                            <span className="inline-flex items-center gap-1">
+                              Skor
+                              {rankingTampilan === 'komposit' ? (
+                                <span className="text-amber-600" title="Diurutkan berdasarkan skor komposit">📍</span>
+                              ) : (
+                                <ArrowUpDown className="w-3 h-3 text-gray-300 group-hover:text-amber-500 transition-colors" />
+                              )}
+                            </span>
+                          </TableHead>
                           <TableHead className="text-center font-semibold text-xs">Status</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -4261,17 +4288,17 @@ export default function Home() {
                               </TableCell>
                               <TableCell className="text-xs text-gray-700">{r.namaSekolahPilihan as string}</TableCell>
                               <TableCell className="text-xs text-gray-600">{r.jurusan as string}</TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className="text-right" style={rankingTampilan === 'jarak' ? { backgroundColor: 'rgba(186, 230, 253, 0.3)' } : undefined}>
                                 <span className={`text-xs font-semibold ${jarakNum > 0 ? 'text-sky-700' : 'text-gray-300'}`}>
                                   {r.lokasiJarak as string || '-'}
                                 </span>
                               </TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className="text-right" style={rankingTampilan === 'nilai' ? { backgroundColor: 'rgba(209, 250, 229, 0.3)' } : undefined}>
                                 <span className={`text-xs font-semibold ${nilaiNum > 0 ? 'text-emerald-700' : 'text-gray-300'}`}>
                                   {r.nilaiRataRata as string || r.skorNilaiRaport as string || '-'}
                                 </span>
                               </TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className="text-right" style={rankingTampilan === 'komposit' ? { backgroundColor: 'rgba(254, 243, 199, 0.4)' } : undefined}>
                                 <span className={`text-xs font-semibold ${skorNum > 0 ? 'text-amber-700' : 'text-gray-300'}`}>
                                   {r.skor as string || '-'}
                                 </span>
