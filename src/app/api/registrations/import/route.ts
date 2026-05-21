@@ -138,6 +138,16 @@ export async function POST(request: NextRequest) {
           mergeField('waktuDaftar', row.waktuDaftar, existing.waktuDaftar);
           mergeField('npsnSekolahPilihan', row.npsnSekolahPilihan, existing.npsnSekolahPilihan);
 
+          // If status changed, also update verificationStatus accordingly
+          if (row.status && row.status.trim()) {
+            const newStatus = row.status.trim();
+            const newVerificationStatus = newStatus === 'DITERIMA' ? 'VERIFIED' : newStatus === 'DITOLAK' ? 'REJECTED' : 'PENDING';
+            // Always sync verificationStatus with CSV status (allows updating from ON PROGRESS → DITERIMA/DITOLAK)
+            if (newVerificationStatus !== existing.verificationStatus) {
+              updateData['verificationStatus'] = newVerificationStatus;
+            }
+          }
+
           // Portal fields - only fill empty fields
           for (const [key, value] of Object.entries(portalData)) {
             if (value && value.trim()) {
@@ -171,7 +181,8 @@ export async function POST(request: NextRequest) {
               namaSekolahAsal: row.namaSekolahAsal || '',
               status: row.status || 'ON PROGRESS',
               waktuDaftar: row.waktuDaftar || '',
-              verificationStatus: 'PENDING',
+              // Map CSV status to verificationStatus: DITERIMA→VERIFIED, DITOLAK→REJECTED, else PENDING
+              verificationStatus: row.status === 'DITERIMA' ? 'VERIFIED' : row.status === 'DITOLAK' ? 'REJECTED' : 'PENDING',
               ...portalData,
             },
           });

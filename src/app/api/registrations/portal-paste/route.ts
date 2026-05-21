@@ -188,7 +188,7 @@ export async function POST(request: NextRequest) {
           namaSekolahAsal: data.namaSekolahAsal || '',
           status: data.status || 'ON PROGRESS',
           waktuDaftar: data.waktuDaftar || '',
-          verificationStatus: 'PENDING',
+          verificationStatus: data.status === 'DITERIMA' ? 'VERIFIED' : data.status === 'DITOLAK' ? 'REJECTED' : 'PENDING',
           ...portalFields,
         },
       });
