@@ -106,6 +106,8 @@ import {
   ListPlus,
   X as XIcon,
   Menu,
+  ChevronUp,
+  ChevronDown,
 } from 'lucide-react'
 
 interface Registration {
@@ -2305,6 +2307,7 @@ export default function Home() {
   const [namaSortRanking, setNamaSortRanking] = useState<'none' | 'asc' | 'desc'>('none')
   const [namaSortDiterima, setNamaSortDiterima] = useState<'none' | 'asc' | 'desc'>('none')
   const [namaSortDitolak, setNamaSortDitolak] = useState<'none' | 'asc' | 'desc'>('none')
+  const [groupBySekolah, setGroupBySekolah] = useState(false)
 
   // Selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -4638,7 +4641,11 @@ export default function Home() {
                         </TableHead>
                         <TableHead className="hidden md:table-cell">NISN</TableHead>
                         <TableHead>Sub Jalur</TableHead>
-                        <TableHead className="hidden lg:table-cell">Sekolah Asal</TableHead>
+                        <TableHead className="hidden lg:table-cell">Sekolah Asal
+                          <span className="ml-1 cursor-pointer inline-flex align-middle" onClick={() => setGroupBySekolah(!groupBySekolah)} title={groupBySekolah ? 'Kembali ke tampilan normal' : 'Kelompokkan per sekolah'}>
+                            {groupBySekolah ? <ChevronDown className="w-3 h-3 text-emerald-600" /> : <ChevronUp className="w-3 h-3 text-gray-400" />}
+                          </span>
+                        </TableHead>
                         <TableHead className="hidden lg:table-cell">Jurusan</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">Aksi</TableHead>
@@ -4665,89 +4672,202 @@ export default function Home() {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        [...registrations].sort((a, b) => {
-                          if (namaSortData === 'asc') return (a.nama || '').localeCompare(b.nama || '')
-                          if (namaSortData === 'desc') return (b.nama || '').localeCompare(a.nama || '')
-                          return 0
-                        }).map((reg, idx) => (
-                          <TableRow key={reg.id} className={
-                            reg.verificationStatus === 'VERIFIED' ? 'bg-emerald-50/40' :
-                            reg.verificationStatus === 'REJECTED' ? 'bg-red-50/40' : ''
-                          }>
-                            <TableCell className="text-center text-sm text-gray-500">
-                              {(pagination.page - 1) * pagination.limit + idx + 1}
-                            </TableCell>
-                            <TableCell>
-                              <Checkbox checked={selectedIds.has(reg.id)} onCheckedChange={() => toggleSelect(reg.id)} />
-                            </TableCell>
-                            <TableCell className="font-mono text-sm">{reg.noRegistrasi}</TableCell>
-                            <TableCell className="font-medium">{reg.nama}</TableCell>
-                            <TableCell className="hidden md:table-cell text-sm text-gray-500">{reg.nisn}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className={SUB_JALUR_COLORS[reg.subJalur] || 'bg-gray-100 text-gray-800 border-gray-200'}>
-                                {reg.subJalur}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="hidden lg:table-cell text-sm">{reg.namaSekolahAsal}</TableCell>
-                            <TableCell className="hidden lg:table-cell">
-                              <Badge variant="secondary">{reg.jurusan}</Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className={STATUS_COLORS[reg.verificationStatus]}>
-                                {reg.verificationStatus === 'PENDING' && <Clock className="w-3 h-3" />}
-                                {reg.verificationStatus === 'VERIFIED' && <CheckCircle2 className="w-3 h-3" />}
-                                {reg.verificationStatus === 'REJECTED' && <XCircle className="w-3 h-3" />}
-                                {reg.verificationStatus === 'PENDING' ? 'Menunggu' :
-                                 reg.verificationStatus === 'VERIFIED' ? 'Diterima' : 'Ditolak'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex items-center justify-end gap-1">
-                                <Button variant="ghost" size="sm" onClick={() => { setDetailTarget(reg); setDetailDialogOpen(true) }} title="Lihat Detail">
-                                  <Eye className="w-4 h-4" />
-                                </Button>
-                                <Button variant="ghost" size="sm" className="text-blue-600 hover:text-white hover:bg-blue-600" title="Edit Data" onClick={() => openEditDialog(reg)}>
-                                  <Pencil className="w-4 h-4" />
-                                </Button>
-                                <Button variant="ghost" size="sm" className="text-red-600 hover:text-white hover:bg-red-600" title="Hapus Data" onClick={() => openDeleteDialog(reg)}>
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                                {reg.verificationStatus !== 'VERIFIED' && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="text-emerald-600 hover:text-white hover:bg-emerald-600"
-                                    title="Terima Pendaftar"
-                                    onClick={() => {
-                                      setVerifyTargetId(reg.id)
-                                      setVerifyAction('VERIFIED')
-                                      setVerifyNote('')
-                                      setVerifyDialogOpen(true)
-                                    }}
-                                  >
-                                    <ThumbsUp className="w-4 h-4" />
-                                  </Button>
-                                )}
-                                {reg.verificationStatus !== 'REJECTED' && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="text-red-600 hover:text-white hover:bg-red-600"
-                                    title="Tolak Pendaftar"
-                                    onClick={() => {
-                                      setVerifyTargetId(reg.id)
-                                      setVerifyAction('REJECTED')
-                                      setVerifyNote('')
-                                      setVerifyDialogOpen(true)
-                                    }}
-                                  >
-                                    <ThumbsDown className="w-4 h-4" />
-                                  </Button>
-                                )}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))
+                        (() => {
+                          const sorted = [...registrations].sort((a, b) => {
+                            if (namaSortData === 'asc') return (a.nama || '').localeCompare(b.nama || '')
+                            if (namaSortData === 'desc') return (b.nama || '').localeCompare(a.nama || '')
+                            return 0
+                          })
+
+                          if (!groupBySekolah) {
+                            return sorted.map((reg, idx) => (
+                              <TableRow key={reg.id} className={
+                                reg.verificationStatus === 'VERIFIED' ? 'bg-emerald-50/40' :
+                                reg.verificationStatus === 'REJECTED' ? 'bg-red-50/40' : ''
+                              }>
+                                <TableCell className="text-center text-sm text-gray-500">
+                                  {(pagination.page - 1) * pagination.limit + idx + 1}
+                                </TableCell>
+                                <TableCell>
+                                  <Checkbox checked={selectedIds.has(reg.id)} onCheckedChange={() => toggleSelect(reg.id)} />
+                                </TableCell>
+                                <TableCell className="font-mono text-sm">{reg.noRegistrasi}</TableCell>
+                                <TableCell className="font-medium">{reg.nama}</TableCell>
+                                <TableCell className="hidden md:table-cell text-sm text-gray-500">{reg.nisn}</TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className={SUB_JALUR_COLORS[reg.subJalur] || 'bg-gray-100 text-gray-800 border-gray-200'}>
+                                    {reg.subJalur}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="hidden lg:table-cell text-sm">{reg.namaSekolahAsal}</TableCell>
+                                <TableCell className="hidden lg:table-cell">
+                                  <Badge variant="secondary">{reg.jurusan}</Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className={STATUS_COLORS[reg.verificationStatus]}>
+                                    {reg.verificationStatus === 'PENDING' && <Clock className="w-3 h-3" />}
+                                    {reg.verificationStatus === 'VERIFIED' && <CheckCircle2 className="w-3 h-3" />}
+                                    {reg.verificationStatus === 'REJECTED' && <XCircle className="w-3 h-3" />}
+                                    {reg.verificationStatus === 'PENDING' ? 'Menunggu' :
+                                     reg.verificationStatus === 'VERIFIED' ? 'Diterima' : 'Ditolak'}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex items-center justify-end gap-1">
+                                    <Button variant="ghost" size="sm" onClick={() => { setDetailTarget(reg); setDetailDialogOpen(true) }} title="Lihat Detail">
+                                      <Eye className="w-4 h-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="sm" className="text-blue-600 hover:text-white hover:bg-blue-600" title="Edit Data" onClick={() => openEditDialog(reg)}>
+                                      <Pencil className="w-4 h-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="sm" className="text-red-600 hover:text-white hover:bg-red-600" title="Hapus Data" onClick={() => openDeleteDialog(reg)}>
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                    {reg.verificationStatus !== 'VERIFIED' && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-emerald-600 hover:text-white hover:bg-emerald-600"
+                                        title="Terima Pendaftar"
+                                        onClick={() => {
+                                          setVerifyTargetId(reg.id)
+                                          setVerifyAction('VERIFIED')
+                                          setVerifyNote('')
+                                          setVerifyDialogOpen(true)
+                                        }}
+                                      >
+                                        <ThumbsUp className="w-4 h-4" />
+                                      </Button>
+                                    )}
+                                    {reg.verificationStatus !== 'REJECTED' && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-red-600 hover:text-white hover:bg-red-600"
+                                        title="Tolak Pendaftar"
+                                        onClick={() => {
+                                          setVerifyTargetId(reg.id)
+                                          setVerifyAction('REJECTED')
+                                          setVerifyNote('')
+                                          setVerifyDialogOpen(true)
+                                        }}
+                                      >
+                                        <ThumbsDown className="w-4 h-4" />
+                                      </Button>
+                                    )}
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          }
+
+                          // Grouped by Sekolah Asal
+                          const groups: Record<string, typeof sorted> = {}
+                          sorted.forEach(reg => {
+                            const key = reg.namaSekolahAsal || 'Tidak diketahui'
+                            if (!groups[key]) groups[key] = []
+                            groups[key].push(reg)
+                          })
+                          const sortedKeys = Object.keys(groups).sort()
+                          let globalIdx = 0
+                          return sortedKeys.flatMap(schoolName => {
+                            const regs = groups[schoolName]
+                            const headerRow = (
+                              <TableRow key={`group-${schoolName}`} className="bg-emerald-50/80 hover:bg-emerald-50/80">
+                                <TableCell colSpan={9} className="py-2.5">
+                                  <div className="flex items-center gap-2">
+                                    <School className="w-4 h-4 text-emerald-600 shrink-0" />
+                                    <span className="font-semibold text-sm text-emerald-800">{schoolName}</span>
+                                    <Badge className="bg-emerald-600 text-white text-[10px] px-1.5 py-0 h-4.5 min-w-[20px] flex items-center justify-center rounded-full">{regs.length}</Badge>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            )
+                            const dataRows = regs.map(reg => {
+                              globalIdx++
+                              return (
+                                <TableRow key={reg.id} className={
+                                  reg.verificationStatus === 'VERIFIED' ? 'bg-emerald-50/40' :
+                                  reg.verificationStatus === 'REJECTED' ? 'bg-red-50/40' : ''
+                                }>
+                                  <TableCell className="text-center text-sm text-gray-500">
+                                    {(pagination.page - 1) * pagination.limit + globalIdx}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Checkbox checked={selectedIds.has(reg.id)} onCheckedChange={() => toggleSelect(reg.id)} />
+                                  </TableCell>
+                                  <TableCell className="font-mono text-sm">{reg.noRegistrasi}</TableCell>
+                                  <TableCell className="font-medium">{reg.nama}</TableCell>
+                                  <TableCell className="hidden md:table-cell text-sm text-gray-500">{reg.nisn}</TableCell>
+                                  <TableCell>
+                                    <Badge variant="outline" className={SUB_JALUR_COLORS[reg.subJalur] || 'bg-gray-100 text-gray-800 border-gray-200'}>
+                                      {reg.subJalur}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="hidden lg:table-cell text-sm">{reg.namaSekolahAsal}</TableCell>
+                                  <TableCell className="hidden lg:table-cell">
+                                    <Badge variant="secondary">{reg.jurusan}</Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge variant="outline" className={STATUS_COLORS[reg.verificationStatus]}>
+                                      {reg.verificationStatus === 'PENDING' && <Clock className="w-3 h-3" />}
+                                      {reg.verificationStatus === 'VERIFIED' && <CheckCircle2 className="w-3 h-3" />}
+                                      {reg.verificationStatus === 'REJECTED' && <XCircle className="w-3 h-3" />}
+                                      {reg.verificationStatus === 'PENDING' ? 'Menunggu' :
+                                       reg.verificationStatus === 'VERIFIED' ? 'Diterima' : 'Ditolak'}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <div className="flex items-center justify-end gap-1">
+                                      <Button variant="ghost" size="sm" onClick={() => { setDetailTarget(reg); setDetailDialogOpen(true) }} title="Lihat Detail">
+                                        <Eye className="w-4 h-4" />
+                                      </Button>
+                                      <Button variant="ghost" size="sm" className="text-blue-600 hover:text-white hover:bg-blue-600" title="Edit Data" onClick={() => openEditDialog(reg)}>
+                                        <Pencil className="w-4 h-4" />
+                                      </Button>
+                                      <Button variant="ghost" size="sm" className="text-red-600 hover:text-white hover:bg-red-600" title="Hapus Data" onClick={() => openDeleteDialog(reg)}>
+                                        <Trash2 className="w-4 h-4" />
+                                      </Button>
+                                      {reg.verificationStatus !== 'VERIFIED' && (
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="text-emerald-600 hover:text-white hover:bg-emerald-600"
+                                          title="Terima Pendaftar"
+                                          onClick={() => {
+                                            setVerifyTargetId(reg.id)
+                                            setVerifyAction('VERIFIED')
+                                            setVerifyNote('')
+                                            setVerifyDialogOpen(true)
+                                          }}
+                                        >
+                                          <ThumbsUp className="w-4 h-4" />
+                                        </Button>
+                                      )}
+                                      {reg.verificationStatus !== 'REJECTED' && (
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="text-red-600 hover:text-white hover:bg-red-600"
+                                          title="Tolak Pendaftar"
+                                          onClick={() => {
+                                            setVerifyTargetId(reg.id)
+                                            setVerifyAction('REJECTED')
+                                            setVerifyNote('')
+                                            setVerifyDialogOpen(true)
+                                          }}
+                                        >
+                                          <ThumbsDown className="w-4 h-4" />
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              )
+                            })
+                            return [headerRow, ...dataRows]
+                          })
+                        })()
                       )}
                     </TableBody>
                   </Table>
