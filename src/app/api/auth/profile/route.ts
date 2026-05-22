@@ -1,27 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { createHash, randomBytes } from 'crypto'
-
-function hashPassword(password: string): string {
-  const salt = randomBytes(16).toString('hex')
-  const hash = createHash('sha256').update(password + salt).digest('hex')
-  return `${salt}:${hash}`
-}
-
-// Helper to get authenticated user
-async function getAuthUser(request: NextRequest) {
-  const sessionToken = request.cookies.get('spmb_session')?.value
-  if (!sessionToken) return null
-
-  const session = await db.setting.findUnique({ where: { key: `session:${sessionToken}` } })
-  if (!session) return null
-
-  const sessionData = JSON.parse(session.value)
-  const user = await db.user.findUnique({ where: { id: sessionData.userId } })
-  if (!user || !user.aktif) return null
-
-  return user
-}
+import { getAuthUser, hashPassword } from '@/lib/auth'
 
 // PUT - Update own profile
 export async function PUT(request: NextRequest) {
@@ -37,7 +16,7 @@ export async function PUT(request: NextRequest) {
     const updateData: Record<string, unknown> = {}
 
     if (username !== undefined) {
-      if (username.length < 3) {
+      if (typeof username !== 'string' || username.length < 3) {
         return NextResponse.json({ success: false, error: 'Username minimal 3 karakter' }, { status: 400 })
       }
       // Check if username is taken
@@ -49,7 +28,7 @@ export async function PUT(request: NextRequest) {
     }
 
     if (password !== undefined && password !== '') {
-      if (password.length < 6) {
+      if (typeof password !== 'string' || password.length < 6) {
         return NextResponse.json({ success: false, error: 'Password minimal 6 karakter' }, { status: 400 })
       }
       updateData.password = hashPassword(password)
@@ -76,7 +55,12 @@ export async function PUT(request: NextRequest) {
       if (sessionToken) {
         const session = await db.setting.findUnique({ where: { key: `session:${sessionToken}` } })
         if (session) {
-          const sessionData = JSON.parse(session.value)
+          let sessionData: Record<string, unknown>
+          try {
+            sessionData = JSON.parse(session.value)
+          } catch {
+            sessionData = {}
+          }
           await db.setting.update({
             where: { key: `session:${sessionToken}` },
             data: {

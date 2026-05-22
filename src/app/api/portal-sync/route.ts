@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { execSync } from 'child_process';
+import { getAdminUser } from '@/lib/auth';
+import { execFileSync } from 'child_process';
 import path from 'path';
 
 interface PortalStudent {
@@ -26,6 +27,12 @@ interface PortalStudent {
 
 export async function POST(request: NextRequest) {
   try {
+    // Auth required — admin only
+    const adminUser = await getAdminUser(request)
+    if (!adminUser) {
+      return NextResponse.json({ error: 'Akses ditolak. Hanya admin.' }, { status: 403 })
+    }
+
     const body = await request.json();
     const { email, password, pages, status } = body as {
       email: string;
@@ -38,22 +45,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email dan password wajib diisi' }, { status: 400 });
     }
 
-    // Run the portal sync script
+    // Run the portal sync script SAFELY using execFileSync (no shell injection)
     const scriptPath = path.join(process.cwd(), 'scripts', 'portal-sync.ts');
-    const pagesArg = pages ? `--pages ${pages}` : '';
-    const statusArg = status ? `--status ${status}` : '--status accepted';
-    
+    const args = ['run', scriptPath, '--email', String(email), '--password', String(password)];
+    if (pages) args.push('--pages', String(pages));
+    args.push('--status', status || 'accepted');
+
     let output: string;
     try {
-      output = execSync(
-        `bun run "${scriptPath}" --email "${email}" --password "${password}" ${pagesArg} ${statusArg}`,
-        {
-          timeout: 120000,
-          encoding: 'utf-8',
-          cwd: process.cwd(),
-          stdio: ['pipe', 'pipe', 'pipe'],
-        }
-      ).trim();
+      output = execFileSync('bun', args, {
+        timeout: 120000,
+        encoding: 'utf-8',
+        cwd: process.cwd(),
+        stdio: ['pipe', 'pipe', 'pipe'],
+      }).trim();
     } catch (e: any) {
       const stderr = e.stderr?.toString() || '';
       const stdout = e.stdout?.toString() || '';

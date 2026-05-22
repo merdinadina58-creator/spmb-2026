@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { getAuthUser } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,8 +25,26 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Parse session data
-    const sessionData = JSON.parse(session.value)
+    // Parse session data safely
+    let sessionData: { userId?: string; createdAt?: string }
+    try {
+      sessionData = JSON.parse(session.value)
+    } catch {
+      // Corrupt session — clean up and reject
+      try { await db.setting.delete({ where: { key: `session:${sessionToken}` } }) } catch {}
+      return NextResponse.json(
+        { success: false, authenticated: false },
+        { status: 401 }
+      )
+    }
+
+    if (!sessionData?.userId) {
+      try { await db.setting.delete({ where: { key: `session:${sessionToken}` } }) } catch {}
+      return NextResponse.json(
+        { success: false, authenticated: false },
+        { status: 401 }
+      )
+    }
 
     // Check if user still exists and is active
     const user = await db.user.findUnique({
@@ -34,7 +53,7 @@ export async function GET(request: NextRequest) {
 
     if (!user || !user.aktif) {
       // Clean up invalid session
-      await db.setting.delete({ where: { key: `session:${sessionToken}` } })
+      try { await db.setting.delete({ where: { key: `session:${sessionToken}` } }) } catch {}
       return NextResponse.json(
         { success: false, authenticated: false },
         { status: 401 }
@@ -42,11 +61,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Check session age (max 7 days)
-    const sessionAge = Date.now() - new Date(sessionData.createdAt).getTime()
+    const sessionAge = Date.now() - new Date(sessionData.createdAt || Date.now()).getTime()
     const maxAge = 7 * 24 * 60 * 60 * 1000 // 7 days in ms
     if (sessionAge > maxAge) {
       // Expired session
-      await db.setting.delete({ where: { key: `session:${sessionToken}` } })
+      try { await db.setting.delete({ where: { key: `session:${sessionToken}` } }) } catch {}
       return NextResponse.json(
         { success: false, authenticated: false },
         { status: 401 }

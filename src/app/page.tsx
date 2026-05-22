@@ -2754,9 +2754,13 @@ export default function Home() {
       if (jurusanFilter !== 'all') params.set('jurusan', jurusanFilter)
 
       const res = await fetch(`/api/registrations?${params}`)
+      if (!res.ok) {
+        toast({ title: 'Error', description: 'Gagal memuat data pendaftar', variant: 'destructive' })
+        return
+      }
       const data = await res.json()
       setRegistrations(data.data || [])
-      setPagination(prev => ({ ...prev, ...data.pagination }))
+      if (data.pagination) setPagination(prev => ({ ...prev, ...data.pagination }))
     } catch {
       toast({ title: 'Error', description: 'Gagal memuat data pendaftar', variant: 'destructive' })
     } finally {
@@ -2767,7 +2771,15 @@ export default function Home() {
   const fetchStats = useCallback(async () => {
     try {
       const res = await fetch('/api/dashboard')
+      if (!res.ok) {
+        toast({ title: 'Error', description: 'Gagal memuat statistik', variant: 'destructive' })
+        return
+      }
       const data = await res.json()
+      if (data.error) {
+        toast({ title: 'Error', description: data.error, variant: 'destructive' })
+        return
+      }
       setStats(data)
     } catch {
       toast({ title: 'Error', description: 'Gagal memuat statistik', variant: 'destructive' })

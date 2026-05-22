@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { getAuthUser } from '@/lib/auth';
 
 interface CSVPayload {
   noRegistrasi: string;
@@ -31,6 +32,15 @@ interface CSVPayload {
 
 export async function POST(request: NextRequest) {
   try {
+    // Auth required — admin only for import
+    const user = await getAuthUser(request)
+    if (!user) {
+      return NextResponse.json({ error: 'Tidak terautentikasi' }, { status: 401 })
+    }
+    if (user.role !== 'admin') {
+      return NextResponse.json({ error: 'Akses ditolak. Hanya admin yang dapat import.' }, { status: 403 })
+    }
+
     const body = await request.json();
     const { rows } = body as { rows: CSVPayload[] };
 
@@ -51,6 +61,13 @@ export async function POST(request: NextRequest) {
         const npsnSekolahPilihan = row.npsnSekolahPilihan || '0';
 
         if (!noRegistrasi && !nisn) {
+          skipped++;
+          continue;
+        }
+
+        // Guard: skip rows with empty required unique fields
+        if (!noRegistrasi?.trim() && !nisn?.trim()) {
+          errors.push(`Row skipped: both noRegistrasi and NISN are empty`);
           skipped++;
           continue;
         }

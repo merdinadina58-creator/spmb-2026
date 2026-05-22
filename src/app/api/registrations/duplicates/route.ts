@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { getAuthUser } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
   try {
+    const user = await getAuthUser(request)
+    if (!user) {
+      return NextResponse.json({ error: 'Tidak terautentikasi' }, { status: 401 })
+    }
+
     // Get all registrations ordered by NISN
     const registrations = await db.registration.findMany({
       select: {

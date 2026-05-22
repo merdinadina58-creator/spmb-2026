@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { getAuthUser } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
+    // Auth required
+    const user = await getAuthUser(request)
+    if (!user) {
+      return NextResponse.json({ error: 'Tidak terautentikasi' }, { status: 401 })
+    }
+
     const searchParams = request.nextUrl.searchParams;
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1') || 1);
+    const limit = Math.min(1000, Math.max(1, parseInt(searchParams.get('limit') || '10') || 10));
     const search = searchParams.get('search') || '';
     const subJalur = searchParams.get('subJalur') || '';
     const verificationStatus = searchParams.get('verificationStatus') || '';

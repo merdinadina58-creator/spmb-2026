@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { createHash, randomBytes } from 'crypto'
+import { cleanupExpiredSessions } from '@/lib/session-cleanup'
 
 // Simple password hashing with SHA-256 + salt
 function hashPassword(password: string, salt: string): string {
@@ -42,9 +43,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify password
-    // Password stored as "salt:hash"
+    // Verify password — guard against corrupt password field
+    if (!user.password || !user.password.includes(':')) {
+      return NextResponse.json(
+        { success: false, error: 'Akun bermasalah. Hubungi administrator.' },
+        { status: 401 }
+      )
+    }
     const [salt, storedHash] = user.password.split(':')
+    if (!salt || !storedHash) {
+      return NextResponse.json(
+        { success: false, error: 'Akun bermasalah. Hubungi administrator.' },
+        { status: 401 }
+      )
+    }
     const inputHash = hashPassword(password, salt)
 
     if (inputHash !== storedHash) {
@@ -59,6 +71,9 @@ export async function POST(request: NextRequest) {
       where: { id: user.id },
       data: { lastLogin: new Date() },
     })
+
+    // Clean up expired sessions (non-blocking, don't await)
+    cleanupExpiredSessions().catch(() => {})
 
     // Generate session token
     const sessionToken = generateSessionToken()

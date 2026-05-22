@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { getAuthUser } from '@/lib/auth';
 
 interface PortalPastePayload {
   noRegistrasi: string;
@@ -37,6 +38,12 @@ interface PortalPastePayload {
 
 export async function POST(request: NextRequest) {
   try {
+    // Auth required
+    const user = await getAuthUser(request)
+    if (!user) {
+      return NextResponse.json({ error: 'Tidak terautentikasi' }, { status: 401 })
+    }
+
     const body = await request.json();
     const data = body as PortalPastePayload;
 

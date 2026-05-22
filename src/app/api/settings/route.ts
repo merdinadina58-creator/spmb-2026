@@ -1,10 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { NextRequest, NextResponse } from 'next/server'
+import { db } from '@/lib/db'
+import { getAuthUser } from '@/lib/auth'
 
-// GET all settings
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const settings = await db.setting.findMany();
+    // Auth required - but allow unauthenticated for login page display
+    const user = await getAuthUser(request)
+
+    // Exclude session entries from settings response for security
+    const settings = await db.setting.findMany({
+      where: { key: { not: { startsWith: 'session:' } } },
+    });
     const jalurConfigs = await db.jalurConfig.findMany({
       orderBy: { urutan: 'asc' },
     });
@@ -55,9 +61,17 @@ export async function GET() {
   }
 }
 
-// PUT - update settings (kuota, appName)
+// PUT - update settings (kuota, appName, schoolName) — admin only
 export async function PUT(request: NextRequest) {
   try {
+    const user = await getAuthUser(request)
+    if (!user) {
+      return NextResponse.json({ error: 'Tidak terautentikasi' }, { status: 401 })
+    }
+    if (user.role !== 'admin') {
+      return NextResponse.json({ error: 'Akses ditolak. Hanya admin.' }, { status: 403 })
+    }
+
     const body = await request.json();
     const { kuota, appName, schoolName } = body as { kuota?: number; appName?: string; schoolName?: string };
 

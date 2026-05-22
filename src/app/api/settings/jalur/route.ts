@@ -1,9 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { NextRequest, NextResponse } from 'next/server'
+import { db } from '@/lib/db'
+import { getAdminUser } from '@/lib/auth'
 
-// POST - Create new jalur
+// POST - Create new jalur (admin only)
 export async function POST(request: NextRequest) {
   try {
+    const adminUser = await getAdminUser(request)
+    if (!adminUser) {
+      return NextResponse.json({ error: 'Akses ditolak. Hanya admin.' }, { status: 403 })
+    }
+
     const body = await request.json();
     const { nama, persentase, urutan } = body as { nama: string; persentase: number; urutan?: number };
 
@@ -46,9 +52,14 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PUT - Update jalur (persentase, nama, urutan, aktif)
+// PUT - Update jalur (admin only)
 export async function PUT(request: NextRequest) {
   try {
+    const adminUser = await getAdminUser(request)
+    if (!adminUser) {
+      return NextResponse.json({ error: 'Akses ditolak. Hanya admin.' }, { status: 403 })
+    }
+
     const body = await request.json();
     const { id, nama, persentase, urutan, aktif } = body as {
       id: string;
@@ -95,9 +106,14 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// DELETE - Delete jalur
+// DELETE - Delete jalur (admin only)
 export async function DELETE(request: NextRequest) {
   try {
+    const adminUser = await getAdminUser(request)
+    if (!adminUser) {
+      return NextResponse.json({ error: 'Akses ditolak. Hanya admin.' }, { status: 403 })
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 

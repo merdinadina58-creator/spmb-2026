@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { getAuthUser } from '@/lib/auth';
 
 // Hitung Lama KK dari tanggal Terbit KK
 function hitungLamaKK(terbitKK: string): string {
@@ -32,8 +33,21 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await getAuthUser(request)
+    if (!user) {
+      return NextResponse.json({ error: 'Tidak terautentikasi' }, { status: 401 })
+    }
+
     const { id } = await params;
     const body = await request.json();
+
+    // Validate field and value types
+    if (body.field && typeof body.field !== 'string') {
+      return NextResponse.json({ error: 'Field must be a string' }, { status: 400 });
+    }
+    if (body.value !== undefined && body.value !== null && typeof body.value !== 'string') {
+      return NextResponse.json({ error: 'Value must be a string or null' }, { status: 400 });
+    }
 
     // Allowed fields for update
     const allowedFields = [
@@ -76,6 +90,13 @@ export async function PATCH(
     if (body.field && typeof body.field === 'string') {
       // Single field update: { field: "kekuranganVerifikasi", value: "..." }
       if (allowedFields.includes(body.field as typeof allowedFields[number])) {
+        // Validate enum fields
+        if (body.field === 'statusLulus' && body.value && !['LULUS', 'TIDAK_LULUS', 'BELUM'].includes(body.value)) {
+          return NextResponse.json({ error: 'Invalid statusLulus value' }, { status: 400 });
+        }
+        if (body.field === 'statusDaftarUlang' && body.value && !['DAFTAR_ULANG', 'TIDAK_DAFTAR_ULANG', 'BELUM'].includes(body.value)) {
+          return NextResponse.json({ error: 'Invalid statusDaftarUlang value' }, { status: 400 });
+        }
         updateData[body.field] = body.value ?? null;
       } else {
         return NextResponse.json({ error: `Field "${body.field}" is not allowed for update` }, { status: 400 });
@@ -84,7 +105,15 @@ export async function PATCH(
       // Multiple field update: { kekuranganVerifikasi: "...", tanggalVerif: "..." }
       for (const field of allowedFields) {
         if (field in body) {
-          updateData[field] = body[field] ?? null;
+          const val = body[field];
+          // Validate enum fields
+          if (field === 'statusLulus' && val && !['LULUS', 'TIDAK_LULUS', 'BELUM'].includes(val)) {
+            return NextResponse.json({ error: 'Invalid statusLulus value' }, { status: 400 });
+          }
+          if (field === 'statusDaftarUlang' && val && !['DAFTAR_ULANG', 'TIDAK_DAFTAR_ULANG', 'BELUM'].includes(val)) {
+            return NextResponse.json({ error: 'Invalid statusDaftarUlang value' }, { status: 400 });
+          }
+          updateData[field] = val ?? null;
         }
       }
     }
@@ -106,6 +135,12 @@ export async function PATCH(
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
     }
 
+    // Check existence first
+    const existing = await db.registration.findUnique({ where: { id } })
+    if (!existing) {
+      return NextResponse.json({ error: 'Pendaftar tidak ditemukan' }, { status: 404 })
+    }
+
     const registration = await db.registration.update({
       where: { id },
       data: updateData,
@@ -123,6 +158,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await getAuthUser(request)
+    if (!user) {
+      return NextResponse.json({ error: 'Tidak terautentikasi' }, { status: 401 })
+    }
+
     const { id } = await params;
 
     const existing = await db.registration.findUnique({ where: { id } });

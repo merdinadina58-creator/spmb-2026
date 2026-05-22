@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { getAuthUser } from '@/lib/auth';
 
 export async function PATCH(request: NextRequest) {
   try {
+    const user = await getAuthUser(request)
+    if (!user) {
+      return NextResponse.json({ error: 'Tidak terautentikasi' }, { status: 401 })
+    }
+
     const body = await request.json();
     const { id, verificationStatus, verificationNote } = body as {
       id: string;
@@ -16,6 +22,12 @@ export async function PATCH(request: NextRequest) {
 
     if (!['VERIFIED', 'REJECTED', 'PENDING'].includes(verificationStatus)) {
       return NextResponse.json({ error: 'Invalid verification status' }, { status: 400 });
+    }
+
+    // Check existence first
+    const existing = await db.registration.findUnique({ where: { id } })
+    if (!existing) {
+      return NextResponse.json({ error: 'Pendaftar tidak ditemukan' }, { status: 404 })
     }
 
     const registration = await db.registration.update({
@@ -35,6 +47,11 @@ export async function PATCH(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const user = await getAuthUser(request)
+    if (!user) {
+      return NextResponse.json({ error: 'Tidak terautentikasi' }, { status: 401 })
+    }
+
     const body = await request.json();
     const { ids, verificationStatus, verificationNote } = body as {
       ids: string[];

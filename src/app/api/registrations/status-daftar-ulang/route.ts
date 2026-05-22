@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { getAuthUser } from '@/lib/auth';
 
 // PATCH: Update single registration's statusDaftarUlang
 export async function PATCH(request: NextRequest) {
   try {
+    const user = await getAuthUser(request)
+    if (!user) {
+      return NextResponse.json({ error: 'Tidak terautentikasi' }, { status: 401 })
+    }
+
     const body = await request.json();
     const { id, statusDaftarUlang } = body as {
       id: string;
@@ -16,6 +22,12 @@ export async function PATCH(request: NextRequest) {
 
     if (!['DAFTAR_ULANG', 'TIDAK_DAFTAR_ULANG', 'BELUM'].includes(statusDaftarUlang)) {
       return NextResponse.json({ error: 'Invalid status. Must be DAFTAR_ULANG, TIDAK_DAFTAR_ULANG, or BELUM' }, { status: 400 });
+    }
+
+    // Check existence first
+    const existing = await db.registration.findUnique({ where: { id } })
+    if (!existing) {
+      return NextResponse.json({ error: 'Pendaftar tidak ditemukan' }, { status: 404 })
     }
 
     const registration = await db.registration.update({
@@ -33,6 +45,11 @@ export async function PATCH(request: NextRequest) {
 // POST: Bulk update statusDaftarUlang
 export async function POST(request: NextRequest) {
   try {
+    const user = await getAuthUser(request)
+    if (!user) {
+      return NextResponse.json({ error: 'Tidak terautentikasi' }, { status: 401 })
+    }
+
     const body = await request.json();
     const { ids, statusDaftarUlang } = body as {
       ids: string[];

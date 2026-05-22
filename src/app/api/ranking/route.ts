@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { getAuthUser } from '@/lib/auth'
 
 // Parse Indonesian number format: "1.383,854" -> 1383.854
 function parseIndonesianNumber(val: string | null | undefined): number {
@@ -94,6 +95,12 @@ function parseDistance(val: string | null | undefined): number {
 
 export async function GET(request: NextRequest) {
   try {
+    // Auth required
+    const user = await getAuthUser(request)
+    if (!user) {
+      return NextResponse.json({ error: 'Tidak terautentikasi' }, { status: 401 })
+    }
+
     const { searchParams } = new URL(request.url)
     const jalur = searchParams.get('jalur') || 'all'
     const sekolah = searchParams.get('sekolah') || 'all'
@@ -203,11 +210,15 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Get available filter options
-    const allRegistrations = await db.registration.findMany()
-    const jalurOptions = [...new Set(allRegistrations.map(r => r.subJalur))].sort()
-    const sekolahOptions = [...new Set(allRegistrations.map(r => r.namaSekolahAsal))].sort()
-    const jurusanOptions = [...new Set(allRegistrations.map(r => r.jurusan))].sort()
+    // Get available filter options (lightweight distinct queries instead of fetching all)
+    const [jalurRaw, sekolahRaw, jurusanRaw] = await Promise.all([
+      db.registration.findMany({ select: { subJalur: true }, distinct: ['subJalur'] }),
+      db.registration.findMany({ select: { namaSekolahAsal: true }, distinct: ['namaSekolahAsal'] }),
+      db.registration.findMany({ select: { jurusan: true }, distinct: ['jurusan'] }),
+    ])
+    const jalurOptions = jalurRaw.map(r => r.subJalur).filter(Boolean).sort()
+    const sekolahOptions = sekolahRaw.map(r => r.namaSekolahAsal).filter(Boolean).sort()
+    const jurusanOptions = jurusanRaw.map(r => r.jurusan).filter(Boolean).sort()
 
     // Calculate kuota per jalur
     const kuotaPerJalur = jalurConfigs.map(jc => ({

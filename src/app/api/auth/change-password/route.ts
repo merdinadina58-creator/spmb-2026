@@ -1,27 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { createHash, randomBytes } from 'crypto'
-
-function hashPassword(password: string, salt: string): string {
-  return createHash('sha256').update(password + salt).digest('hex')
-}
+import { getAuthUser, hashPassword, verifyPassword } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
   try {
-    const sessionToken = request.cookies.get('spmb_session')?.value
-    if (!sessionToken) {
+    const user = await getAuthUser(request)
+    if (!user) {
       return NextResponse.json({ success: false, error: 'Tidak terautentikasi' }, { status: 401 })
-    }
-
-    const session = await db.setting.findUnique({ where: { key: `session:${sessionToken}` } })
-    if (!session) {
-      return NextResponse.json({ success: false, error: 'Sesi tidak valid' }, { status: 401 })
-    }
-
-    const sessionData = JSON.parse(session.value)
-    const user = await db.user.findUnique({ where: { id: sessionData.userId } })
-    if (!user || !user.aktif) {
-      return NextResponse.json({ success: false, error: 'User tidak valid' }, { status: 401 })
     }
 
     const body = await request.json()
@@ -35,17 +20,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Password baru minimal 6 karakter' }, { status: 400 })
     }
 
-    // Verify current password
-    const [salt, storedHash] = user.password.split(':')
-    const inputHash = hashPassword(currentPassword, salt)
-    if (inputHash !== storedHash) {
+    // Get full user record with password
+    const fullUser = await db.user.findUnique({ where: { id: user.id } })
+    if (!fullUser) {
+      return NextResponse.json({ success: false, error: 'User tidak ditemukan' }, { status: 401 })
+    }
+
+    // Verify current password safely
+    if (!verifyPassword(currentPassword, fullUser.password)) {
       return NextResponse.json({ success: false, error: 'Password lama salah' }, { status: 401 })
     }
 
     // Hash new password
-    const newSalt = randomBytes(16).toString('hex')
-    const newHash = hashPassword(newPassword, newSalt)
-    const newPasswordField = `${newSalt}:${newHash}`
+    const newPasswordField = hashPassword(newPassword)
 
     await db.user.update({
       where: { id: user.id },

@@ -1,34 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { createHash, randomBytes } from 'crypto'
-
-// Simple password hashing with SHA-256 + salt
-function hashPassword(password: string): string {
-  const salt = randomBytes(16).toString('hex')
-  const hash = createHash('sha256').update(password + salt).digest('hex')
-  return `${salt}:${hash}`
-}
-
-function verifyPassword(password: string, storedPassword: string): boolean {
-  const [salt, storedHash] = storedPassword.split(':')
-  const inputHash = createHash('sha256').update(password + salt).digest('hex')
-  return inputHash === storedHash
-}
-
-// Helper to check if current user is admin
-async function getAdminUser(request: NextRequest) {
-  const sessionToken = request.cookies.get('spmb_session')?.value
-  if (!sessionToken) return null
-
-  const session = await db.setting.findUnique({ where: { key: `session:${sessionToken}` } })
-  if (!session) return null
-
-  const sessionData = JSON.parse(session.value)
-  const user = await db.user.findUnique({ where: { id: sessionData.userId } })
-  if (!user || !user.aktif || user.role !== 'admin') return null
-
-  return user
-}
+import { getAdminUser, hashPassword, verifyPassword } from '@/lib/auth'
 
 // GET - List all users (admin only)
 export async function GET(request: NextRequest) {
