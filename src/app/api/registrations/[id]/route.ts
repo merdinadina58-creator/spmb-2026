@@ -66,6 +66,8 @@ export async function PATCH(
       'skor',
       'nilaiRapor',
       'dokumen',
+      'statusLulus',
+      'statusDaftarUlang',
     ] as const;
 
     const updateData: Record<string, string | null> = {};

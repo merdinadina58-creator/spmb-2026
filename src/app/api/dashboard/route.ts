@@ -103,6 +103,84 @@ export async function GET() {
       orderBy: { updatedAt: 'desc' },
     });
 
+    // === KELULUSAN stats ===
+    const lulus = await db.registration.count({
+      where: { statusLulus: 'LULUS' },
+    });
+
+    const tidakLulus = await db.registration.count({
+      where: { statusLulus: 'TIDAK_LULUS' },
+    });
+
+    const belumLulus = await db.registration.count({
+      where: { statusLulus: 'BELUM' },
+    });
+
+    // Lulus by sub jalur
+    const lulusBySubJalur = await db.registration.groupBy({
+      by: ['subJalur'],
+      _count: { id: true },
+      where: { statusLulus: 'LULUS' },
+      orderBy: { _count: { id: 'desc' } },
+    });
+
+    const tidakLulusBySubJalur = await db.registration.groupBy({
+      by: ['subJalur'],
+      _count: { id: true },
+      where: { statusLulus: 'TIDAK_LULUS' },
+      orderBy: { _count: { id: 'desc' } },
+    });
+
+    // Lulus list
+    const lulusList = await db.registration.findMany({
+      where: { statusLulus: 'LULUS' },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    const tidakLulusList = await db.registration.findMany({
+      where: { statusLulus: 'TIDAK_LULUS' },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    // === DAFTAR ULANG stats ===
+    const daftarUlang = await db.registration.count({
+      where: { statusDaftarUlang: 'DAFTAR_ULANG' },
+    });
+
+    const tidakDaftarUlang = await db.registration.count({
+      where: { statusDaftarUlang: 'TIDAK_DAFTAR_ULANG' },
+    });
+
+    const belumDaftarUlang = await db.registration.count({
+      where: { statusDaftarUlang: 'BELUM' },
+    });
+
+    // Daftar Ulang by sub jalur
+    const daftarUlangBySubJalur = await db.registration.groupBy({
+      by: ['subJalur'],
+      _count: { id: true },
+      where: { statusDaftarUlang: 'DAFTAR_ULANG' },
+      orderBy: { _count: { id: 'desc' } },
+    });
+
+    const tidakDaftarUlangBySubJalur = await db.registration.groupBy({
+      by: ['subJalur'],
+      _count: { id: true },
+      where: { statusDaftarUlang: 'TIDAK_DAFTAR_ULANG' },
+      orderBy: { _count: { id: 'desc' } },
+    });
+
+    // Daftar Ulang list
+    const daftarUlangList = await db.registration.findMany({
+      where: { statusDaftarUlang: 'DAFTAR_ULANG' },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    const tidakDaftarUlangList = await db.registration.findMany({
+      where: { statusDaftarUlang: 'TIDAK_DAFTAR_ULANG' },
+      orderBy: { updatedAt: 'desc' },
+    });
+
     return NextResponse.json({
       total,
       verified,
@@ -152,6 +230,34 @@ export async function GET() {
         count: item._count.id,
       })),
       rejectedList,
+      // Kelulusan stats
+      lulus,
+      tidakLulus,
+      belumLulus,
+      lulusBySubJalur: lulusBySubJalur.map(item => ({
+        name: item.subJalur,
+        count: item._count.id,
+      })),
+      tidakLulusBySubJalur: tidakLulusBySubJalur.map(item => ({
+        name: item.subJalur,
+        count: item._count.id,
+      })),
+      lulusList,
+      tidakLulusList,
+      // Daftar Ulang stats
+      daftarUlang,
+      tidakDaftarUlang,
+      belumDaftarUlang,
+      daftarUlangBySubJalur: daftarUlangBySubJalur.map(item => ({
+        name: item.subJalur,
+        count: item._count.id,
+      })),
+      tidakDaftarUlangBySubJalur: tidakDaftarUlangBySubJalur.map(item => ({
+        name: item.subJalur,
+        count: item._count.id,
+      })),
+      daftarUlangList,
+      tidakDaftarUlangList,
     });
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);

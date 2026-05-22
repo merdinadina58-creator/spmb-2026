@@ -142,6 +142,9 @@ interface Registration {
   terbitKK?: string | null
   lamaKK?: string | null
   dokumen?: string | null
+  // Kelulusan & Daftar Ulang
+  statusLulus?: string | null
+  statusDaftarUlang?: string | null
 }
 
 interface DashboardStats {
@@ -161,6 +164,22 @@ interface DashboardStats {
   rejectedBySekolah: { name: string; count: number }[]
   rejectedByJurusan: { name: string; count: number }[]
   rejectedList: Registration[]
+  // Kelulusan
+  lulus: number
+  tidakLulus: number
+  belumLulus: number
+  lulusBySubJalur: { name: string; count: number }[]
+  tidakLulusBySubJalur: { name: string; count: number }[]
+  lulusList: Registration[]
+  tidakLulusList: Registration[]
+  // Daftar Ulang
+  daftarUlang: number
+  tidakDaftarUlang: number
+  belumDaftarUlang: number
+  daftarUlangBySubJalur: { name: string; count: number }[]
+  tidakDaftarUlangBySubJalur: { name: string; count: number }[]
+  daftarUlangList: Registration[]
+  tidakDaftarUlangList: Registration[]
 }
 
 interface PaginationInfo {
@@ -185,6 +204,18 @@ const STATUS_COLORS: Record<string, string> = {
   PENDING: 'bg-yellow-100 text-yellow-800 border-yellow-300',
   VERIFIED: 'bg-emerald-100 text-emerald-800 border-emerald-300',
   REJECTED: 'bg-red-100 text-red-800 border-red-300',
+}
+
+const STATUS_LULUS_COLORS: Record<string, string> = {
+  BELUM: 'bg-gray-100 text-gray-600 border-gray-300',
+  LULUS: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+  TIDAK_LULUS: 'bg-red-100 text-red-800 border-red-300',
+}
+
+const STATUS_DAFTAR_ULANG_COLORS: Record<string, string> = {
+  BELUM: 'bg-gray-100 text-gray-600 border-gray-300',
+  DAFTAR_ULANG: 'bg-blue-100 text-blue-800 border-blue-300',
+  TIDAK_DAFTAR_ULANG: 'bg-orange-100 text-orange-800 border-orange-300',
 }
 
 // 99 Kategori Kekurangan Verifikasi
@@ -719,6 +750,8 @@ function LembarVerifikasiSheet({
       longitude: reg.longitude || '',
       lokasiJarak: reg.lokasiJarak || '',
       nilaiRataRata: reg.nilaiRataRata || '',
+      statusLulus: reg.statusLulus || 'BELUM',
+      statusDaftarUlang: reg.statusDaftarUlang || 'BELUM',
     })
     setEditDialogOpen(true)
   }
@@ -1781,6 +1814,39 @@ function LembarVerifikasiSheet({
                   <div>
                     <label className="text-xs text-gray-500 font-medium">Nilai Rata-Rata</label>
                     <Input value={editForm.nilaiRataRata || ''} onChange={e => setEditForm({...editForm, nilaiRataRata: e.target.value})} className="mt-1" />
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Status Kelulusan & Daftar Ulang */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
+                  <GraduationCap className="w-4 h-4 text-gray-500" /> Kelulusan & Daftar Ulang
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Status Kelulusan</label>
+                    <Select value={editForm.statusLulus || 'BELUM'} onValueChange={v => setEditForm({...editForm, statusLulus: v})}>
+                      <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih Status" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="BELUM">Belum Ditentukan</SelectItem>
+                        <SelectItem value="LULUS">Lulus</SelectItem>
+                        <SelectItem value="TIDAK_LULUS">Tidak Lulus</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Status Daftar Ulang</label>
+                    <Select value={editForm.statusDaftarUlang || 'BELUM'} onValueChange={v => setEditForm({...editForm, statusDaftarUlang: v})}>
+                      <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih Status" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="BELUM">Belum Ditentukan</SelectItem>
+                        <SelectItem value="DAFTAR_ULANG">Daftar Ulang</SelectItem>
+                        <SelectItem value="TIDAK_DAFTAR_ULANG">Tidak Daftar Ulang</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </div>
@@ -3190,6 +3256,8 @@ export default function Home() {
       longitude: reg.longitude || '',
       lokasiJarak: reg.lokasiJarak || '',
       nilaiRataRata: reg.nilaiRataRata || '',
+      statusLulus: reg.statusLulus || 'BELUM',
+      statusDaftarUlang: reg.statusDaftarUlang || 'BELUM',
     })
     setEditDialogOpen(true)
   }
@@ -3638,6 +3706,26 @@ export default function Home() {
                 {stats && stats.rejected > 0 && (
                   <Badge className="ml-0.5 sm:ml-1 bg-red-600 text-white text-[10px] sm:text-xs px-1 sm:px-1.5 py-0 min-w-[16px] sm:min-w-[20px] h-4 sm:h-5 flex items-center justify-center">
                     {stats.rejected}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="kelulusan" className="gap-1 rounded-lg px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm transition-all duration-200 data-[state=active]:bg-emerald-100 data-[state=active]:text-emerald-800 data-[state=active]:shadow-sm whitespace-nowrap">
+                <GraduationCap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Kelulusan</span>
+                <span className="sm:hidden">Lulus</span>
+                {stats && stats.lulus > 0 && (
+                  <Badge className="ml-0.5 sm:ml-1 bg-emerald-600 text-white text-[10px] sm:text-xs px-1 sm:px-1.5 py-0 min-w-[16px] sm:min-w-[20px] h-4 sm:h-5 flex items-center justify-center">
+                    {stats.lulus}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="daftar-ulang" className="gap-1 rounded-lg px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm transition-all duration-200 data-[state=active]:bg-blue-100 data-[state=active]:text-blue-800 data-[state=active]:shadow-sm whitespace-nowrap">
+                <ClipboardCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Daftar Ulang</span>
+                <span className="sm:hidden">Dft.Ulang</span>
+                {stats && stats.daftarUlang > 0 && (
+                  <Badge className="ml-0.5 sm:ml-1 bg-blue-600 text-white text-[10px] sm:text-xs px-1 sm:px-1.5 py-0 min-w-[16px] sm:min-w-[20px] h-4 sm:h-5 flex items-center justify-center">
+                    {stats.daftarUlang}
                   </Badge>
                 )}
               </TabsTrigger>
@@ -4946,6 +5034,684 @@ export default function Home() {
                             </TableCell>
                           </TableRow>
                         )
+                      })()}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ==================== KELULUSAN TAB ==================== */}
+          <TabsContent value="kelulusan" className="space-y-6">
+            {/* Elegant Header - Emerald Theme */}
+            <Card className="overflow-hidden border-0 shadow-lg">
+              <div className="bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-600 p-4 sm:p-6 text-white">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+                  <div>
+                    <h2 className="text-lg sm:text-2xl font-bold tracking-wide">KELULUSAN</h2>
+                    <p className="text-emerald-100 mt-0.5 sm:mt-1 text-xs sm:text-sm">SPMB 2026 — Status Kelulusan Peserta Didik Baru</p>
+                  </div>
+                  <Button variant="secondary" size="sm" className="bg-white/20 hover:bg-white/30 text-white border-white/30" onClick={() => handlePrintReport('kelulusan')}>
+                    <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2" /> <span className="text-xs sm:text-sm">Cetak</span>
+                  </Button>
+                </div>
+              </div>
+              <CardContent className="p-3 sm:p-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+                  <div className="bg-emerald-50 rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-emerald-100">
+                    <p className="text-xl sm:text-3xl font-bold text-emerald-700">{stats?.lulus || 0}</p>
+                    <p className="text-[10px] sm:text-xs text-emerald-600 font-medium mt-0.5 sm:mt-1">Lulus</p>
+                  </div>
+                  <div className="bg-red-50 rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-red-100">
+                    <p className="text-xl sm:text-3xl font-bold text-red-700">{stats?.tidakLulus || 0}</p>
+                    <p className="text-[10px] sm:text-xs text-red-600 font-medium mt-0.5 sm:mt-1">Tidak Lulus</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-gray-200">
+                    <p className="text-xl sm:text-3xl font-bold text-gray-600">{stats?.belumLulus || 0}</p>
+                    <p className="text-[10px] sm:text-xs text-gray-500 font-medium mt-0.5 sm:mt-1">Belum Ditentukan</p>
+                  </div>
+                  <div className="bg-emerald-50 rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-emerald-100">
+                    <p className="text-xl sm:text-3xl font-bold text-emerald-700">{stats?.total ? Math.round(((stats.lulus || 0) / stats.total) * 100) : 0}%</p>
+                    <p className="text-[10px] sm:text-xs text-emerald-600 font-medium mt-0.5 sm:mt-1">Persentase Lulus</p>
+                  </div>
+                </div>
+
+                {/* Per Jalur Breakdown */}
+                <div className="mt-6">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Distribusi Lulus Per Sub Jalur</h3>
+                  <div className="space-y-2.5">
+                    {stats?.lulusBySubJalur.map((item) => (
+                      <div key={item.name} className="flex items-center gap-3">
+                        <Badge variant="outline" className={`${SUB_JALUR_COLORS[item.name] || 'bg-gray-100 text-gray-800'} min-w-[130px] justify-center text-xs`}>
+                          {item.name}
+                        </Badge>
+                        <div className="flex-1 bg-gray-100 rounded-full h-5 relative overflow-hidden">
+                          <div
+                            className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                            style={{ width: stats?.lulus ? `${(item.count / stats.lulus) * 100}%` : '0%' }}
+                          />
+                        </div>
+                        <span className="text-sm font-semibold text-gray-700 min-w-[40px] text-right">{item.count}</span>
+                      </div>
+                    ))}
+                    {(!stats?.lulusBySubJalur || stats.lulusBySubJalur.length === 0) && (
+                      <p className="text-xs text-gray-400 text-center py-2">Belum ada data</p>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Bulk Action Bar */}
+            <Card className="shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="text-sm font-medium text-gray-700">Aksi Massal:</span>
+                  <Button
+                    size="sm"
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                    onClick={async () => {
+                      const selectedLulus = Array.from(selectedIds)
+                      if (selectedLulus.length === 0) {
+                        toast({ title: 'Perhatian', description: 'Pilih pendaftar terlebih dahulu', variant: 'destructive' })
+                        return
+                      }
+                      try {
+                        const res = await fetch('/api/registrations/status-lulus', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ ids: selectedLulus, statusLulus: 'LULUS' }),
+                        })
+                        const data = await res.json()
+                        if (data.success) {
+                          toast({ title: 'Berhasil', description: `${data.updated} pendaftar ditetapkan LULUS` })
+                          setSelectedIds(new Set())
+                          fetchStats()
+                          fetchRegistrations()
+                        }
+                      } catch {
+                        toast({ title: 'Gagal', description: 'Gagal mengubah status', variant: 'destructive' })
+                      }
+                    }}
+                  >
+                    <GraduationCap className="w-4 h-4 mr-1" /> Lulus ({selectedIds.size})
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={async () => {
+                      const selectedTl = Array.from(selectedIds)
+                      if (selectedTl.length === 0) {
+                        toast({ title: 'Perhatian', description: 'Pilih pendaftar terlebih dahulu', variant: 'destructive' })
+                        return
+                      }
+                      try {
+                        const res = await fetch('/api/registrations/status-lulus', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ ids: selectedTl, statusLulus: 'TIDAK_LULUS' }),
+                        })
+                        const data = await res.json()
+                        if (data.success) {
+                          toast({ title: 'Berhasil', description: `${data.updated} pendaftar ditetapkan TIDAK LULUS` })
+                          setSelectedIds(new Set())
+                          fetchStats()
+                          fetchRegistrations()
+                        }
+                      } catch {
+                        toast({ title: 'Gagal', description: 'Gagal mengubah status', variant: 'destructive' })
+                      }
+                    }}
+                  >
+                    <XCircle className="w-4 h-4 mr-1" /> Tidak Lulus ({selectedIds.size})
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={async () => {
+                      const selectedReset = Array.from(selectedIds)
+                      if (selectedReset.length === 0) {
+                        toast({ title: 'Perhatian', description: 'Pilih pendaftar terlebih dahulu', variant: 'destructive' })
+                        return
+                      }
+                      try {
+                        const res = await fetch('/api/registrations/status-lulus', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ ids: selectedReset, statusLulus: 'BELUM' }),
+                        })
+                        const data = await res.json()
+                        if (data.success) {
+                          toast({ title: 'Berhasil', description: `${data.updated} pendaftar direset ke BELUM` })
+                          setSelectedIds(new Set())
+                          fetchStats()
+                          fetchRegistrations()
+                        }
+                      } catch {
+                        toast({ title: 'Gagal', description: 'Gagal mengubah status', variant: 'destructive' })
+                      }
+                    }}
+                  >
+                    <RotateCcw className="w-4 h-4 mr-1" /> Reset
+                  </Button>
+                  {selectedIds.size > 0 && (
+                    <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
+                      <X className="w-4 h-4 mr-1" /> Batal Pilih
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Kelulusan Data Table */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Data Status Kelulusan</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto max-h-[60vh] overflow-y-auto">
+                  <Table>
+                    <TableHeader className="sticky top-0 z-10 bg-white">
+                      <TableRow className="bg-emerald-50/80">
+                        <TableHead className="w-10 text-center">No</TableHead>
+                        <TableHead className="w-10 text-center">
+                          <Checkbox
+                            checked={(() => {
+                              const allRegs = [...(stats?.lulusList || []), ...(stats?.tidakLulusList || []), ...(stats?.belumLulus !== undefined ? registrations.filter(r => r.statusLulus === 'BELUM' || !r.statusLulus) : [])]
+                              return allRegs.length > 0 && selectedIds.size === allRegs.length
+                            })()}
+                            onCheckedChange={() => {
+                              const allRegs = [...(stats?.lulusList || []), ...(stats?.tidakLulusList || []), ...(registrations.filter(r => r.statusLulus === 'BELUM' || !r.statusLulus))]
+                              if (selectedIds.size === allRegs.length) {
+                                setSelectedIds(new Set())
+                              } else {
+                                setSelectedIds(new Set(allRegs.map(r => r.id)))
+                              }
+                            }}
+                          />
+                        </TableHead>
+                        <TableHead>No. Registrasi</TableHead>
+                        <TableHead>Nama Peserta</TableHead>
+                        <TableHead>Sub Jalur</TableHead>
+                        <TableHead>Sekolah Pilihan</TableHead>
+                        <TableHead>Status Verifikasi</TableHead>
+                        <TableHead>Status Kelulusan</TableHead>
+                        <TableHead className="text-right">Aksi</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(() => {
+                        const allKelulusanData = [
+                          ...(stats?.lulusList || []),
+                          ...(stats?.tidakLulusList || []),
+                          ...(registrations.filter(r => r.statusLulus === 'BELUM' || !r.statusLulus)),
+                        ]
+                        if (allKelulusanData.length === 0) {
+                          return (
+                            <TableRow>
+                              <TableCell colSpan={9} className="text-center py-12">
+                                <GraduationCap className="w-10 h-10 mx-auto text-gray-300 mb-2" />
+                                <p className="text-gray-500 font-medium">Belum ada data kelulusan</p>
+                                <p className="text-sm text-gray-400">Tentukan status kelulusan peserta dari menu aksi</p>
+                              </TableCell>
+                            </TableRow>
+                          )
+                        }
+                        return allKelulusanData.map((reg, idx) => (
+                          <TableRow key={reg.id} className={
+                            reg.statusLulus === 'LULUS' ? 'bg-emerald-50/40' :
+                            reg.statusLulus === 'TIDAK_LULUS' ? 'bg-red-50/40' : ''
+                          }>
+                            <TableCell className="text-center text-sm text-gray-500">{idx + 1}</TableCell>
+                            <TableCell className="text-center">
+                              <Checkbox checked={selectedIds.has(reg.id)} onCheckedChange={() => {
+                                const next = new Set(selectedIds)
+                                if (next.has(reg.id)) next.delete(reg.id)
+                                else next.add(reg.id)
+                                setSelectedIds(next)
+                              }} />
+                            </TableCell>
+                            <TableCell className="font-mono text-sm">{reg.noRegistrasi}</TableCell>
+                            <TableCell className="font-medium text-sm">{reg.nama}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={SUB_JALUR_COLORS[reg.subJalur] || 'bg-gray-100 text-gray-800'}>
+                                {reg.subJalur}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-sm text-gray-600">{reg.namaSekolahPilihan}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={STATUS_COLORS[reg.verificationStatus]}>
+                                {reg.verificationStatus === 'PENDING' ? 'Menunggu' :
+                                 reg.verificationStatus === 'VERIFIED' ? 'Diterima' : 'Ditolak'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={STATUS_LULUS_COLORS[reg.statusLulus || 'BELUM']}>
+                                {reg.statusLulus === 'LULUS' ? 'Lulus' :
+                                 reg.statusLulus === 'TIDAK_LULUS' ? 'Tidak Lulus' : 'Belum'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-emerald-600 hover:text-white hover:bg-emerald-600"
+                                  title="Tetapkan Lulus"
+                                  onClick={async () => {
+                                    try {
+                                      const res = await fetch('/api/registrations/status-lulus', {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ id: reg.id, statusLulus: 'LULUS' }),
+                                      })
+                                      const data = await res.json()
+                                      if (data.success) {
+                                        toast({ title: 'Berhasil', description: `${reg.nama} ditetapkan LULUS` })
+                                        fetchStats()
+                                        fetchRegistrations()
+                                      }
+                                    } catch {
+                                      toast({ title: 'Gagal', description: 'Gagal mengubah status', variant: 'destructive' })
+                                    }
+                                  }}
+                                >
+                                  <GraduationCap className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-red-600 hover:text-white hover:bg-red-600"
+                                  title="Tetapkan Tidak Lulus"
+                                  onClick={async () => {
+                                    try {
+                                      const res = await fetch('/api/registrations/status-lulus', {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ id: reg.id, statusLulus: 'TIDAK_LULUS' }),
+                                      })
+                                      const data = await res.json()
+                                      if (data.success) {
+                                        toast({ title: 'Berhasil', description: `${reg.nama} ditetapkan TIDAK LULUS` })
+                                        fetchStats()
+                                        fetchRegistrations()
+                                      }
+                                    } catch {
+                                      toast({ title: 'Gagal', description: 'Gagal mengubah status', variant: 'destructive' })
+                                    }
+                                  }}
+                                >
+                                  <XCircle className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-gray-500 hover:text-white hover:bg-gray-500"
+                                  title="Reset ke Belum"
+                                  onClick={async () => {
+                                    try {
+                                      const res = await fetch('/api/registrations/status-lulus', {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ id: reg.id, statusLulus: 'BELUM' }),
+                                      })
+                                      const data = await res.json()
+                                      if (data.success) {
+                                        toast({ title: 'Berhasil', description: `Status ${reg.nama} direset` })
+                                        fetchStats()
+                                        fetchRegistrations()
+                                      }
+                                    } catch {
+                                      toast({ title: 'Gagal', description: 'Gagal mengubah status', variant: 'destructive' })
+                                    }
+                                  }}
+                                >
+                                  <RotateCcw className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      })()}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ==================== DAFTAR ULANG TAB ==================== */}
+          <TabsContent value="daftar-ulang" className="space-y-6">
+            {/* Elegant Header - Blue Theme */}
+            <Card className="overflow-hidden border-0 shadow-lg">
+              <div className="bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-600 p-4 sm:p-6 text-white">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+                  <div>
+                    <h2 className="text-lg sm:text-2xl font-bold tracking-wide">DAFTAR ULANG</h2>
+                    <p className="text-blue-100 mt-0.5 sm:mt-1 text-xs sm:text-sm">SPMB 2026 — Status Daftar Ulang Peserta Didik Baru</p>
+                  </div>
+                  <Button variant="secondary" size="sm" className="bg-white/20 hover:bg-white/30 text-white border-white/30" onClick={() => handlePrintReport('daftar-ulang')}>
+                    <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2" /> <span className="text-xs sm:text-sm">Cetak</span>
+                  </Button>
+                </div>
+              </div>
+              <CardContent className="p-3 sm:p-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+                  <div className="bg-blue-50 rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-blue-100">
+                    <p className="text-xl sm:text-3xl font-bold text-blue-700">{stats?.daftarUlang || 0}</p>
+                    <p className="text-[10px] sm:text-xs text-blue-600 font-medium mt-0.5 sm:mt-1">Daftar Ulang</p>
+                  </div>
+                  <div className="bg-orange-50 rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-orange-100">
+                    <p className="text-xl sm:text-3xl font-bold text-orange-700">{stats?.tidakDaftarUlang || 0}</p>
+                    <p className="text-[10px] sm:text-xs text-orange-600 font-medium mt-0.5 sm:mt-1">Tidak Daftar Ulang</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-gray-200">
+                    <p className="text-xl sm:text-3xl font-bold text-gray-600">{stats?.belumDaftarUlang || 0}</p>
+                    <p className="text-[10px] sm:text-xs text-gray-500 font-medium mt-0.5 sm:mt-1">Belum Ditentukan</p>
+                  </div>
+                  <div className="bg-blue-50 rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-blue-100">
+                    <p className="text-xl sm:text-3xl font-bold text-blue-700">{stats?.lulus ? (stats.lulus > 0 ? Math.round(((stats.daftarUlang || 0) / stats.lulus) * 100) : 0) : 0}%</p>
+                    <p className="text-[10px] sm:text-xs text-blue-600 font-medium mt-0.5 sm:mt-1">Persentase Daftar Ulang</p>
+                  </div>
+                </div>
+
+                {/* Per Jalur Breakdown */}
+                <div className="mt-6">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Distribusi Daftar Ulang Per Sub Jalur</h3>
+                  <div className="space-y-2.5">
+                    {stats?.daftarUlangBySubJalur.map((item) => (
+                      <div key={item.name} className="flex items-center gap-3">
+                        <Badge variant="outline" className={`${SUB_JALUR_COLORS[item.name] || 'bg-gray-100 text-gray-800'} min-w-[130px] justify-center text-xs`}>
+                          {item.name}
+                        </Badge>
+                        <div className="flex-1 bg-gray-100 rounded-full h-5 relative overflow-hidden">
+                          <div
+                            className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                            style={{ width: stats?.daftarUlang ? `${(item.count / stats.daftarUlang) * 100}%` : '0%' }}
+                          />
+                        </div>
+                        <span className="text-sm font-semibold text-gray-700 min-w-[40px] text-right">{item.count}</span>
+                      </div>
+                    ))}
+                    {(!stats?.daftarUlangBySubJalur || stats.daftarUlangBySubJalur.length === 0) && (
+                      <p className="text-xs text-gray-400 text-center py-2">Belum ada data</p>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Bulk Action Bar */}
+            <Card className="shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="text-sm font-medium text-gray-700">Aksi Massal:</span>
+                  <Button
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700"
+                    onClick={async () => {
+                      const selectedDU = Array.from(selectedIds)
+                      if (selectedDU.length === 0) {
+                        toast({ title: 'Perhatian', description: 'Pilih pendaftar terlebih dahulu', variant: 'destructive' })
+                        return
+                      }
+                      try {
+                        const res = await fetch('/api/registrations/status-daftar-ulang', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ ids: selectedDU, statusDaftarUlang: 'DAFTAR_ULANG' }),
+                        })
+                        const data = await res.json()
+                        if (data.success) {
+                          toast({ title: 'Berhasil', description: `${data.updated} pendaftar ditetapkan DAFTAR ULANG` })
+                          setSelectedIds(new Set())
+                          fetchStats()
+                          fetchRegistrations()
+                        }
+                      } catch {
+                        toast({ title: 'Gagal', description: 'Gagal mengubah status', variant: 'destructive' })
+                      }
+                    }}
+                  >
+                    <ClipboardCheck className="w-4 h-4 mr-1" /> Daftar Ulang ({selectedIds.size})
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="bg-orange-600 hover:bg-orange-700"
+                    onClick={async () => {
+                      const selectedTDU = Array.from(selectedIds)
+                      if (selectedTDU.length === 0) {
+                        toast({ title: 'Perhatian', description: 'Pilih pendaftar terlebih dahulu', variant: 'destructive' })
+                        return
+                      }
+                      try {
+                        const res = await fetch('/api/registrations/status-daftar-ulang', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ ids: selectedTDU, statusDaftarUlang: 'TIDAK_DAFTAR_ULANG' }),
+                        })
+                        const data = await res.json()
+                        if (data.success) {
+                          toast({ title: 'Berhasil', description: `${data.updated} pendaftar ditetapkan TIDAK DAFTAR ULANG` })
+                          setSelectedIds(new Set())
+                          fetchStats()
+                          fetchRegistrations()
+                        }
+                      } catch {
+                        toast({ title: 'Gagal', description: 'Gagal mengubah status', variant: 'destructive' })
+                      }
+                    }}
+                  >
+                    <XCircle className="w-4 h-4 mr-1" /> Tidak Daftar Ulang ({selectedIds.size})
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={async () => {
+                      const selectedReset = Array.from(selectedIds)
+                      if (selectedReset.length === 0) {
+                        toast({ title: 'Perhatian', description: 'Pilih pendaftar terlebih dahulu', variant: 'destructive' })
+                        return
+                      }
+                      try {
+                        const res = await fetch('/api/registrations/status-daftar-ulang', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ ids: selectedReset, statusDaftarUlang: 'BELUM' }),
+                        })
+                        const data = await res.json()
+                        if (data.success) {
+                          toast({ title: 'Berhasil', description: `${data.updated} pendaftar direset ke BELUM` })
+                          setSelectedIds(new Set())
+                          fetchStats()
+                          fetchRegistrations()
+                        }
+                      } catch {
+                        toast({ title: 'Gagal', description: 'Gagal mengubah status', variant: 'destructive' })
+                      }
+                    }}
+                  >
+                    <RotateCcw className="w-4 h-4 mr-1" /> Reset
+                  </Button>
+                  {selectedIds.size > 0 && (
+                    <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
+                      <X className="w-4 h-4 mr-1" /> Batal Pilih
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Daftar Ulang Data Table */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Data Status Daftar Ulang</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto max-h-[60vh] overflow-y-auto">
+                  <Table>
+                    <TableHeader className="sticky top-0 z-10 bg-white">
+                      <TableRow className="bg-blue-50/80">
+                        <TableHead className="w-10 text-center">No</TableHead>
+                        <TableHead className="w-10 text-center">
+                          <Checkbox
+                            checked={(() => {
+                              const allDURegs = [...(stats?.daftarUlangList || []), ...(stats?.tidakDaftarUlangList || []), ...(registrations.filter(r => r.statusDaftarUlang === 'BELUM' || !r.statusDaftarUlang))]
+                              return allDURegs.length > 0 && selectedIds.size === allDURegs.length
+                            })()}
+                            onCheckedChange={() => {
+                              const allDURegs = [...(stats?.daftarUlangList || []), ...(stats?.tidakDaftarUlangList || []), ...(registrations.filter(r => r.statusDaftarUlang === 'BELUM' || !r.statusDaftarUlang))]
+                              if (selectedIds.size === allDURegs.length) {
+                                setSelectedIds(new Set())
+                              } else {
+                                setSelectedIds(new Set(allDURegs.map(r => r.id)))
+                              }
+                            }}
+                          />
+                        </TableHead>
+                        <TableHead>No. Registrasi</TableHead>
+                        <TableHead>Nama Peserta</TableHead>
+                        <TableHead>Sub Jalur</TableHead>
+                        <TableHead>Sekolah Pilihan</TableHead>
+                        <TableHead>Status Kelulusan</TableHead>
+                        <TableHead>Status Daftar Ulang</TableHead>
+                        <TableHead className="text-right">Aksi</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(() => {
+                        const allDUData = [
+                          ...(stats?.daftarUlangList || []),
+                          ...(stats?.tidakDaftarUlangList || []),
+                          ...(registrations.filter(r => r.statusDaftarUlang === 'BELUM' || !r.statusDaftarUlang)),
+                        ]
+                        if (allDUData.length === 0) {
+                          return (
+                            <TableRow>
+                              <TableCell colSpan={9} className="text-center py-12">
+                                <ClipboardCheck className="w-10 h-10 mx-auto text-gray-300 mb-2" />
+                                <p className="text-gray-500 font-medium">Belum ada data daftar ulang</p>
+                                <p className="text-sm text-gray-400">Tentukan status daftar ulang peserta dari menu aksi</p>
+                              </TableCell>
+                            </TableRow>
+                          )
+                        }
+                        return allDUData.map((reg, idx) => (
+                          <TableRow key={reg.id} className={
+                            reg.statusDaftarUlang === 'DAFTAR_ULANG' ? 'bg-blue-50/40' :
+                            reg.statusDaftarUlang === 'TIDAK_DAFTAR_ULANG' ? 'bg-orange-50/40' : ''
+                          }>
+                            <TableCell className="text-center text-sm text-gray-500">{idx + 1}</TableCell>
+                            <TableCell className="text-center">
+                              <Checkbox checked={selectedIds.has(reg.id)} onCheckedChange={() => {
+                                const next = new Set(selectedIds)
+                                if (next.has(reg.id)) next.delete(reg.id)
+                                else next.add(reg.id)
+                                setSelectedIds(next)
+                              }} />
+                            </TableCell>
+                            <TableCell className="font-mono text-sm">{reg.noRegistrasi}</TableCell>
+                            <TableCell className="font-medium text-sm">{reg.nama}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={SUB_JALUR_COLORS[reg.subJalur] || 'bg-gray-100 text-gray-800'}>
+                                {reg.subJalur}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-sm text-gray-600">{reg.namaSekolahPilihan}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={STATUS_LULUS_COLORS[reg.statusLulus || 'BELUM']}>
+                                {reg.statusLulus === 'LULUS' ? 'Lulus' :
+                                 reg.statusLulus === 'TIDAK_LULUS' ? 'Tidak Lulus' : 'Belum'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={STATUS_DAFTAR_ULANG_COLORS[reg.statusDaftarUlang || 'BELUM']}>
+                                {reg.statusDaftarUlang === 'DAFTAR_ULANG' ? 'Daftar Ulang' :
+                                 reg.statusDaftarUlang === 'TIDAK_DAFTAR_ULANG' ? 'Tidak Daftar Ulang' : 'Belum'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-blue-600 hover:text-white hover:bg-blue-600"
+                                  title="Tetapkan Daftar Ulang"
+                                  onClick={async () => {
+                                    try {
+                                      const res = await fetch('/api/registrations/status-daftar-ulang', {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ id: reg.id, statusDaftarUlang: 'DAFTAR_ULANG' }),
+                                      })
+                                      const data = await res.json()
+                                      if (data.success) {
+                                        toast({ title: 'Berhasil', description: `${reg.nama} ditetapkan DAFTAR ULANG` })
+                                        fetchStats()
+                                        fetchRegistrations()
+                                      }
+                                    } catch {
+                                      toast({ title: 'Gagal', description: 'Gagal mengubah status', variant: 'destructive' })
+                                    }
+                                  }}
+                                >
+                                  <ClipboardCheck className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-orange-600 hover:text-white hover:bg-orange-600"
+                                  title="Tetapkan Tidak Daftar Ulang"
+                                  onClick={async () => {
+                                    try {
+                                      const res = await fetch('/api/registrations/status-daftar-ulang', {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ id: reg.id, statusDaftarUlang: 'TIDAK_DAFTAR_ULANG' }),
+                                      })
+                                      const data = await res.json()
+                                      if (data.success) {
+                                        toast({ title: 'Berhasil', description: `${reg.nama} ditetapkan TIDAK DAFTAR ULANG` })
+                                        fetchStats()
+                                        fetchRegistrations()
+                                      }
+                                    } catch {
+                                      toast({ title: 'Gagal', description: 'Gagal mengubah status', variant: 'destructive' })
+                                    }
+                                  }}
+                                >
+                                  <XCircle className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-gray-500 hover:text-white hover:bg-gray-500"
+                                  title="Reset ke Belum"
+                                  onClick={async () => {
+                                    try {
+                                      const res = await fetch('/api/registrations/status-daftar-ulang', {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ id: reg.id, statusDaftarUlang: 'BELUM' }),
+                                      })
+                                      const data = await res.json()
+                                      if (data.success) {
+                                        toast({ title: 'Berhasil', description: `Status ${reg.nama} direset` })
+                                        fetchStats()
+                                        fetchRegistrations()
+                                      }
+                                    } catch {
+                                      toast({ title: 'Gagal', description: 'Gagal mengubah status', variant: 'destructive' })
+                                    }
+                                  }}
+                                >
+                                  <RotateCcw className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
                       })()}
                     </TableBody>
                   </Table>
@@ -6767,6 +7533,39 @@ export default function Home() {
                   <div>
                     <label className="text-xs text-gray-500 font-medium">Nilai Rata-Rata</label>
                     <Input value={editForm.nilaiRataRata || ''} onChange={e => setEditForm({...editForm, nilaiRataRata: e.target.value})} className="mt-1" />
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Status Kelulusan & Daftar Ulang */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
+                  <GraduationCap className="w-4 h-4 text-gray-500" /> Kelulusan & Daftar Ulang
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Status Kelulusan</label>
+                    <Select value={editForm.statusLulus || 'BELUM'} onValueChange={v => setEditForm({...editForm, statusLulus: v})}>
+                      <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih Status" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="BELUM">Belum Ditentukan</SelectItem>
+                        <SelectItem value="LULUS">Lulus</SelectItem>
+                        <SelectItem value="TIDAK_LULUS">Tidak Lulus</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Status Daftar Ulang</label>
+                    <Select value={editForm.statusDaftarUlang || 'BELUM'} onValueChange={v => setEditForm({...editForm, statusDaftarUlang: v})}>
+                      <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih Status" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="BELUM">Belum Ditentukan</SelectItem>
+                        <SelectItem value="DAFTAR_ULANG">Daftar Ulang</SelectItem>
+                        <SelectItem value="TIDAK_DAFTAR_ULANG">Tidak Daftar Ulang</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </div>

@@ -25,6 +25,10 @@ model Registration {
   waktuDaftar         String
   verificationStatus  String   @default("PENDING") // PENDING, VERIFIED, REJECTED
   verificationNote    String?
+
+  // Kelulusan & Daftar Ulang
+  statusLulus         String   @default("BELUM")     // BELUM, LULUS, TIDAK_LULUS
+  statusDaftarUlang   String   @default("BELUM")     // BELUM, DAFTAR_ULANG, TIDAK_DAFTAR_ULANG
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 

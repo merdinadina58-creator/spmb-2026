@@ -174,3 +174,30 @@ Stage Summary:
 - Database is empty (fresh Neon DB) - needs data import
 - Watchdog keeps dev server alive in sandbox
 - `.zscripts/dev.sh` ensures correct DATABASE_URL on sandbox restart
+---
+Task ID: 1
+Agent: main
+Task: Add Lulus/Tidak Lulus and Daftar Ulang/Tidak Daftar Ulang features to SPMB 2026
+
+Work Log:
+- Added statusLulus and statusDaftarUlang fields to Prisma schema (default: "BELUM")
+- Pushed schema changes to Neon PostgreSQL database
+- Created /api/registrations/status-lulus/route.ts (PATCH single, POST bulk)
+- Created /api/registrations/status-daftar-ulang/route.ts (PATCH single, POST bulk)
+- Updated /api/registrations/[id]/route.ts allowedFields with statusLulus and statusDaftarUlang
+- Updated /api/dashboard/route.ts with kelulusan & daftar ulang stats (counts, breakdowns, lists)
+- Added Registration interface fields: statusLulus, statusDaftarUlang
+- Added DashboardStats interface fields: lulus, tidakLulus, belumLulus, daftarUlang, tidakDaftarUlang, belumDaftarUlang + by sub jalur + lists
+- Added STATUS_LULUS_COLORS and STATUS_DAFTAR_ULANG_COLORS constants
+- Added "Kelulusan" tab with: header stats, bulk actions, data table with per-row actions
+- Added "Daftar Ulang" tab with: header stats, bulk actions, data table with per-row actions
+- Added Kelulusan & Daftar Ulang fields to both edit dialogs
+- Fixed JSX structure issues from sed insertions
+- Lint passes successfully
+- Dashboard API tested and returns new fields correctly
+
+Stage Summary:
+- Two new features fully implemented: Kelulusan (Lulus/Tidak Lulus) and Daftar Ulang (Daftar Ulang/Tidak Daftar Ulang)
+- Each feature has: tab in main menu, stats cards, breakdown per sub jalur, bulk actions, per-row actions
+- API endpoints: /api/registrations/status-lulus and /api/registrations/status-daftar-ulang
+- Database schema updated on Neon PostgreSQL
