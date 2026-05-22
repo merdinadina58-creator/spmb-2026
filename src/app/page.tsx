@@ -2398,6 +2398,7 @@ export default function Home() {
 
   // Pengaturan state
   const [kuota, setKuota] = useState(0)
+  const [appName, setAppName] = useState('SPMB 2026')
   const [jalurConfigs, setJalurConfigs] = useState<Array<{ id: string; nama: string; persentase: number; urutan: number; aktif: boolean }>>([])
   const [settingsLoading, setSettingsLoading] = useState(false)
   const [settingsSaving, setSettingsSaving] = useState(false)
@@ -2779,6 +2780,7 @@ export default function Home() {
       const data = await res.json()
       setKuota(data.kuota || 0)
       setJalurConfigs(data.jalurConfigs || [])
+      setAppName(data.appName || 'SPMB 2026')
     } catch {
       toast({ title: 'Error', description: 'Gagal memuat pengaturan', variant: 'destructive' })
     } finally {
@@ -2834,6 +2836,22 @@ export default function Home() {
     }
   }, [isAuthenticated])
 
+  // Fetch app name early (even before login) for display on login page
+  useEffect(() => {
+    const fetchAppName = async () => {
+      try {
+        const res = await fetch('/api/settings')
+        if (res.ok) {
+          const data = await res.json()
+          if (data.appName) setAppName(data.appName)
+        }
+      } catch {
+        // silently fail, default name will be used
+      }
+    }
+    fetchAppName()
+  }, [])
+
   // Clear session flag on beforeunload so refresh triggers logout
   useEffect(() => {
     const handleBeforeUnload = () => {
@@ -2882,7 +2900,7 @@ export default function Home() {
           <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-2xl shadow-emerald-500/30 animate-pulse">
             <ShieldCheck className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-xl font-bold text-white mb-2">SPMB 2026</h1>
+          <h1 className="text-xl font-bold text-white mb-2">{appName}</h1>
           <p className="text-emerald-200 text-sm">Memuat sistem...</p>
         </div>
       </div>
@@ -2899,7 +2917,7 @@ export default function Home() {
             <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-2xl shadow-emerald-500/30">
               <ShieldCheck className="w-10 h-10 text-white" />
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">SPMB 2026</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">{appName}</h1>
             <p className="text-emerald-200/80 text-sm">Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
             <div className="mt-4 inline-flex items-center gap-2 bg-amber-500/20 border border-amber-400/30 rounded-full px-4 py-1.5">
               <AlertCircle className="w-4 h-4 text-amber-300" />
@@ -2912,7 +2930,7 @@ export default function Home() {
             <CardHeader className="pb-4">
               <CardTitle className="text-white text-lg">Buat Akun Administrator</CardTitle>
               <CardDescription className="text-emerald-200/60 text-xs">
-                Ini adalah akun pertama yang akan digunakan untuk mengelola sistem verifikasi SPMB 2026.
+                Ini adalah akun pertama yang akan digunakan untuk mengelola sistem verifikasi.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -3015,7 +3033,7 @@ export default function Home() {
             <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-2xl shadow-emerald-500/30">
               <ShieldCheck className="w-10 h-10 text-white" />
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">SPMB 2026</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">{appName}</h1>
             <p className="text-emerald-200/80 text-sm">Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
           </div>
 
@@ -3098,7 +3116,7 @@ export default function Home() {
 
           {/* Footer */}
           <p className="text-center text-emerald-200/40 text-xs mt-6">
-            &copy; 2026 SPMB Verifikasi System
+            &copy; 2026 {appName}
           </p>
         </div>
       </div>
@@ -3396,6 +3414,26 @@ export default function Home() {
       }
     } catch {
       toast({ title: 'Gagal', description: 'Gagal menyimpan kuota', variant: 'destructive' })
+    } finally {
+      setSettingsSaving(false)
+    }
+  }
+
+  // Save app name
+  const saveAppName = async () => {
+    setSettingsSaving(true)
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ appName }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        toast({ title: 'Tersimpan', description: `Nama aplikasi: ${appName}` })
+      }
+    } catch {
+      toast({ title: 'Gagal', description: 'Gagal menyimpan nama aplikasi', variant: 'destructive' })
     } finally {
       setSettingsSaving(false)
     }
@@ -3883,7 +3921,7 @@ export default function Home() {
     `).join('')
     printWindow.document.write(`<!DOCTYPE html><html><head><title>${title}</title>
       <style>body{font-family:Arial,sans-serif;margin:20px}table{width:100%;border-collapse:collapse}th{background:#f5f5f5;padding:8px;border:1px solid #ddd;text-align:left}h1{text-align:center;font-size:18px}h2{text-align:center;font-size:14px;color:#666}</style></head>
-      <body><h1>${title}</h1><h2>SPMB 2026</h2><p style="text-align:center;color:#888">Dicetak pada: ${new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+      <body><h1>${title}</h1><h2>${appName}</h2><p style="text-align:center;color:#888">Dicetak pada: ${new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
       <table><thead><tr><th>No</th><th>No. Registrasi</th><th>Nama</th><th>NISN</th><th>Sub Jalur</th><th>Sekolah Asal</th><th>Jurusan</th><th>Tanggal Verif</th>${type === 'ditolak' ? '<th>Alasan Penolakan</th>' : ''}</tr></thead><tbody>${rows}</tbody></table></body></html>`)
     printWindow.document.close()
     printWindow.print()
@@ -3954,7 +3992,7 @@ export default function Home() {
       </tr>`
     }).join('')
 
-    return `<!DOCTYPE html><html><head><title>Perangkingan SPMB 2026 - ${sortLabel}</title>
+    return `<!DOCTYPE html><html><head><title>Perangkingan ${appName} - ${sortLabel}</title>
       <style>
         @page { size: A4 landscape; margin: 15mm; }
         body { font-family: Arial, sans-serif; margin: 0; padding: 15px; font-size: 12px; }
@@ -3977,7 +4015,7 @@ export default function Home() {
     <body>
       <div class="header">
         <h1>LAPORAN PERANGKINGAN</h1>
-        <h2>SPMB 2026 — Sistem Penerimaan Madrasah</h2>
+        <h2>${appName} — Sistem Penerimaan Peserta Didik Baru</h2>
         <p>Diurutkan berdasarkan: <strong>${sortLabel}</strong> · Dicetak pada: ${new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
       </div>
       <div class="filters">
@@ -4102,7 +4140,7 @@ export default function Home() {
 
     // Add a summary sheet
     const summaryData = [
-      { 'Keterangan': 'LAPORAN PERANGKINGAN SPMB 2026', 'Nilai': '' },
+      { 'Keterangan': `LAPORAN PERANGKINGAN ${appName}`, 'Nilai': '' },
       { 'Keterangan': 'Diurutkan Berdasarkan', 'Nilai': sortLabel },
       { 'Keterangan': 'Jalur', 'Nilai': jalurLabel },
       { 'Keterangan': 'Sekolah Asal', 'Nilai': rankingSekolah !== 'all' ? rankingSekolah : 'Semua Sekolah' },
@@ -4140,7 +4178,7 @@ export default function Home() {
                 <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
               <div>
-                <h1 className="text-base sm:text-xl font-bold text-white tracking-tight">SPMB 2026</h1>
+                <h1 className="text-base sm:text-xl font-bold text-white tracking-tight">{appName}</h1>
                 <p className="text-[10px] sm:text-xs text-emerald-200 hidden xs:block">Sistem Verifikasi Pendaftaran</p>
               </div>
             </div>
@@ -4212,7 +4250,7 @@ export default function Home() {
                 <ShieldCheck className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-sm font-bold text-gray-900 tracking-tight">SPMB 2026</h2>
+                <h2 className="text-sm font-bold text-gray-900 tracking-tight">{appName}</h2>
                 <p className="text-[10px] text-gray-400 font-medium">Menu Navigasi</p>
               </div>
             </div>
@@ -4482,7 +4520,7 @@ export default function Home() {
             <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-white shadow-lg shadow-emerald-200/50">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                 <div>
-                  <h2 className="text-lg sm:text-2xl font-bold tracking-tight">Selamat Datang di SPMB 2026</h2>
+                  <h2 className="text-lg sm:text-2xl font-bold tracking-tight">Selamat Datang di {appName}</h2>
                   <p className="text-emerald-100 mt-0.5 text-xs sm:text-sm">Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
                 </div>
                 <div className="flex gap-2 sm:gap-3">
@@ -5545,7 +5583,7 @@ export default function Home() {
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
                   <div>
                     <h2 className="text-lg sm:text-2xl font-bold tracking-wide">LAPORAN PESERTA DITERIMA</h2>
-                    <p className="text-emerald-100 mt-0.5 sm:mt-1 text-xs sm:text-sm">SPMB 2026 — Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
+                    <p className="text-emerald-100 mt-0.5 sm:mt-1 text-xs sm:text-sm">{appName} — Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
                   </div>
                   <Button variant="secondary" size="sm" className="bg-white/20 hover:bg-white/30 text-white border-white/30" onClick={() => handlePrintReport('diterima')}>
                     <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2" /> <span className="text-xs sm:text-sm">Cetak</span>
@@ -5734,7 +5772,7 @@ export default function Home() {
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
                   <div>
                     <h2 className="text-lg sm:text-2xl font-bold tracking-wide">LAPORAN PESERTA DITOLAK</h2>
-                    <p className="text-red-100 mt-0.5 sm:mt-1 text-xs sm:text-sm">SPMB 2026 — Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
+                    <p className="text-red-100 mt-0.5 sm:mt-1 text-xs sm:text-sm">{appName} — Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
                   </div>
                   <Button variant="secondary" size="sm" className="bg-white/20 hover:bg-white/30 text-white border-white/30" onClick={() => handlePrintReport('ditolak')}>
                     <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2" /> <span className="text-xs sm:text-sm">Cetak</span>
@@ -5908,7 +5946,7 @@ export default function Home() {
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
                   <div>
                     <h2 className="text-lg sm:text-2xl font-bold tracking-wide">KELULUSAN</h2>
-                    <p className="text-emerald-100 mt-0.5 sm:mt-1 text-xs sm:text-sm">SPMB 2026 — Status Kelulusan Peserta Didik Baru</p>
+                    <p className="text-emerald-100 mt-0.5 sm:mt-1 text-xs sm:text-sm">{appName} — Status Kelulusan Peserta Didik Baru</p>
                   </div>
                   <Button variant="secondary" size="sm" className="bg-white/20 hover:bg-white/30 text-white border-white/30" onClick={() => handlePrintReport('kelulusan')}>
                     <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2" /> <span className="text-xs sm:text-sm">Cetak</span>
@@ -6247,7 +6285,7 @@ export default function Home() {
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
                   <div>
                     <h2 className="text-lg sm:text-2xl font-bold tracking-wide">DAFTAR ULANG</h2>
-                    <p className="text-blue-100 mt-0.5 sm:mt-1 text-xs sm:text-sm">SPMB 2026 — Status Daftar Ulang Peserta Didik Baru</p>
+                    <p className="text-blue-100 mt-0.5 sm:mt-1 text-xs sm:text-sm">{appName} — Status Daftar Ulang Peserta Didik Baru</p>
                   </div>
                   <Button variant="secondary" size="sm" className="bg-white/20 hover:bg-white/30 text-white border-white/30" onClick={() => handlePrintReport('daftar-ulang')}>
                     <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2" /> <span className="text-xs sm:text-sm">Cetak</span>
@@ -6587,7 +6625,7 @@ export default function Home() {
                   <Settings className="w-6 h-6 sm:w-8 sm:h-8" />
                   <div>
                     <h2 className="text-lg sm:text-2xl font-bold tracking-wide">PENGATURAN SISTEM</h2>
-                    <p className="text-sky-100 mt-0.5 sm:mt-1 text-xs sm:text-sm">SPMB 2026 — Atur user, kuota siswa, dan persentase jalur pendaftaran</p>
+                    <p className="text-sky-100 mt-0.5 sm:mt-1 text-xs sm:text-sm">{appName} — Atur user, kuota siswa, dan persentase jalur pendaftaran</p>
                   </div>
                 </div>
               </div>
@@ -6733,6 +6771,43 @@ export default function Home() {
                     </Table>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* Nama Aplikasi */}
+            <Card className="shadow-sm hover:shadow-md transition-shadow">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Pencil className="w-5 h-5 text-emerald-600" />
+                  Nama Aplikasi
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4">
+                  <div className="flex-1">
+                    <label className="text-sm text-gray-500 font-medium">Nama yang ditampilkan di header, sidebar, dan halaman login</label>
+                    <div className="flex items-center gap-2 mt-2">
+                      <Input
+                        value={appName}
+                        onChange={(e) => setAppName(e.target.value)}
+                        className="text-lg font-bold"
+                        placeholder="Contoh: SPMB 2026 SMA Negeri 1 Telukdalam"
+                      />
+                      <Button
+                        onClick={saveAppName}
+                        disabled={settingsSaving}
+                        className="bg-emerald-600 hover:bg-emerald-700"
+                      >
+                        {settingsSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                        Simpan
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="bg-emerald-50 rounded-xl p-5 text-center border border-emerald-100 min-w-[200px]">
+                    <p className="text-lg font-bold text-emerald-700 leading-tight">{appName}</p>
+                    <p className="text-xs text-emerald-600 font-medium mt-1">Nama Aplikasi</p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
@@ -7129,7 +7204,7 @@ export default function Home() {
                     <Plus className="w-5 h-5 text-emerald-600" />
                     Tambah Jalur Baru
                   </DialogTitle>
-                  <DialogDescription>Tambahkan jalur pendaftaran baru untuk SPMB 2026</DialogDescription>
+                  <DialogDescription>Tambahkan jalur pendaftaran baru untuk {appName}</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
@@ -7178,7 +7253,7 @@ export default function Home() {
                     <Plus className="w-5 h-5 text-emerald-600" />
                     Tambah User Baru
                   </DialogTitle>
-                  <DialogDescription>Tambahkan user baru untuk mengakses sistem SPMB 2026</DialogDescription>
+                  <DialogDescription>Tambahkan user baru untuk mengakses sistem {appName}</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
@@ -7403,7 +7478,7 @@ export default function Home() {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-1 sm:gap-2">
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" />
-              <p className="text-xs sm:text-sm text-emerald-100 font-medium">&copy; 2026 SPMB Verifikasi System</p>
+              <p className="text-xs sm:text-sm text-emerald-100 font-medium">&copy; 2026 {appName}</p>
             </div>
             <p className="text-[10px] sm:text-xs text-emerald-200/60">Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
           </div>
@@ -7631,7 +7706,7 @@ export default function Home() {
               {/* Header Preview */}
               <div className="text-center mb-4 pb-3 border-b-4 border-double border-gray-300">
                 <h2 className="text-lg font-bold tracking-wider">LAPORAN PERANGKINGAN</h2>
-                <p className="text-sm text-gray-500">SPMB 2026 — Sistem Penerimaan Madrasah</p>
+                <p className="text-sm text-gray-500">{appName} — Sistem Penerimaan Peserta Didik Baru</p>
                 <p className="text-xs text-gray-400 mt-1">
                   Diurutkan berdasarkan: <strong>{rankingTampilan === 'jarak' ? 'Jarak Terdekat' : rankingTampilan === 'nilai' ? 'Nilai Tertinggi' : 'Skor Komposit'}</strong>
                   {' · '}Dicetak pada: {new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
@@ -8131,7 +8206,7 @@ export default function Home() {
             </DialogTitle>
             <DialogDescription>
               {verifyAction === 'VERIFIED'
-                ? 'Apakah Anda yakin ingin MENERIMA pendaftar ini? Data akan diverifikasi dan diterima di SPMB 2026.'
+                ? `Apakah Anda yakin ingin MENERIMA pendaftar ini? Data akan diverifikasi dan diterima di ${appName}.`
                 : 'Apakah Anda yakin ingin MENOLAK pendaftar ini? Berikan alasan penolakan jika diperlukan.'}
             </DialogDescription>
           </DialogHeader>
@@ -8252,7 +8327,7 @@ export default function Home() {
               <Users className="w-5 h-5 text-emerald-600" />
               Detail Pendaftar
             </DialogTitle>
-            <DialogDescription>Informasi lengkap pendaftar SPMB 2026</DialogDescription>
+            <DialogDescription>Informasi lengkap pendaftar {appName}</DialogDescription>
           </DialogHeader>
 
           {detailTarget && (

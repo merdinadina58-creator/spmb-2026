@@ -37,6 +37,7 @@ export async function GET() {
         settings: settingsMap,
         jalurConfigs: seeded,
         kuota: parseInt(settingsMap.kuota || '0'),
+        appName: settingsMap.appName || 'SPMB 2026',
       });
     }
 
@@ -44,6 +45,7 @@ export async function GET() {
       settings: settingsMap,
       jalurConfigs,
       kuota: parseInt(settingsMap.kuota || '0'),
+      appName: settingsMap.appName || 'SPMB 2026',
     });
   } catch (error) {
     console.error('Error fetching settings:', error);
@@ -51,17 +53,25 @@ export async function GET() {
   }
 }
 
-// PUT - update settings (kuota)
+// PUT - update settings (kuota, appName)
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { kuota } = body as { kuota?: number };
+    const { kuota, appName } = body as { kuota?: number; appName?: string };
 
     if (kuota !== undefined) {
       await db.setting.upsert({
         where: { key: 'kuota' },
         update: { value: kuota.toString() },
         create: { key: 'kuota', value: kuota.toString() },
+      });
+    }
+
+    if (appName !== undefined) {
+      await db.setting.upsert({
+        where: { key: 'appName' },
+        update: { value: appName },
+        create: { key: 'appName', value: appName },
       });
     }
 
