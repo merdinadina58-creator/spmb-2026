@@ -101,6 +101,9 @@ import {
   ArrowDownAZ,
   FileDown,
   Maximize2,
+  Copy,
+  ListPlus,
+  X as XIcon,
 } from 'lucide-react'
 
 interface Registration {
@@ -218,107 +221,105 @@ const STATUS_DAFTAR_ULANG_COLORS: Record<string, string> = {
   TIDAK_DAFTAR_ULANG: 'bg-orange-100 text-orange-800 border-orange-300',
 }
 
-// 99 Kategori Kekurangan Verifikasi
-const KEKURANGAN_VERIFIKASI_OPTIONS = [
-  '1. Tidak Ada Kendala',
-  '2. Titik Koordinat tidak sesuai dengan Alamat di Kartu Keluarga',
-  '3. Tidak Foto Rapor Semester 2',
-  '4. Tidak Foto Rapor Semester 3',
-  '5. Tidak Foto Rapor Semester 4',
-  '6. Tidak Foto Rapor Semester 5',
-  '7. Foto KK Buram tidak dapat dibaca',
-  '8. Perubahan tempat dan tanggal tanda tangan pada surat pernyataan orang tua',
-  '9. Foto Surat Keterangan Keabsahan Nilai Buram/ tidak dapat dibaca',
-  '10. Tidak Ada Foto Surat Keterangan Kepala Sekolah (Keabsahan Nilai)',
-  '11. Nilai Raport yang dientri tidak sesuai dengan foto nilai Per Semester',
-  '12. Salah Input Nilai Raport Semester 1',
-  '13. Salah Input Nilai Raport Semester 2',
-  '14. Salah Input Nilai Raport Semester 3',
-  '15. Salah Input Nilai Raport Semester 4',
-  '16. Salah Input Nilai Raport Semester 5',
-  '17. Tidak Ada Foto Rapor Sem 1, Sem 2, Sem 3, Sem 4',
-  '18. Tidak Ada Foto Rapor Sem 1, Sem 2, Sem 3',
-  '19. Tidak Ada Foto Rapor Sem 1, Sem 2',
-  '20. Tidak Ada Foto Rapor Sem 1',
-  '21. Tidak Ada Foto Rapor Sem 2',
-  '22. Tidak Ada Foto Rapor Sem 3',
-  '23. Tidak Ada Foto Rapor Sem 4',
-  '24. Tidak Ada Foto Rapor Sem 5',
-  '25. Tidak Ada Foto Rapor Samasekali',
-  '26. Foto KK dan Surat Keterangan Buram',
-  '27. Foto KK dan Rapor Buram',
-  '28. Foto Surat Keterangan Kepala Sekolah dan Foto Rapor Buram',
-  '29. Surat Pernyataan Orangtua/ Wali Tidak Dibubuhi Materai 10.000',
-  '30. Titik Koordinat dan alamat di KK tidak sinkron',
-  '31. Umur KK Baru 13 Hari',
-  '32. Usia KK Masih Belum Setahun Silahkan Upload KK yang Diatas Satu tahun',
-  '33. Umur KK Belum 1 Tahun',
-  '34. Buram Foto Rapor Semester 2, 3, 4 dan 5',
-  '35. Buram Foto Rapor Semester 3, 4 dan 5',
-  '36. Buram Foto Rapor Semester 4 dan 5',
-  '37. Surat pernyataan orang tua salah',
-  '38. Foto raport yang di upload adalah foto raport asli dan bukan daftar kumpul',
-  '39. Salah Upload bukti dokumen PIP',
-  '40. Ditolak dinas',
-  '41. KK tidak aktif segera aktifkan ke dukcapil serta surat keterangan tidak mampu',
-  '42. KK tidak aktif segera aktifkan ke dukcapil supaya bisa mendaftar kembali',
-  '43. Titik koordinat berbeda dan kartu keluarga tidak dapat di scan',
-  '44. Kartu PKH sudah tidak aktif',
-  '45. Titik koordinat salah dan KK tidak aktif',
-  '46. Foto KK tidak dapat di scan',
-  '47. Dokumen PKH yang diunggah salah dan surat pernyataan tidak sesuai form',
-  '48. KK kurang dari 1 tahun dan nilai raport yang di input tidak sesuai dengan foto',
-  '49. Nilai raport yang di input tidak sesuai dengan yang di upload',
-  '50. KK tidak aktif, tidak ada kartu PKH, format pernyataan orang tua salah',
-  '51. KK tidak aktif dan ket. Tempat dan tanggal surat pernyataan orang tua tidak sesuai',
-  '52. KK tidak dapat dibaca dan hasil scan kartu KIP eror',
-  '53. Dokumen KIP salah dan surat pernyataan orang tua kurang jelas',
-  '54. KK tidak aktif dan titik koordinat salah',
-  '55. KK kurang 1 tahun, dokumen KIP buram dan surat pernyataan orang tua tidak sesuai',
-  '56. KK tidak aktif, foto raport tidak jelas dan tidak rapi',
-  '57. Foto raport salah di upload',
-  '58. KK blm 1 tahun, foto KIP buram dan tidak rapi',
-  '59. Foto KK tidak dapat di baca',
-  '60. Foto raport yang di upload pada semester 5 salah',
-  '61. Alamat titik koordinat tidak sesuai dengan alamat di KK dan surat pernyataan',
-  '62. Foto kartu KIP terpotong',
-  '63. KK dan KIP tidak ditemukan serta tanda tangan tidak mengenai materai',
-  '64. Nilai yang di input sem. 2 tidak sesuai dengan foto yang di upload',
-  '65. Umur KK kurang dari 1 tahun dan foto raport tidak sesuai',
-  '66. Nilai yang di input tidak sesuai dengan surat keabsahan nilai dari kasek',
-  '67. KK tidak aktif',
-  '68. Foto KK tdk dapat di scan',
-  '69. Nilai raport sem. 1 yang di upload berbeda dengan surat keabsahan nilai raport',
-  '70. Foto KK Buram tidak dapat dibaca',
-  '71. Titik koordinat tidak sesuai, umur KK kurang dari 1 tahun, dokumen PKH salah',
-  '72. KK tidak dapat di scan, titik koordinat tidak sesuai KK, kartu KIP tidak dapat di scan',
-  '73. KK tidak dapat di baca dan kartu KIP eror saat di scan',
-  '74. KK tidak dapat di baca dan titik koordinat tidak sesuai (titik di hutan)',
-  '75. Foto raport semester 5 tidak lengkap dan KK tidak dapat discan',
-  '76. KK buram dan salah upload foto raport',
-  '77. KK tidak jelas, surat pernyataan salah',
-  '78. KK dan kartu KIP tidak ditemukan',
-  '79. Surat pernyataan keabsahan nilai raport salah',
-  '80. Foto KK',
-  '81. Kartu KIP tidak di upload',
-  '82. Nilai sem. 4 dan 5 yang di input tidak sesuai dengan foto raport, umur KK kurang 1 tahun',
-  '83. Titik koordinat tidak sesuai dengan KK, foto raport yang di upload tidak sesuai',
-  '84. Foto raport tidak lengkap',
-  '85. KK kurang 1 tahun dan surat keabsahan raport tidak sesuai',
-  '86. KK tidak aktif',
-  '87. Surat pernyataan dan kartu PKH tidak sesuai',
-  '88. Umur KK kurang 1 tahun dan foto raport yang di upload salah',
-  '89. KK kurang 1 tahun dan surat pernyataan tidak sesuai',
-  '90. KK tidak aktif dan foto raport tidak lengkap',
-  '91. Umur KK kurang 1 tahun dan nilai raport tidak sesuai dengan yang di input',
-  '92. Foto raport semester 5 tidak lengkap',
-  '93. Dokumen surat tugas tidak lengkap dan KK tidak aktif',
-  '94. Foto raport terpotong',
-  '95. Umur KK kurang 1 tahun',
-  '96. Surat keabsahan yang di upload tidak sesuai',
-  '97. KK tidak dapat di baca dan hasil scan kartu KIP eror',
-  '98. KK tidak dapat di baca dan kartu KIP eror saat di scan',
-  '99. KK tidak dapat di baca dan titik koordinat tidak sesuai (titik di hutan)',
+// Kategori Kekurangan Verifikasi (tanpa nomor, bisa ditambah)
+const DEFAULT_KEKURANGAN_OPTIONS = [
+  'Tidak Ada Kendala',
+  'Titik Koordinat tidak sesuai dengan Alamat di Kartu Keluarga',
+  'Tidak Foto Rapor Semester 2',
+  'Tidak Foto Rapor Semester 3',
+  'Tidak Foto Rapor Semester 4',
+  'Tidak Foto Rapor Semester 5',
+  'Foto KK Buram tidak dapat dibaca',
+  'Perubahan tempat dan tanggal tanda tangan pada surat pernyataan orang tua',
+  'Foto Surat Keterangan Keabsahan Nilai Buram/ tidak dapat dibaca',
+  'Tidak Ada Foto Surat Keterangan Kepala Sekolah (Keabsahan Nilai)',
+  'Nilai Raport yang dientri tidak sesuai dengan foto nilai Per Semester',
+  'Salah Input Nilai Raport Semester 1',
+  'Salah Input Nilai Raport Semester 2',
+  'Salah Input Nilai Raport Semester 3',
+  'Salah Input Nilai Raport Semester 4',
+  'Salah Input Nilai Raport Semester 5',
+  'Tidak Ada Foto Rapor Sem 1, Sem 2, Sem 3, Sem 4',
+  'Tidak Ada Foto Rapor Sem 1, Sem 2, Sem 3',
+  'Tidak Ada Foto Rapor Sem 1, Sem 2',
+  'Tidak Ada Foto Rapor Sem 1',
+  'Tidak Ada Foto Rapor Sem 2',
+  'Tidak Ada Foto Rapor Sem 3',
+  'Tidak Ada Foto Rapor Sem 4',
+  'Tidak Ada Foto Rapor Sem 5',
+  'Tidak Ada Foto Rapor Samasekali',
+  'Foto KK dan Surat Keterangan Buram',
+  'Foto KK dan Rapor Buram',
+  'Foto Surat Keterangan Kepala Sekolah dan Foto Rapor Buram',
+  'Surat Pernyataan Orangtua/ Wali Tidak Dibubuhi Materai 10.000',
+  'Titik Koordinat dan alamat di KK tidak sinkron',
+  'Umur KK Baru 13 Hari',
+  'Usia KK Masih Belum Setahun Silahkan Upload KK yang Diatas Satu tahun',
+  'Umur KK Belum 1 Tahun',
+  'Buram Foto Rapor Semester 2, 3, 4 dan 5',
+  'Buram Foto Rapor Semester 3, 4 dan 5',
+  'Buram Foto Rapor Semester 4 dan 5',
+  'Surat pernyataan orang tua salah',
+  'Foto raport yang di upload adalah foto raport asli dan bukan daftar kumpul',
+  'Salah Upload bukti dokumen PIP',
+  'Ditolak dinas',
+  'KK tidak aktif segera aktifkan ke dukcapil serta surat keterangan tidak mampu',
+  'KK tidak aktif segera aktifkan ke dukcapil supaya bisa mendaftar kembali',
+  'Titik koordinat berbeda dan kartu keluarga tidak dapat di scan',
+  'Kartu PKH sudah tidak aktif',
+  'Titik koordinat salah dan KK tidak aktif',
+  'Foto KK tidak dapat di scan',
+  'Dokumen PKH yang diunggah salah dan surat pernyataan tidak sesuai form',
+  'KK kurang dari 1 tahun dan nilai raport yang di input tidak sesuai dengan foto',
+  'Nilai raport yang di input tidak sesuai dengan yang di upload',
+  'KK tidak aktif, tidak ada kartu PKH, format pernyataan orang tua salah',
+  'KK tidak aktif dan ket. Tempat dan tanggal surat pernyataan orang tua tidak sesuai',
+  'KK tidak dapat dibaca dan hasil scan kartu KIP eror',
+  'Dokumen KIP salah dan surat pernyataan orang tua kurang jelas',
+  'KK tidak aktif dan titik koordinat salah',
+  'KK kurang 1 tahun, dokumen KIP buram dan surat pernyataan orang tua tidak sesuai',
+  'KK tidak aktif, foto raport tidak jelas dan tidak rapi',
+  'Foto raport salah di upload',
+  'KK blm 1 tahun, foto KIP buram dan tidak rapi',
+  'Foto KK tidak dapat di baca',
+  'Foto raport yang di upload pada semester 5 salah',
+  'Alamat titik koordinat tidak sesuai dengan alamat di KK dan surat pernyataan',
+  'Foto kartu KIP terpotong',
+  'KK dan KIP tidak ditemukan serta tanda tangan tidak mengenai materai',
+  'Nilai yang di input sem. 2 tidak sesuai dengan foto yang di upload',
+  'Umur KK kurang dari 1 tahun dan foto raport tidak sesuai',
+  'Nilai yang di input tidak sesuai dengan surat keabsahan nilai dari kasek',
+  'KK tidak aktif',
+  'Foto KK tdk dapat di scan',
+  'Nilai raport sem. 1 yang di upload berbeda dengan surat keabsahan nilai raport',
+  'Titik koordinat tidak sesuai, umur KK kurang dari 1 tahun, dokumen PKH salah',
+  'KK tidak dapat di scan, titik koordinat tidak sesuai KK, kartu KIP tidak dapat di scan',
+  'KK tidak dapat di baca dan kartu KIP eror saat di scan',
+  'KK tidak dapat di baca dan titik koordinat tidak sesuai (titik di hutan)',
+  'Foto raport semester 5 tidak lengkap dan KK tidak dapat discan',
+  'KK buram dan salah upload foto raport',
+  'KK tidak jelas, surat pernyataan salah',
+  'KK dan kartu KIP tidak ditemukan',
+  'Surat pernyataan keabsahan nilai raport salah',
+  'Foto KK',
+  'Kartu KIP tidak di upload',
+  'Nilai sem. 4 dan 5 yang di input tidak sesuai dengan foto raport, umur KK kurang 1 tahun',
+  'Titik koordinat tidak sesuai dengan KK, foto raport yang di upload tidak sesuai',
+  'Foto raport tidak lengkap',
+  'KK kurang 1 tahun dan surat keabsahan raport tidak sesuai',
+  'Surat pernyataan dan kartu PKH tidak sesuai',
+  'Umur KK kurang 1 tahun dan foto raport yang di upload salah',
+  'KK kurang 1 tahun dan surat pernyataan tidak sesuai',
+  'KK tidak aktif dan foto raport tidak lengkap',
+  'Umur KK kurang 1 tahun dan nilai raport tidak sesuai dengan yang di input',
+  'Foto raport semester 5 tidak lengkap',
+  'Dokumen surat tugas tidak lengkap dan KK tidak aktif',
+  'Foto raport terpotong',
+  'Umur KK kurang 1 tahun',
+  'Surat keabsahan yang di upload tidak sesuai',
+  'KK tidak dapat di baca dan hasil scan kartu KIP eror',
+  'KK tidak dapat di baca dan kartu KIP eror saat di scan',
+  'KK tidak dapat di baca dan titik koordinat tidak sesuai (titik di hutan)',
 ]
 
 const SUB_JALUR_COLORS: Record<string, string> = {
@@ -499,82 +500,353 @@ function StatBar({ label, count, total, color }: { label: string; count: number;
   )
 }
 
-// Searchable Kekurangan Verifikasi Dropdown
+// VerifyKekuranganPicker: Inline multi-select for rejection dialog
+function VerifyKekuranganPicker({ value, onChange }: { value: string; onChange: (val: string) => void }) {
+  const [search, setSearch] = useState('')
+  const [newOption, setNewOption] = useState('')
+  const [copied, setCopied] = useState(false)
+  const [customOptions, setCustomOptions] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('spmb_custom_kekurangan')
+        return saved ? JSON.parse(saved) : []
+      } catch { return [] }
+    }
+    return []
+  })
+
+  const allOptions = [...DEFAULT_KEKURANGAN_OPTIONS, ...customOptions]
+  const selectedItems: string[] = value ? value.split(' | ').filter(Boolean) : []
+
+  const filtered = search
+    ? allOptions.filter(opt => opt.toLowerCase().includes(search.toLowerCase()))
+    : allOptions
+
+  const toggleItem = (opt: string) => {
+    let next: string[]
+    if (selectedItems.includes(opt)) {
+      next = selectedItems.filter(s => s !== opt)
+    } else {
+      next = [...selectedItems, opt]
+    }
+    onChange(next.join(' | '))
+  }
+
+  const addNewOption = () => {
+    const trimmed = newOption.trim()
+    if (!trimmed) return
+    if (allOptions.includes(trimmed)) {
+      if (!selectedItems.includes(trimmed)) toggleItem(trimmed)
+      setNewOption('')
+      return
+    }
+    const updated = [...customOptions, trimmed]
+    setCustomOptions(updated)
+    localStorage.setItem('spmb_custom_kekurangan', JSON.stringify(updated))
+    onChange([...selectedItems, trimmed].join(' | '))
+    setNewOption('')
+  }
+
+  const handleCopy = () => {
+    if (!value) return
+    navigator.clipboard.writeText(value).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    })
+  }
+
+  return (
+    <div className="border rounded-lg overflow-hidden">
+      <div className="bg-red-50 px-3 py-2 border-b flex items-center justify-between">
+        <label className="text-sm font-medium text-red-700 flex items-center gap-1.5">
+          <AlertTriangle className="w-4 h-4" /> Alasan Penolakan
+        </label>
+        {selectedItems.length > 0 && (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleCopy}
+              className="text-xs flex items-center gap-1 px-2 py-1 rounded hover:bg-red-100 text-red-600 transition-colors"
+              title="Copy alasan untuk paste ke Portal SPMB"
+            >
+              {copied ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+              {copied ? 'Tersalin!' : 'Copy'}
+            </button>
+            <button
+              onClick={() => onChange('')}
+              className="text-xs flex items-center gap-1 px-2 py-1 rounded hover:bg-red-100 text-red-600 transition-colors"
+            >
+              <XIcon className="w-3 h-3" /> Hapus
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Selected tags */}
+      {selectedItems.length > 0 && (
+        <div className="px-3 py-2 bg-white border-b flex flex-wrap gap-1">
+          {selectedItems.map((item) => (
+            <span
+              key={item}
+              className="inline-flex items-center gap-0.5 text-[10px] bg-red-50 border border-red-200 rounded px-1.5 py-0.5 text-red-700"
+            >
+              {item.length > 50 ? item.substring(0, 48) + '…' : item}
+              <button onClick={() => toggleItem(item)} className="ml-0.5 hover:text-red-900 shrink-0">
+                <XIcon className="w-2.5 h-2.5" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Search */}
+      <div className="flex items-center px-3 py-2 border-b gap-2 bg-gray-50">
+        <Search className="w-4 h-4 text-gray-400 shrink-0" />
+        <input
+          placeholder="Cari alasan kekurangan..."
+          className="flex-1 text-sm outline-none bg-transparent"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+
+      {/* Options list */}
+      <div className="max-h-48 overflow-y-auto">
+        {filtered.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-4">Tidak ditemukan</p>
+        ) : (
+          filtered.map((opt) => (
+            <div
+              key={opt}
+              className={`px-3 py-1.5 text-xs cursor-pointer hover:bg-sky-50 transition-colors flex items-start gap-2 ${
+                selectedItems.includes(opt) ? 'bg-red-50' : ''
+              }`}
+              onClick={() => toggleItem(opt)}
+            >
+              <Checkbox checked={selectedItems.includes(opt)} className="mt-0.5 shrink-0" />
+              <span className={selectedItems.includes(opt) ? 'font-medium text-red-700' : 'text-gray-700'}>
+                {opt}
+              </span>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Add new option */}
+      <div className="border-t px-3 py-2 bg-gray-50">
+        <div className="flex items-center gap-2">
+          <input
+            placeholder="Tambah alasan baru..."
+            className="flex-1 text-xs outline-none bg-white border rounded px-2 py-1.5 focus:ring-1 focus:ring-sky-400"
+            value={newOption}
+            onChange={(e) => setNewOption(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addNewOption() } }}
+          />
+          <Button size="sm" variant="outline" className="h-7 px-2 text-xs shrink-0" onClick={addNewOption} disabled={!newOption.trim()}>
+            <ListPlus className="w-3 h-3 mr-1" /> Tambah
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Multi-select Kekurangan Verifikasi Dropdown with copy & add new
 function KekuranganVerifSelect({ value, onChange }: { value: string; onChange: (val: string) => void }) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
+  const [newOption, setNewOption] = useState('')
+  const [copied, setCopied] = useState(false)
+  const [customOptions, setCustomOptions] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('spmb_custom_kekurangan')
+        return saved ? JSON.parse(saved) : []
+      } catch { return [] }
+    }
+    return []
+  })
+
+  // All options = default + custom
+  const allOptions = [...DEFAULT_KEKURANGAN_OPTIONS, ...customOptions]
+
+  // Parse current value into array (separated by " | ")
+  const selectedItems: string[] = value ? value.split(' | ').filter(Boolean) : []
 
   const filtered = search
-    ? KEKURANGAN_VERIFIKASI_OPTIONS.filter(opt => opt.toLowerCase().includes(search.toLowerCase()))
-    : KEKURANGAN_VERIFIKASI_OPTIONS
+    ? allOptions.filter(opt => opt.toLowerCase().includes(search.toLowerCase()))
+    : allOptions
 
-  // Display short version in the cell (just the number or first 20 chars)
-  const displayValue = value || '-'
-  const shortDisplay = value
-    ? value.length > 18
-      ? value.substring(0, 16) + '…'
-      : value
-    : '-'
+  const toggleItem = (opt: string) => {
+    let next: string[]
+    if (selectedItems.includes(opt)) {
+      next = selectedItems.filter(s => s !== opt)
+    } else {
+      next = [...selectedItems, opt]
+    }
+    onChange(next.join(' | '))
+  }
+
+  const addNewOption = () => {
+    const trimmed = newOption.trim()
+    if (!trimmed) return
+    if (allOptions.includes(trimmed)) {
+      // Just select it if it already exists
+      if (!selectedItems.includes(trimmed)) {
+        toggleItem(trimmed)
+      }
+      setNewOption('')
+      return
+    }
+    // Add to custom options and select it
+    const updated = [...customOptions, trimmed]
+    setCustomOptions(updated)
+    localStorage.setItem('spmb_custom_kekurangan', JSON.stringify(updated))
+    const nextSelected = [...selectedItems, trimmed]
+    onChange(nextSelected.join(' | '))
+    setNewOption('')
+  }
+
+  const handleCopy = () => {
+    if (!value) return
+    navigator.clipboard.writeText(value).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    })
+  }
+
+  const clearAll = () => {
+    onChange('')
+    setOpen(false)
+    setSearch('')
+  }
+
+  // Display in cell
+  const cellDisplay = selectedItems.length === 0
+    ? <span className="text-gray-400">-</span>
+    : (
+      <span className="text-gray-800">
+        {selectedItems.length === 1
+          ? (selectedItems[0].length > 22 ? selectedItems[0].substring(0, 20) + '…' : selectedItems[0])
+          : <span className="inline-flex items-center gap-1">
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-sky-100 text-sky-700">{selectedItems.length} alasan</Badge>
+              <span className="text-[10px] text-gray-500 truncate max-w-[120px]">{selectedItems[0]}</span>
+            </span>
+        }
+      </span>
+    )
 
   return (
-    <Popover open={open} onOpenChange={(v) => { setOpen(v); if (!v) setSearch('') }}>
+    <Popover open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setSearch(''); setNewOption('') } }}>
       <PopoverTrigger asChild>
         <span
           className="cursor-pointer hover:bg-sky-50 px-1 py-0.5 rounded inline-flex items-center gap-1 group min-h-[24px] text-xs"
-          title={displayValue}
+          title={value || '-'}
         >
-          <span className={value ? 'text-gray-800' : 'text-gray-400'}>
-            {shortDisplay}
-          </span>
+          {cellDisplay}
           <Pencil className="w-3 h-3 text-gray-300 group-hover:text-sky-500 shrink-0" />
         </span>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="start" side="bottom">
-        <div className="flex items-center border-b px-3 py-2">
-          <Search className="w-4 h-4 text-gray-400 mr-2 shrink-0" />
+      <PopoverContent className="w-96 p-0" align="start" side="bottom">
+        {/* Search */}
+        <div className="flex items-center border-b px-3 py-2 gap-2">
+          <Search className="w-4 h-4 text-gray-400 shrink-0" />
           <input
-            placeholder="Cari kategori kekurangan..."
+            placeholder="Cari alasan kekurangan..."
             className="flex-1 text-sm outline-none bg-transparent"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             autoFocus
           />
         </div>
-        <div className="max-h-64 overflow-y-auto">
+
+        {/* Selected items preview */}
+        {selectedItems.length > 0 && (
+          <div className="px-3 py-2 bg-red-50 border-b">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-medium text-red-700">Alasan dipilih ({selectedItems.length}):</span>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={handleCopy}
+                  className="text-xs flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-red-100 text-red-600 transition-colors"
+                  title="Copy alasan untuk paste ke Portal SPMB"
+                >
+                  {copied ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                  {copied ? 'Tersalin!' : 'Copy'}
+                </button>
+                <button
+                  onClick={clearAll}
+                  className="text-xs flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-red-100 text-red-600 transition-colors"
+                  title="Hapus semua pilihan"
+                >
+                  <XIcon className="w-3 h-3" /> Hapus
+                </button>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {selectedItems.map((item) => (
+                <span
+                  key={item}
+                  className="inline-flex items-center gap-0.5 text-[10px] bg-white border border-red-200 rounded px-1.5 py-0.5 text-red-700"
+                >
+                  {item.length > 40 ? item.substring(0, 38) + '…' : item}
+                  <button
+                    onClick={() => toggleItem(item)}
+                    className="ml-0.5 hover:text-red-900 shrink-0"
+                  >
+                    <XIcon className="w-2.5 h-2.5" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Options list with checkboxes */}
+        <div className="max-h-56 overflow-y-auto">
           {filtered.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-4">Tidak ditemukan</p>
           ) : (
             filtered.map((opt) => (
               <div
                 key={opt}
-                className={`px-3 py-1.5 text-xs cursor-pointer hover:bg-sky-50 transition-colors ${
-                  value === opt ? 'bg-sky-100 font-medium' : ''
+                className={`px-3 py-1.5 text-xs cursor-pointer hover:bg-sky-50 transition-colors flex items-start gap-2 ${
+                  selectedItems.includes(opt) ? 'bg-red-50' : ''
                 }`}
-                onClick={() => {
-                  onChange(opt === value ? '' : opt)
-                  setOpen(false)
-                  setSearch('')
-                }}
+                onClick={() => toggleItem(opt)}
               >
-                {opt}
+                <Checkbox
+                  checked={selectedItems.includes(opt)}
+                  className="mt-0.5 shrink-0"
+                />
+                <span className={selectedItems.includes(opt) ? 'font-medium text-red-700' : 'text-gray-700'}>
+                  {opt}
+                </span>
               </div>
             ))
           )}
         </div>
-        {value && (
-          <div className="border-t px-3 py-2">
-            <button
-              className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1"
-              onClick={() => {
-                onChange('')
-                setOpen(false)
-                setSearch('')
-              }}
+
+        {/* Add new option */}
+        <div className="border-t px-3 py-2">
+          <div className="flex items-center gap-2">
+            <input
+              placeholder="Tambah alasan baru..."
+              className="flex-1 text-xs outline-none bg-gray-50 border rounded px-2 py-1.5 focus:ring-1 focus:ring-sky-400 focus:bg-white"
+              value={newOption}
+              onChange={(e) => setNewOption(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addNewOption() } }}
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 px-2 text-xs shrink-0"
+              onClick={addNewOption}
+              disabled={!newOption.trim()}
             >
-              <XCircle className="w-3 h-3" /> Hapus pilihan
-            </button>
+              <ListPlus className="w-3 h-3 mr-1" /> Tambah
+            </Button>
           </div>
-        )}
+        </div>
       </PopoverContent>
     </Popover>
   )
@@ -1179,7 +1451,18 @@ function LembarVerifikasiSheet({
                   </TableHead>
                   <TableHead>Skor Jarak</TableHead>
                   <TableHead>Skor Nilai Raport</TableHead>
-                  <TableHead>Kekurangan Verifikasi</TableHead>
+                  <TableHead className="min-w-[180px]">
+                    <span className="inline-flex items-center gap-1 cursor-pointer group" onClick={() => {
+                      // Open a dialog to bulk-set kekurangan for selected rows, or just indicate the column purpose
+                      if (selectedIds.size > 0) {
+                        setVerifyAction('REJECTED')
+                        setBulkVerifyDialogOpen(true)
+                      }
+                    }}>
+                      Kekurangan Verifikasi
+                      <Pencil className="w-3 h-3 text-gray-300 group-hover:text-sky-500" />
+                    </span>
+                  </TableHead>
                   <TableHead>Tanggal Verif</TableHead>
                   <TableHead>Jam Verif</TableHead>
                   <TableHead>Terbit KK</TableHead>
@@ -1258,12 +1541,21 @@ function LembarVerifikasiSheet({
                           </span>
                         )}
                       </TableCell>
-                      {/* Kekurangan Verifikasi - Searchable Dropdown */}
-                      <TableCell className="text-sm">
-                        <KekuranganVerifSelect
-                          value={reg.kekuranganVerifikasi || ''}
-                          onChange={(val) => commitEditDirect(reg.id, 'kekuranganVerifikasi', val)}
-                        />
+                      {/* Kekurangan Verifikasi - Multi-Select Dropdown */}
+                      <TableCell className="text-sm align-top" style={{ maxWidth: '280px' }}>
+                        <div className="space-y-1">
+                          <KekuranganVerifSelect
+                            value={reg.kekuranganVerifikasi || ''}
+                            onChange={(val) => commitEditDirect(reg.id, 'kekuranganVerifikasi', val)}
+                          />
+                          {reg.kekuranganVerifikasi && (
+                            <div className="text-[10px] text-red-600 leading-tight whitespace-normal break-words">
+                              {reg.kekuranganVerifikasi.split(' | ').map((reason, i) => (
+                                <span key={i} className="block">• {reason}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </TableCell>
                       {/* Tanggal Verif */}
                       <TableCell className="text-sm">
@@ -1507,7 +1799,7 @@ function LembarVerifikasiSheet({
 
       {/* Single Verify Dialog */}
       <Dialog open={verifyDialogOpen} onOpenChange={setVerifyDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {verifyAction === 'VERIFIED' ? (
@@ -1534,15 +1826,18 @@ function LembarVerifikasiSheet({
                 </div>
               </div>
             )}
+            {verifyAction === 'REJECTED' && (
+              <VerifyKekuranganPicker value={verifyNote} onChange={setVerifyNote} />
+            )}
             <div>
               <label className="text-sm font-medium text-gray-700 mb-1.5 block">
-                {verifyAction === 'VERIFIED' ? 'Catatan Verifikasi' : 'Alasan Penolakan'}
+                {verifyAction === 'VERIFIED' ? 'Catatan Verifikasi' : 'Catatan Tambahan'}
               </label>
               <Textarea
-                placeholder={verifyAction === 'VERIFIED' ? 'Catatan tambahan (opsional)...' : 'Tuliskan alasan penolakan...'}
+                placeholder={verifyAction === 'VERIFIED' ? 'Catatan tambahan (opsional)...' : 'Catatan tambahan (opsional)...'}
                 value={verifyNote}
                 onChange={(e) => setVerifyNote(e.target.value)}
-                rows={3}
+                rows={2}
               />
             </div>
           </div>
@@ -1568,7 +1863,7 @@ function LembarVerifikasiSheet({
 
       {/* Bulk Verify Dialog */}
       <Dialog open={bulkVerifyDialogOpen} onOpenChange={setBulkVerifyDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {verifyAction === 'VERIFIED' ? (
@@ -1595,15 +1890,18 @@ function LembarVerifikasiSheet({
                 </div>
               </div>
             )}
+            {verifyAction === 'REJECTED' && (
+              <VerifyKekuranganPicker value={verifyNote} onChange={setVerifyNote} />
+            )}
             <div>
               <label className="text-sm font-medium text-gray-700 mb-1.5 block">
-                {verifyAction === 'VERIFIED' ? 'Catatan Verifikasi' : 'Alasan Penolakan'}
+                {verifyAction === 'VERIFIED' ? 'Catatan Verifikasi' : 'Catatan Tambahan'}
               </label>
               <Textarea
-                placeholder={verifyAction === 'VERIFIED' ? 'Catatan untuk semua pendaftar (opsional)...' : 'Alasan penolakan untuk semua...'}
+                placeholder={verifyAction === 'VERIFIED' ? 'Catatan untuk semua pendaftar (opsional)...' : 'Catatan tambahan (opsional)...'}
                 value={verifyNote}
                 onChange={(e) => setVerifyNote(e.target.value)}
-                rows={3}
+                rows={2}
               />
             </div>
           </div>
@@ -1746,15 +2044,10 @@ function LembarVerifikasiSheet({
                   <div className="sm:col-span-2">
                     <label className="text-xs text-gray-500 font-medium">Kekurangan Verifikasi</label>
                     <div className="mt-1">
-                      <Select value={editForm.kekuranganVerifikasi || ''} onValueChange={v => setEditForm({...editForm, kekuranganVerifikasi: v === '__none__' ? '' : v})}>
-                        <SelectTrigger><SelectValue placeholder="Pilih kekurangan verifikasi" /></SelectTrigger>
-                        <SelectContent className="max-h-64">
-                          <SelectItem value="__none__">- Tidak Ada -</SelectItem>
-                          {KEKURANGAN_VERIFIKASI_OPTIONS.map(opt => (
-                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <KekuranganVerifSelect
+                        value={editForm.kekuranganVerifikasi || ''}
+                        onChange={(val) => setEditForm({...editForm, kekuranganVerifikasi: val})}
+                      />
                     </div>
                   </div>
                   <div>
@@ -7195,8 +7488,21 @@ export default function Home() {
                     )}
                     {detailTarget.kekuranganVerifikasi && (
                       <div className="bg-red-50 rounded-lg p-2">
-                        <label className="text-xs text-red-600 font-medium">Kekurangan Verifikasi</label>
-                        <p className="text-sm text-red-700">{detailTarget.kekuranganVerifikasi}</p>
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs text-red-600 font-medium">Kekurangan Verifikasi</label>
+                          <button
+                            className="text-[10px] flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-red-100 text-red-600 transition-colors"
+                            onClick={() => navigator.clipboard.writeText(detailTarget.kekuranganVerifikasi || '').then(() => {})}
+                            title="Copy alasan untuk paste ke Portal SPMB"
+                          >
+                            <Copy className="w-3 h-3" /> Copy
+                          </button>
+                        </div>
+                        <div className="text-sm text-red-700">
+                          {detailTarget.kekuranganVerifikasi.split(' | ').map((reason, i) => (
+                            <p key={i} className="mt-0.5">• {reason}</p>
+                          ))}
+                        </div>
                       </div>
                     )}
                     {detailTarget.tanggalVerif && (
@@ -7465,15 +7771,10 @@ export default function Home() {
                   <div className="sm:col-span-2">
                     <label className="text-xs text-gray-500 font-medium">Kekurangan Verifikasi</label>
                     <div className="mt-1">
-                      <Select value={editForm.kekuranganVerifikasi || ''} onValueChange={v => setEditForm({...editForm, kekuranganVerifikasi: v === '__none__' ? '' : v})}>
-                        <SelectTrigger><SelectValue placeholder="Pilih kekurangan verifikasi" /></SelectTrigger>
-                        <SelectContent className="max-h-64">
-                          <SelectItem value="__none__">- Tidak Ada -</SelectItem>
-                          {KEKURANGAN_VERIFIKASI_OPTIONS.map(opt => (
-                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <KekuranganVerifSelect
+                        value={editForm.kekuranganVerifikasi || ''}
+                        onChange={(val) => setEditForm({...editForm, kekuranganVerifikasi: val})}
+                      />
                     </div>
                   </div>
                   <div>
