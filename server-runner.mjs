@@ -1,4 +1,5 @@
 import { spawn } from 'child_process';
+import http from 'http';
 
 function startServer() {
   console.log('[Runner] Starting Next.js server...');
@@ -23,7 +24,6 @@ startServer();
 // Keepalive: ping every 5s
 setInterval(() => {
   try {
-    const http = require('http');
     http.get('http://localhost:3000/api/auth/setup', (res) => {
       res.resume();
     }).on('error', () => {});
