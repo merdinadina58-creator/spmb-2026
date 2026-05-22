@@ -3857,10 +3857,10 @@ export default function Home() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {stats?.bySubJalur.map((item) => (
-                      <StatBar key={item.name} label={item.name} count={item.count} total={stats.total} color="bg-emerald-500" />
+                    {(stats?.bySubJalur || []).map((item) => (
+                      <StatBar key={item.name} label={item.name} count={item.count} total={stats?.total || 0} color="bg-emerald-500" />
                     ))}
-                    {(!stats?.bySubJalur || stats.bySubJalur.length === 0) && (
+                    {(stats?.bySubJalur || []).length === 0 && (
                       <p className="text-sm text-gray-400 text-center py-4">Belum ada data</p>
                     )}
                   </div>
@@ -3877,10 +3877,10 @@ export default function Home() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3 max-h-64 overflow-y-auto">
-                    {stats?.bySekolahPilihan.map((item) => (
-                      <StatBar key={item.name} label={item.name} count={item.count} total={stats.total} color="bg-sky-500" />
+                    {(stats?.bySekolahPilihan || []).map((item) => (
+                      <StatBar key={item.name} label={item.name} count={item.count} total={stats?.total || 0} color="bg-sky-500" />
                     ))}
-                    {(!stats?.bySekolahPilihan || stats.bySekolahPilihan.length === 0) && (
+                    {(stats?.bySekolahPilihan || []).length === 0 && (
                       <p className="text-sm text-gray-400 text-center py-4">Belum ada data</p>
                     )}
                   </div>
@@ -3897,10 +3897,10 @@ export default function Home() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {stats?.byJurusan.map((item) => (
-                      <StatBar key={item.name} label={item.name} count={item.count} total={stats.total} color="bg-violet-500" />
+                    {(stats?.byJurusan || []).map((item) => (
+                      <StatBar key={item.name} label={item.name} count={item.count} total={stats?.total || 0} color="bg-violet-500" />
                     ))}
-                    {(!stats?.byJurusan || stats.byJurusan.length === 0) && (
+                    {(stats?.byJurusan || []).length === 0 && (
                       <p className="text-sm text-gray-400 text-center py-4">Belum ada data</p>
                     )}
                   </div>
@@ -4718,7 +4718,7 @@ export default function Home() {
                 <div className="mt-6">
                   <h3 className="text-sm font-semibold text-gray-700 mb-3">Distribusi Per Sub Jalur</h3>
                   <div className="space-y-2.5">
-                    {stats?.verifiedBySubJalur.map((item) => (
+                    {(stats?.verifiedBySubJalur || []).map((item) => (
                       <div key={item.name} className="flex items-center gap-3">
                         <Badge variant="outline" className={`${SUB_JALUR_COLORS[item.name] || 'bg-gray-100 text-gray-800'} min-w-[130px] justify-center text-xs`}>
                           {item.name}
@@ -4732,7 +4732,7 @@ export default function Home() {
                         <span className="text-sm font-semibold text-gray-700 min-w-[40px] text-right">{item.count}</span>
                       </div>
                     ))}
-                    {(!stats?.verifiedBySubJalur || stats.verifiedBySubJalur.length === 0) && (
+                    {(stats?.verifiedBySubJalur || []).length === 0 && (
                       <p className="text-xs text-gray-400 text-center py-2">Belum ada data</p>
                     )}
                   </div>
@@ -4760,7 +4760,7 @@ export default function Home() {
                     <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Sekolah Pilihan" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Semua Sekolah</SelectItem>
-                      {stats?.verifiedBySekolah.map((item) => (
+                      {(stats?.verifiedBySekolah || []).map((item) => (
                         <SelectItem key={item.name} value={item.name}>{item.name}</SelectItem>
                       ))}
                     </SelectContent>
@@ -4907,7 +4907,7 @@ export default function Home() {
                 <div className="mt-6">
                   <h3 className="text-sm font-semibold text-gray-700 mb-3">Distribusi Per Sub Jalur</h3>
                   <div className="space-y-2.5">
-                    {stats?.rejectedBySubJalur.map((item) => (
+                    {(stats?.rejectedBySubJalur || []).map((item) => (
                       <div key={item.name} className="flex items-center gap-3">
                         <Badge variant="outline" className={`${SUB_JALUR_COLORS[item.name] || 'bg-gray-100 text-gray-800'} min-w-[130px] justify-center text-xs`}>
                           {item.name}
@@ -4921,7 +4921,7 @@ export default function Home() {
                         <span className="text-sm font-semibold text-gray-700 min-w-[40px] text-right">{item.count}</span>
                       </div>
                     ))}
-                    {(!stats?.rejectedBySubJalur || stats.rejectedBySubJalur.length === 0) && (
+                    {(stats?.rejectedBySubJalur || []).length === 0 && (
                       <p className="text-xs text-gray-400 text-center py-2">Belum ada data</p>
                     )}
                   </div>
@@ -5081,7 +5081,7 @@ export default function Home() {
                 <div className="mt-6">
                   <h3 className="text-sm font-semibold text-gray-700 mb-3">Distribusi Lulus Per Sub Jalur</h3>
                   <div className="space-y-2.5">
-                    {stats?.lulusBySubJalur.map((item) => (
+                    {(stats?.lulusBySubJalur || []).map((item) => (
                       <div key={item.name} className="flex items-center gap-3">
                         <Badge variant="outline" className={`${SUB_JALUR_COLORS[item.name] || 'bg-gray-100 text-gray-800'} min-w-[130px] justify-center text-xs`}>
                           {item.name}
@@ -5095,7 +5095,7 @@ export default function Home() {
                         <span className="text-sm font-semibold text-gray-700 min-w-[40px] text-right">{item.count}</span>
                       </div>
                     ))}
-                    {(!stats?.lulusBySubJalur || stats.lulusBySubJalur.length === 0) && (
+                    {(stats?.lulusBySubJalur || []).length === 0 && (
                       <p className="text-xs text-gray-400 text-center py-2">Belum ada data</p>
                     )}
                   </div>
@@ -5420,7 +5420,7 @@ export default function Home() {
                 <div className="mt-6">
                   <h3 className="text-sm font-semibold text-gray-700 mb-3">Distribusi Daftar Ulang Per Sub Jalur</h3>
                   <div className="space-y-2.5">
-                    {stats?.daftarUlangBySubJalur.map((item) => (
+                    {(stats?.daftarUlangBySubJalur || []).map((item) => (
                       <div key={item.name} className="flex items-center gap-3">
                         <Badge variant="outline" className={`${SUB_JALUR_COLORS[item.name] || 'bg-gray-100 text-gray-800'} min-w-[130px] justify-center text-xs`}>
                           {item.name}
@@ -5434,7 +5434,7 @@ export default function Home() {
                         <span className="text-sm font-semibold text-gray-700 min-w-[40px] text-right">{item.count}</span>
                       </div>
                     ))}
-                    {(!stats?.daftarUlangBySubJalur || stats.daftarUlangBySubJalur.length === 0) && (
+                    {(stats?.daftarUlangBySubJalur || []).length === 0 && (
                       <p className="text-xs text-gray-400 text-center py-2">Belum ada data</p>
                     )}
                   </div>
