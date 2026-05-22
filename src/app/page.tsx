@@ -221,105 +221,104 @@ const STATUS_DAFTAR_ULANG_COLORS: Record<string, string> = {
   TIDAK_DAFTAR_ULANG: 'bg-orange-100 text-orange-800 border-orange-300',
 }
 
-// Kategori Kekurangan Verifikasi (tanpa nomor, bisa ditambah)
+// Kategori Kekurangan Verifikasi (tanpa nomor, bisa ditambah, tanpa duplikat)
 const DEFAULT_KEKURANGAN_OPTIONS = [
-  'Tidak Ada Kendala',
-  'Titik Koordinat tidak sesuai dengan Alamat di Kartu Keluarga',
-  'Tidak Foto Rapor Semester 2',
-  'Tidak Foto Rapor Semester 3',
-  'Tidak Foto Rapor Semester 4',
-  'Tidak Foto Rapor Semester 5',
-  'Foto KK Buram tidak dapat dibaca',
-  'Perubahan tempat dan tanggal tanda tangan pada surat pernyataan orang tua',
-  'Foto Surat Keterangan Keabsahan Nilai Buram/ tidak dapat dibaca',
-  'Tidak Ada Foto Surat Keterangan Kepala Sekolah (Keabsahan Nilai)',
-  'Nilai Raport yang dientri tidak sesuai dengan foto nilai Per Semester',
-  'Salah Input Nilai Raport Semester 1',
-  'Salah Input Nilai Raport Semester 2',
-  'Salah Input Nilai Raport Semester 3',
-  'Salah Input Nilai Raport Semester 4',
-  'Salah Input Nilai Raport Semester 5',
-  'Tidak Ada Foto Rapor Sem 1, Sem 2, Sem 3, Sem 4',
-  'Tidak Ada Foto Rapor Sem 1, Sem 2, Sem 3',
-  'Tidak Ada Foto Rapor Sem 1, Sem 2',
-  'Tidak Ada Foto Rapor Sem 1',
-  'Tidak Ada Foto Rapor Sem 2',
-  'Tidak Ada Foto Rapor Sem 3',
-  'Tidak Ada Foto Rapor Sem 4',
-  'Tidak Ada Foto Rapor Sem 5',
-  'Tidak Ada Foto Rapor Samasekali',
-  'Foto KK dan Surat Keterangan Buram',
-  'Foto KK dan Rapor Buram',
-  'Foto Surat Keterangan Kepala Sekolah dan Foto Rapor Buram',
-  'Surat Pernyataan Orangtua/ Wali Tidak Dibubuhi Materai 10.000',
-  'Titik Koordinat dan alamat di KK tidak sinkron',
-  'Umur KK Baru 13 Hari',
-  'Usia KK Masih Belum Setahun Silahkan Upload KK yang Diatas Satu tahun',
-  'Umur KK Belum 1 Tahun',
-  'Buram Foto Rapor Semester 2, 3, 4 dan 5',
-  'Buram Foto Rapor Semester 3, 4 dan 5',
-  'Buram Foto Rapor Semester 4 dan 5',
-  'Surat pernyataan orang tua salah',
-  'Foto raport yang di upload adalah foto raport asli dan bukan daftar kumpul',
-  'Salah Upload bukti dokumen PIP',
-  'Ditolak dinas',
-  'KK tidak aktif segera aktifkan ke dukcapil serta surat keterangan tidak mampu',
-  'KK tidak aktif segera aktifkan ke dukcapil supaya bisa mendaftar kembali',
-  'Titik koordinat berbeda dan kartu keluarga tidak dapat di scan',
-  'Kartu PKH sudah tidak aktif',
-  'Titik koordinat salah dan KK tidak aktif',
-  'Foto KK tidak dapat di scan',
-  'Dokumen PKH yang diunggah salah dan surat pernyataan tidak sesuai form',
-  'KK kurang dari 1 tahun dan nilai raport yang di input tidak sesuai dengan foto',
-  'Nilai raport yang di input tidak sesuai dengan yang di upload',
-  'KK tidak aktif, tidak ada kartu PKH, format pernyataan orang tua salah',
-  'KK tidak aktif dan ket. Tempat dan tanggal surat pernyataan orang tua tidak sesuai',
-  'KK tidak dapat dibaca dan hasil scan kartu KIP eror',
-  'Dokumen KIP salah dan surat pernyataan orang tua kurang jelas',
-  'KK tidak aktif dan titik koordinat salah',
-  'KK kurang 1 tahun, dokumen KIP buram dan surat pernyataan orang tua tidak sesuai',
-  'KK tidak aktif, foto raport tidak jelas dan tidak rapi',
-  'Foto raport salah di upload',
-  'KK blm 1 tahun, foto KIP buram dan tidak rapi',
-  'Foto KK tidak dapat di baca',
-  'Foto raport yang di upload pada semester 5 salah',
-  'Alamat titik koordinat tidak sesuai dengan alamat di KK dan surat pernyataan',
-  'Foto kartu KIP terpotong',
-  'KK dan KIP tidak ditemukan serta tanda tangan tidak mengenai materai',
-  'Nilai yang di input sem. 2 tidak sesuai dengan foto yang di upload',
-  'Umur KK kurang dari 1 tahun dan foto raport tidak sesuai',
-  'Nilai yang di input tidak sesuai dengan surat keabsahan nilai dari kasek',
-  'KK tidak aktif',
-  'Foto KK tdk dapat di scan',
-  'Nilai raport sem. 1 yang di upload berbeda dengan surat keabsahan nilai raport',
-  'Titik koordinat tidak sesuai, umur KK kurang dari 1 tahun, dokumen PKH salah',
-  'KK tidak dapat di scan, titik koordinat tidak sesuai KK, kartu KIP tidak dapat di scan',
-  'KK tidak dapat di baca dan kartu KIP eror saat di scan',
-  'KK tidak dapat di baca dan titik koordinat tidak sesuai (titik di hutan)',
-  'Foto raport semester 5 tidak lengkap dan KK tidak dapat discan',
-  'KK buram dan salah upload foto raport',
-  'KK tidak jelas, surat pernyataan salah',
-  'KK dan kartu KIP tidak ditemukan',
-  'Surat pernyataan keabsahan nilai raport salah',
-  'Foto KK',
-  'Kartu KIP tidak di upload',
-  'Nilai sem. 4 dan 5 yang di input tidak sesuai dengan foto raport, umur KK kurang 1 tahun',
-  'Titik koordinat tidak sesuai dengan KK, foto raport yang di upload tidak sesuai',
-  'Foto raport tidak lengkap',
-  'KK kurang 1 tahun dan surat keabsahan raport tidak sesuai',
-  'Surat pernyataan dan kartu PKH tidak sesuai',
-  'Umur KK kurang 1 tahun dan foto raport yang di upload salah',
-  'KK kurang 1 tahun dan surat pernyataan tidak sesuai',
-  'KK tidak aktif dan foto raport tidak lengkap',
-  'Umur KK kurang 1 tahun dan nilai raport tidak sesuai dengan yang di input',
-  'Foto raport semester 5 tidak lengkap',
-  'Dokumen surat tugas tidak lengkap dan KK tidak aktif',
-  'Foto raport terpotong',
-  'Umur KK kurang 1 tahun',
-  'Surat keabsahan yang di upload tidak sesuai',
-  'KK tidak dapat di baca dan hasil scan kartu KIP eror',
-  'KK tidak dapat di baca dan kartu KIP eror saat di scan',
-  'KK tidak dapat di baca dan titik koordinat tidak sesuai (titik di hutan)',
+  ...new Set([
+    'Tidak Ada Kendala',
+    'Titik Koordinat tidak sesuai dengan Alamat di Kartu Keluarga',
+    'Tidak Foto Rapor Semester 2',
+    'Tidak Foto Rapor Semester 3',
+    'Tidak Foto Rapor Semester 4',
+    'Tidak Foto Rapor Semester 5',
+    'Foto KK Buram tidak dapat dibaca',
+    'Perubahan tempat dan tanggal tanda tangan pada surat pernyataan orang tua',
+    'Foto Surat Keterangan Keabsahan Nilai Buram/ tidak dapat dibaca',
+    'Tidak Ada Foto Surat Keterangan Kepala Sekolah (Keabsahan Nilai)',
+    'Nilai Raport yang dientri tidak sesuai dengan foto nilai Per Semester',
+    'Salah Input Nilai Raport Semester 1',
+    'Salah Input Nilai Raport Semester 2',
+    'Salah Input Nilai Raport Semester 3',
+    'Salah Input Nilai Raport Semester 4',
+    'Salah Input Nilai Raport Semester 5',
+    'Tidak Ada Foto Rapor Sem 1, Sem 2, Sem 3, Sem 4',
+    'Tidak Ada Foto Rapor Sem 1, Sem 2, Sem 3',
+    'Tidak Ada Foto Rapor Sem 1, Sem 2',
+    'Tidak Ada Foto Rapor Sem 1',
+    'Tidak Ada Foto Rapor Sem 2',
+    'Tidak Ada Foto Rapor Sem 3',
+    'Tidak Ada Foto Rapor Sem 4',
+    'Tidak Ada Foto Rapor Sem 5',
+    'Tidak Ada Foto Rapor Samasekali',
+    'Foto KK dan Surat Keterangan Buram',
+    'Foto KK dan Rapor Buram',
+    'Foto Surat Keterangan Kepala Sekolah dan Foto Rapor Buram',
+    'Surat Pernyataan Orangtua/ Wali Tidak Dibubuhi Materai 10.000',
+    'Titik Koordinat dan alamat di KK tidak sinkron',
+    'Umur KK Baru 13 Hari',
+    'Usia KK Masih Belum Setahun Silahkan Upload KK yang Diatas Satu tahun',
+    'Umur KK Belum 1 Tahun',
+    'Buram Foto Rapor Semester 2, 3, 4 dan 5',
+    'Buram Foto Rapor Semester 3, 4 dan 5',
+    'Buram Foto Rapor Semester 4 dan 5',
+    'Surat pernyataan orang tua salah',
+    'Foto raport yang di upload adalah foto raport asli dan bukan daftar kumpul',
+    'Salah Upload bukti dokumen PIP',
+    'Ditolak dinas',
+    'KK tidak aktif segera aktifkan ke dukcapil serta surat keterangan tidak mampu',
+    'KK tidak aktif segera aktifkan ke dukcapil supaya bisa mendaftar kembali',
+    'Titik koordinat berbeda dan kartu keluarga tidak dapat di scan',
+    'Kartu PKH sudah tidak aktif',
+    'Titik koordinat salah dan KK tidak aktif',
+    'Foto KK tidak dapat di scan',
+    'Dokumen PKH yang diunggah salah dan surat pernyataan tidak sesuai form',
+    'KK kurang dari 1 tahun dan nilai raport yang di input tidak sesuai dengan foto',
+    'Nilai raport yang di input tidak sesuai dengan yang di upload',
+    'KK tidak aktif, tidak ada kartu PKH, format pernyataan orang tua salah',
+    'KK tidak aktif dan ket. Tempat dan tanggal surat pernyataan orang tua tidak sesuai',
+    'KK tidak dapat dibaca dan hasil scan kartu KIP eror',
+    'Dokumen KIP salah dan surat pernyataan orang tua kurang jelas',
+    'KK tidak aktif dan titik koordinat salah',
+    'KK kurang 1 tahun, dokumen KIP buram dan surat pernyataan orang tua tidak sesuai',
+    'KK tidak aktif, foto raport tidak jelas dan tidak rapi',
+    'Foto raport salah di upload',
+    'KK blm 1 tahun, foto KIP buram dan tidak rapi',
+    'Foto KK tidak dapat di baca',
+    'Foto raport yang di upload pada semester 5 salah',
+    'Alamat titik koordinat tidak sesuai dengan alamat di KK dan surat pernyataan',
+    'Foto kartu KIP terpotong',
+    'KK dan KIP tidak ditemukan serta tanda tangan tidak mengenai materai',
+    'Nilai yang di input sem. 2 tidak sesuai dengan foto yang di upload',
+    'Umur KK kurang dari 1 tahun dan foto raport tidak sesuai',
+    'Nilai yang di input tidak sesuai dengan surat keabsahan nilai dari kasek',
+    'KK tidak aktif',
+    'Foto KK tdk dapat di scan',
+    'Nilai raport sem. 1 yang di upload berbeda dengan surat keabsahan nilai raport',
+    'Titik koordinat tidak sesuai, umur KK kurang dari 1 tahun, dokumen PKH salah',
+    'KK tidak dapat di scan, titik koordinat tidak sesuai KK, kartu KIP tidak dapat di scan',
+    'KK tidak dapat di baca dan kartu KIP eror saat di scan',
+    'KK tidak dapat di baca dan titik koordinat tidak sesuai (titik di hutan)',
+    'Foto raport semester 5 tidak lengkap dan KK tidak dapat discan',
+    'KK buram dan salah upload foto raport',
+    'KK tidak jelas, surat pernyataan salah',
+    'KK dan kartu KIP tidak ditemukan',
+    'Surat pernyataan keabsahan nilai raport salah',
+    'Foto KK',
+    'Kartu KIP tidak di upload',
+    'Nilai sem. 4 dan 5 yang di input tidak sesuai dengan foto raport, umur KK kurang 1 tahun',
+    'Titik koordinat tidak sesuai dengan KK, foto raport yang di upload tidak sesuai',
+    'Foto raport tidak lengkap',
+    'KK kurang 1 tahun dan surat keabsahan raport tidak sesuai',
+    'Surat pernyataan dan kartu PKH tidak sesuai',
+    'Umur KK kurang 1 tahun dan foto raport yang di upload salah',
+    'KK kurang 1 tahun dan surat pernyataan tidak sesuai',
+    'KK tidak aktif dan foto raport tidak lengkap',
+    'Umur KK kurang 1 tahun dan nilai raport tidak sesuai dengan yang di input',
+    'Foto raport semester 5 tidak lengkap',
+    'Dokumen surat tugas tidak lengkap dan KK tidak aktif',
+    'Foto raport terpotong',
+    'Umur KK kurang 1 tahun',
+    'Surat keabsahan yang di upload tidak sesuai',
+  ])
 ]
 
 const SUB_JALUR_COLORS: Record<string, string> = {
@@ -515,7 +514,7 @@ function VerifyKekuranganPicker({ value, onChange }: { value: string; onChange: 
     return []
   })
 
-  const allOptions = [...DEFAULT_KEKURANGAN_OPTIONS, ...customOptions]
+  const allOptions = [...new Set([...DEFAULT_KEKURANGAN_OPTIONS, ...customOptions])]
   const selectedItems: string[] = value ? value.split(' | ').filter(Boolean) : []
 
   const filtered = search
@@ -584,9 +583,9 @@ function VerifyKekuranganPicker({ value, onChange }: { value: string; onChange: 
       {/* Selected tags */}
       {selectedItems.length > 0 && (
         <div className="px-3 py-2 bg-white border-b flex flex-wrap gap-1">
-          {selectedItems.map((item) => (
+          {selectedItems.map((item, idx) => (
             <span
-              key={item}
+              key={`tag-${idx}`}
               className="inline-flex items-center gap-0.5 text-[10px] bg-red-50 border border-red-200 rounded px-1.5 py-0.5 text-red-700"
             >
               {item.length > 50 ? item.substring(0, 48) + '…' : item}
@@ -614,9 +613,9 @@ function VerifyKekuranganPicker({ value, onChange }: { value: string; onChange: 
         {filtered.length === 0 ? (
           <p className="text-sm text-gray-400 text-center py-4">Tidak ditemukan</p>
         ) : (
-          filtered.map((opt) => (
+          filtered.map((opt, idx) => (
             <div
-              key={opt}
+              key={`opt-${idx}`}
               className={`px-3 py-1.5 text-xs cursor-pointer hover:bg-sky-50 transition-colors flex items-start gap-2 ${
                 selectedItems.includes(opt) ? 'bg-red-50' : ''
               }`}
@@ -667,7 +666,7 @@ function KekuranganVerifSelect({ value, onChange }: { value: string; onChange: (
   })
 
   // All options = default + custom
-  const allOptions = [...DEFAULT_KEKURANGAN_OPTIONS, ...customOptions]
+  const allOptions = [...new Set([...DEFAULT_KEKURANGAN_OPTIONS, ...customOptions])]
 
   // Parse current value into array (separated by " | ")
   const selectedItems: string[] = value ? value.split(' | ').filter(Boolean) : []
@@ -783,9 +782,9 @@ function KekuranganVerifSelect({ value, onChange }: { value: string; onChange: (
               </div>
             </div>
             <div className="flex flex-wrap gap-1">
-              {selectedItems.map((item) => (
+              {selectedItems.map((item, idx) => (
                 <span
-                  key={item}
+                  key={`vtag-${idx}`}
                   className="inline-flex items-center gap-0.5 text-[10px] bg-white border border-red-200 rounded px-1.5 py-0.5 text-red-700"
                 >
                   {item.length > 40 ? item.substring(0, 38) + '…' : item}
@@ -806,9 +805,9 @@ function KekuranganVerifSelect({ value, onChange }: { value: string; onChange: (
           {filtered.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-4">Tidak ditemukan</p>
           ) : (
-            filtered.map((opt) => (
+            filtered.map((opt, idx) => (
               <div
-                key={opt}
+                key={`vopt-${idx}`}
                 className={`px-3 py-1.5 text-xs cursor-pointer hover:bg-sky-50 transition-colors flex items-start gap-2 ${
                   selectedItems.includes(opt) ? 'bg-red-50' : ''
                 }`}
@@ -1549,10 +1548,22 @@ function LembarVerifikasiSheet({
                             onChange={(val) => commitEditDirect(reg.id, 'kekuranganVerifikasi', val)}
                           />
                           {reg.kekuranganVerifikasi && (
-                            <div className="text-[10px] text-red-600 leading-tight whitespace-normal break-words">
-                              {reg.kekuranganVerifikasi.split(' | ').map((reason, i) => (
-                                <span key={i} className="block">• {reason}</span>
-                              ))}
+                            <div className="group/reason relative">
+                              <div className="text-[10px] text-red-600 leading-tight whitespace-normal break-words pr-5">
+                                {reg.kekuranganVerifikasi.split(' | ').map((reason, i) => (
+                                  <span key={i} className="block">• {reason}</span>
+                                ))}
+                              </div>
+                              <button
+                                className="absolute top-0 right-0 opacity-0 group-hover/reason:opacity-100 transition-opacity p-0.5 rounded hover:bg-sky-100 text-gray-400 hover:text-sky-600"
+                                title="Copy alasan untuk paste ke Portal SPMB"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(reg.kekuranganVerifikasi || '')
+                                  toast({ title: 'Tersalin!', description: 'Alasan kekurangan sudah di-copy' })
+                                }}
+                              >
+                                <Copy className="w-3 h-3" />
+                              </button>
                             </div>
                           )}
                         </div>
