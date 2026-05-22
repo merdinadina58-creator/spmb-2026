@@ -2419,6 +2419,24 @@ export default function Home() {
   const [portalSyncing, setPortalSyncing] = useState(false)
   const [portalSyncResult, setPortalSyncResult] = useState<{ success: boolean; message: string; created?: number; updated?: number; unchanged?: number; total?: number } | null>(null)
 
+  // User management state
+  const [users, setUsers] = useState<Array<{ id: string; username: string; namaLengkap: string; role: string; aktif: boolean; lastLogin: string | null; createdAt: string }>>([])
+  const [usersLoading, setUsersLoading] = useState(false)
+  const [addUserOpen, setAddUserOpen] = useState(false)
+  const [editUserOpen, setEditUserOpen] = useState(false)
+  const [editUserData, setEditUserData] = useState<{ id: string; username: string; namaLengkap: string; role: string; aktif: boolean } | null>(null)
+  const [addUserForm, setAddUserForm] = useState({ username: '', password: '', namaLengkap: '', role: 'verifikator' })
+  const [editUserForm, setEditUserForm] = useState({ username: '', password: '', namaLengkap: '', role: 'verifikator', aktif: true })
+  const [userSaving, setUserSaving] = useState(false)
+  const [deleteUserOpen, setDeleteUserOpen] = useState(false)
+  const [deleteUserTarget, setDeleteUserTarget] = useState<{ id: string; namaLengkap: string } | null>(null)
+  const [deleteUserLoading, setDeleteUserLoading] = useState(false)
+
+  // Admin profile edit
+  const [editProfileOpen, setEditProfileOpen] = useState(false)
+  const [editProfileForm, setEditProfileForm] = useState({ username: '', password: '', namaLengkap: '' })
+  const [editProfileSaving, setEditProfileSaving] = useState(false)
+
   // ==================== AUTH HANDLERS ====================
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -2534,6 +2552,143 @@ export default function Home() {
     }
   }
 
+  // Load users
+  const loadUsers = async () => {
+    setUsersLoading(true)
+    try {
+      const res = await fetch('/api/users')
+      const data = await res.json()
+      if (data.success) setUsers(data.users)
+    } catch {
+      toast({ title: 'Error', description: 'Gagal memuat data user', variant: 'destructive' })
+    } finally {
+      setUsersLoading(false)
+    }
+  }
+
+  // Add user
+  const handleAddUser = async () => {
+    if (!addUserForm.username || !addUserForm.password || !addUserForm.namaLengkap) {
+      toast({ title: 'Error', description: 'Semua field harus diisi', variant: 'destructive' })
+      return
+    }
+    setUserSaving(true)
+    try {
+      const res = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(addUserForm),
+      })
+      const data = await res.json()
+      if (data.success) {
+        toast({ title: 'Berhasil', description: `User ${addUserForm.namaLengkap} berhasil ditambahkan` })
+        setAddUserOpen(false)
+        setAddUserForm({ username: '', password: '', namaLengkap: '', role: 'verifikator' })
+        loadUsers()
+      } else {
+        toast({ title: 'Gagal', description: data.error, variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Terjadi kesalahan', variant: 'destructive' })
+    } finally {
+      setUserSaving(false)
+    }
+  }
+
+  // Edit user
+  const handleEditUser = async () => {
+    if (!editUserData) return
+    if (!editUserForm.username || !editUserForm.namaLengkap) {
+      toast({ title: 'Error', description: 'Username dan Nama Lengkap harus diisi', variant: 'destructive' })
+      return
+    }
+    setUserSaving(true)
+    try {
+      const body: Record<string, unknown> = {
+        id: editUserData.id,
+        username: editUserForm.username,
+        namaLengkap: editUserForm.namaLengkap,
+        role: editUserForm.role,
+        aktif: editUserForm.aktif,
+      }
+      if (editUserForm.password) body.password = editUserForm.password
+
+      const res = await fetch('/api/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const data = await res.json()
+      if (data.success) {
+        toast({ title: 'Berhasil', description: 'User berhasil diperbarui' })
+        setEditUserOpen(false)
+        loadUsers()
+      } else {
+        toast({ title: 'Gagal', description: data.error, variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Terjadi kesalahan', variant: 'destructive' })
+    } finally {
+      setUserSaving(false)
+    }
+  }
+
+  // Delete user
+  const handleDeleteUser = async () => {
+    if (!deleteUserTarget) return
+    setDeleteUserLoading(true)
+    try {
+      const res = await fetch(`/api/users?id=${deleteUserTarget.id}`, { method: 'DELETE' })
+      const data = await res.json()
+      if (data.success) {
+        toast({ title: 'Berhasil', description: 'User berhasil dihapus' })
+        setDeleteUserOpen(false)
+        setDeleteUserTarget(null)
+        loadUsers()
+      } else {
+        toast({ title: 'Gagal', description: data.error, variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Terjadi kesalahan', variant: 'destructive' })
+    } finally {
+      setDeleteUserLoading(false)
+    }
+  }
+
+  // Update own profile
+  const handleUpdateProfile = async () => {
+    if (!editProfileForm.username || !editProfileForm.namaLengkap) {
+      toast({ title: 'Error', description: 'Username dan Nama Lengkap harus diisi', variant: 'destructive' })
+      return
+    }
+    setEditProfileSaving(true)
+    try {
+      const body: Record<string, string> = {
+        username: editProfileForm.username,
+        namaLengkap: editProfileForm.namaLengkap,
+      }
+      if (editProfileForm.password) body.password = editProfileForm.password
+
+      const res = await fetch('/api/auth/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setAuthUser(data.user)
+        setEditProfileOpen(false)
+        toast({ title: 'Berhasil', description: 'Profil berhasil diperbarui' })
+      } else {
+        toast({ title: 'Gagal', description: data.error, variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Terjadi kesalahan', variant: 'destructive' })
+    } finally {
+      setEditProfileSaving(false)
+    }
+  }
+
   // ==================== DATA FETCHING HOOKS (must be before conditional returns) ====================
   const fetchRegistrations = useCallback(async () => {
     setLoading(true)
@@ -2592,6 +2747,20 @@ export default function Home() {
   useEffect(() => {
     if (isAuthenticated) fetchSettings()
   }, [fetchSettings, isAuthenticated])
+
+  // Load users when Pengaturan tab is active
+  useEffect(() => {
+    if (activeTab === 'pengaturan' && authUser?.role === 'admin') {
+      loadUsers()
+    }
+  }, [activeTab, authUser?.role])
+
+  // Redirect verifikator away from restricted tabs
+  useEffect(() => {
+    if (authUser?.role === 'verifikator' && (activeTab === 'pengaturan' || activeTab === 'ranking')) {
+      setActiveTab('dashboard')
+    }
+  }, [activeTab, authUser?.role])
 
   // Auto-logout on refresh: clear session on every page load
   useEffect(() => {
@@ -3935,14 +4104,16 @@ export default function Home() {
                 <ClipboardPaste className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 <span className="hidden sm:inline">Paste Portal</span>
               </Button>
-              <Button
-                onClick={() => setImportDialogOpen(true)}
-                size="sm"
-                className="bg-white/10 hover:bg-white/20 text-white border border-white/20 h-8 sm:h-9 px-2 sm:px-3"
-              >
-                <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">Import CSV</span>
-              </Button>
+              {authUser?.role === 'admin' && (
+                <Button
+                  onClick={() => setImportDialogOpen(true)}
+                  size="sm"
+                  className="bg-white/10 hover:bg-white/20 text-white border border-white/20 h-8 sm:h-9 px-2 sm:px-3"
+                >
+                  <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Import CSV</span>
+                </Button>
+              )}
               {/* User info & Logout */}
               <div className="hidden sm:flex items-center gap-2 ml-1 pl-2 border-l border-white/20">
                 <div className="flex items-center gap-1.5">
@@ -3951,7 +4122,7 @@ export default function Home() {
                   </div>
                   <div className="hidden md:block">
                     <p className="text-xs font-medium text-white leading-tight">{authUser?.namaLengkap}</p>
-                    <p className="text-[10px] text-emerald-200/60 leading-tight">{authUser?.role === 'admin' ? 'Administrator' : 'Operator'}</p>
+                    <p className="text-[10px] text-emerald-200/60 leading-tight">{authUser?.role === 'admin' ? 'Administrator' : 'Verifikator'}</p>
                   </div>
                 </div>
               </div>
@@ -4055,17 +4226,19 @@ export default function Home() {
               <span className="text-[10px] font-semibold tracking-widest text-gray-400 uppercase shrink-0">Hasil</span>
               <div className="h-px bg-gray-200/80 flex-1" />
             </div>
-            <button
-              onClick={() => setActiveTab('ranking')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 relative group ${
-                activeTab === 'ranking'
-                  ? 'bg-amber-50 text-amber-700 font-medium shadow-sm shadow-amber-100/50 before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-[3px] before:h-5 before:bg-amber-500 before:rounded-full before:-ml-3'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              }`}
-            >
-              <Trophy className={`w-4 h-4 shrink-0 ${activeTab === 'ranking' ? 'text-amber-600' : 'text-gray-400 group-hover:text-gray-600'}`} />
-              <span>Perangkingan</span>
-            </button>
+            {authUser?.role === 'admin' && (
+              <button
+                onClick={() => setActiveTab('ranking')}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 relative group ${
+                  activeTab === 'ranking'
+                    ? 'bg-amber-50 text-amber-700 font-medium shadow-sm shadow-amber-100/50 before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-[3px] before:h-5 before:bg-amber-500 before:rounded-full before:-ml-3'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+              >
+                <Trophy className={`w-4 h-4 shrink-0 ${activeTab === 'ranking' ? 'text-amber-600' : 'text-gray-400 group-hover:text-gray-600'}`} />
+                <span>Perangkingan</span>
+              </button>
+            )}
             <button
               onClick={() => setActiveTab('diterima')}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 relative group ${
@@ -4144,17 +4317,19 @@ export default function Home() {
               <span className="text-[10px] font-semibold tracking-widest text-gray-400 uppercase shrink-0">Sistem</span>
               <div className="h-px bg-gray-200/80 flex-1" />
             </div>
-            <button
-              onClick={() => setActiveTab('pengaturan')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 relative group ${
-                activeTab === 'pengaturan'
-                  ? 'bg-gray-100 text-gray-700 font-medium shadow-sm before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-[3px] before:h-5 before:bg-gray-500 before:rounded-full before:-ml-3'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              }`}
-            >
-              <Settings className={`w-4 h-4 shrink-0 ${activeTab === 'pengaturan' ? 'text-gray-600' : 'text-gray-400 group-hover:text-gray-600'}`} />
-              <span>Pengaturan</span>
-            </button>
+            {authUser?.role === 'admin' && (
+              <button
+                onClick={() => setActiveTab('pengaturan')}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 relative group ${
+                  activeTab === 'pengaturan'
+                    ? 'bg-gray-100 text-gray-700 font-medium shadow-sm before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-[3px] before:h-5 before:bg-gray-500 before:rounded-full before:-ml-3'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+              >
+                <Settings className={`w-4 h-4 shrink-0 ${activeTab === 'pengaturan' ? 'text-gray-600' : 'text-gray-400 group-hover:text-gray-600'}`} />
+                <span>Pengaturan</span>
+              </button>
+            )}
           </nav>
 
           {/* Sidebar Footer - User Info */}
@@ -4165,7 +4340,7 @@ export default function Home() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-gray-900 truncate">{authUser?.namaLengkap}</p>
-                <p className="text-[10px] text-gray-400">{authUser?.role === 'admin' ? 'Administrator' : 'Operator'}</p>
+                <p className="text-[10px] text-gray-400">{authUser?.role === 'admin' ? 'Administrator' : 'Verifikator'}</p>
               </div>
             </div>
           </div>
@@ -4196,11 +4371,13 @@ export default function Home() {
                 <span className="hidden sm:inline">Data Pendaftar</span>
                 <span className="sm:hidden">Pendaftar</span>
               </TabsTrigger>
-              <TabsTrigger value="ranking" className="gap-1.5 rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm transition-all duration-300 data-[state=active]:bg-amber-500 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-amber-200/50 whitespace-nowrap">
-                <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">Perangkingan</span>
-                <span className="sm:hidden">Rangking</span>
-              </TabsTrigger>
+              {authUser?.role === 'admin' && (
+                <TabsTrigger value="ranking" className="gap-1.5 rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm transition-all duration-300 data-[state=active]:bg-amber-500 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-amber-200/50 whitespace-nowrap">
+                  <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Perangkingan</span>
+                  <span className="sm:hidden">Rangking</span>
+                </TabsTrigger>
+              )}
               <TabsTrigger value="diterima" className="gap-1.5 rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm transition-all duration-300 data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-emerald-200/50 whitespace-nowrap">
                 <ThumbsUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 Diterima
@@ -4239,11 +4416,13 @@ export default function Home() {
                   </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="pengaturan" className="gap-1.5 rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm transition-all duration-300 data-[state=active]:bg-gray-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-gray-200/50 whitespace-nowrap">
-                <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">Pengaturan</span>
-                <span className="sm:hidden">Setting</span>
-              </TabsTrigger>
+              {authUser?.role === 'admin' && (
+                <TabsTrigger value="pengaturan" className="gap-1.5 rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm transition-all duration-300 data-[state=active]:bg-gray-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-gray-200/50 whitespace-nowrap">
+                  <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Pengaturan</span>
+                  <span className="sm:hidden">Setting</span>
+                </TabsTrigger>
+              )}
             </TabsList>
           </div>
 
@@ -6355,11 +6534,154 @@ export default function Home() {
                 <div className="flex items-center gap-2 sm:gap-3">
                   <Settings className="w-6 h-6 sm:w-8 sm:h-8" />
                   <div>
-                    <h2 className="text-lg sm:text-2xl font-bold tracking-wide">PENGATURAN KUOTA</h2>
-                    <p className="text-sky-100 mt-0.5 sm:mt-1 text-xs sm:text-sm">SPMB 2026 — Atur kuota siswa dan persentase jalur pendaftaran</p>
+                    <h2 className="text-lg sm:text-2xl font-bold tracking-wide">PENGATURAN SISTEM</h2>
+                    <p className="text-sky-100 mt-0.5 sm:mt-1 text-xs sm:text-sm">SPMB 2026 — Atur user, kuota siswa, dan persentase jalur pendaftaran</p>
                   </div>
                 </div>
               </div>
+            </Card>
+
+            {/* Manajemen User */}
+            <Card className="shadow-sm hover:shadow-md transition-shadow">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <UserCog className="w-5 h-5 text-violet-600" />
+                    Manajemen User
+                  </CardTitle>
+                  <Button
+                    onClick={() => {
+                      setAddUserForm({ username: '', password: '', namaLengkap: '', role: 'verifikator' })
+                      setAddUserOpen(true)
+                    }}
+                    size="sm"
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Tambah User
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {/* Admin Profile Card */}
+                {authUser && (
+                  <div className="mb-4 p-4 rounded-xl bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-md">
+                          <span className="text-lg font-bold text-white">{authUser.namaLengkap?.charAt(0) || 'A'}</span>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900">{authUser.namaLengkap}</p>
+                          <p className="text-xs text-gray-500">@{authUser.username} · <span className="text-violet-600 font-medium">{authUser.role === 'admin' ? 'Administrator' : 'Verifikator'}</span></p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setEditProfileForm({ username: authUser.username, password: '', namaLengkap: authUser.namaLengkap })
+                          setEditProfileOpen(true)
+                        }}
+                        className="border-violet-200 text-violet-700 hover:bg-violet-50"
+                      >
+                        <Pencil className="w-3.5 h-3.5 mr-1" /> Edit Profil
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* User Table */}
+                {usersLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                    <p className="text-sm text-gray-400 ml-2">Memuat data user...</p>
+                  </div>
+                ) : (
+                  <div className="border rounded-xl overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-violet-50/80">
+                          <TableHead className="w-10 text-center">No</TableHead>
+                          <TableHead>Username</TableHead>
+                          <TableHead>Nama Lengkap</TableHead>
+                          <TableHead className="w-28 text-center">Role</TableHead>
+                          <TableHead className="w-24 text-center">Status</TableHead>
+                          <TableHead className="w-36 text-center">Login Terakhir</TableHead>
+                          <TableHead className="w-28 text-right">Aksi</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {users.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-center py-8 text-gray-400">
+                              Belum ada user terdaftar
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          users.map((user, idx) => (
+                            <TableRow key={user.id} className={!user.aktif ? 'opacity-50' : ''}>
+                              <TableCell className="text-center text-sm text-gray-500">{idx + 1}</TableCell>
+                              <TableCell className="font-mono text-sm">@{user.username}</TableCell>
+                              <TableCell className="font-medium text-sm">{user.namaLengkap}</TableCell>
+                              <TableCell className="text-center">
+                                <Badge className={`text-[10px] px-2 py-0.5 ${
+                                  user.role === 'admin'
+                                    ? 'bg-violet-100 text-violet-700 border border-violet-200'
+                                    : 'bg-sky-100 text-sky-700 border border-sky-200'
+                                }`}>
+                                  {user.role === 'admin' ? 'Admin' : 'Verifikator'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <span className={`inline-flex items-center gap-1 text-xs font-medium ${
+                                  user.aktif ? 'text-emerald-600' : 'text-gray-400'
+                                }`}>
+                                  {user.aktif ? <><CheckCircle2 className="w-3 h-3" /> Aktif</> : <><XCircle className="w-3 h-3" /> Nonaktif</>}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-center text-xs text-gray-400">
+                                {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-violet-600 hover:text-violet-800 hover:bg-violet-50 h-8 w-8 p-0"
+                                    onClick={() => {
+                                      setEditUserData({ id: user.id, username: user.username, namaLengkap: user.namaLengkap, role: user.role, aktif: user.aktif })
+                                      setEditUserForm({ username: user.username, password: '', namaLengkap: user.namaLengkap, role: user.role, aktif: user.aktif })
+                                      setEditUserOpen(true)
+                                    }}
+                                    title="Edit user"
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </Button>
+                                  {user.id !== authUser?.id && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
+                                      onClick={() => {
+                                        setDeleteUserTarget({ id: user.id, namaLengkap: user.namaLengkap })
+                                        setDeleteUserOpen(true)
+                                      }}
+                                      title="Hapus user"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
             </Card>
 
             {/* Kuota Siswa */}
@@ -6791,6 +7113,229 @@ export default function Home() {
                   <Button variant="outline" onClick={() => setAddJalurOpen(false)}>Batal</Button>
                   <Button onClick={addJalur} className="bg-emerald-600 hover:bg-emerald-700">
                     <Plus className="w-4 h-4" /> Tambah
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Add User Dialog */}
+            <Dialog open={addUserOpen} onOpenChange={setAddUserOpen}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Plus className="w-5 h-5 text-emerald-600" />
+                    Tambah User Baru
+                  </DialogTitle>
+                  <DialogDescription>Tambahkan user baru untuk mengakses sistem SPMB 2026</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Username</label>
+                    <Input
+                      value={addUserForm.username}
+                      onChange={(e) => setAddUserForm(prev => ({ ...prev, username: e.target.value }))}
+                      placeholder="Minimal 3 karakter"
+                      className="mt-1"
+                      autoComplete="off"
+                      readOnly
+                      onFocus={(e) => e.target.removeAttribute('readonly')}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Password</label>
+                    <Input
+                      type="text"
+                      value={addUserForm.password}
+                      onChange={(e) => setAddUserForm(prev => ({ ...prev, password: e.target.value }))}
+                      placeholder="Minimal 6 karakter"
+                      className="mt-1"
+                      autoComplete="off"
+                      readOnly
+                      onFocus={(e) => e.target.removeAttribute('readonly')}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Nama Lengkap</label>
+                    <Input
+                      value={addUserForm.namaLengkap}
+                      onChange={(e) => setAddUserForm(prev => ({ ...prev, namaLengkap: e.target.value }))}
+                      placeholder="Nama lengkap user"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Role</label>
+                    <select
+                      value={addUserForm.role}
+                      onChange={(e) => setAddUserForm(prev => ({ ...prev, role: e.target.value }))}
+                      className="mt-1 w-full h-10 px-3 border border-gray-200 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    >
+                      <option value="verifikator">Verifikator</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </div>
+                </div>
+                <DialogFooter className="gap-2">
+                  <Button variant="outline" onClick={() => setAddUserOpen(false)}>Batal</Button>
+                  <Button onClick={handleAddUser} disabled={userSaving} className="bg-emerald-600 hover:bg-emerald-700">
+                    {userSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                    Tambah
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Edit User Dialog */}
+            <Dialog open={editUserOpen} onOpenChange={setEditUserOpen}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Pencil className="w-5 h-5 text-violet-600" />
+                    Edit User
+                  </DialogTitle>
+                  <DialogDescription>Ubah data user @{editUserData?.username}</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Username</label>
+                    <Input
+                      value={editUserForm.username}
+                      onChange={(e) => setEditUserForm(prev => ({ ...prev, username: e.target.value }))}
+                      className="mt-1"
+                      autoComplete="off"
+                      readOnly
+                      onFocus={(e) => e.target.removeAttribute('readonly')}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Password</label>
+                    <Input
+                      type="text"
+                      value={editUserForm.password}
+                      onChange={(e) => setEditUserForm(prev => ({ ...prev, password: e.target.value }))}
+                      placeholder="Kosongkan jika tidak ingin mengubah password"
+                      className="mt-1"
+                      autoComplete="off"
+                      readOnly
+                      onFocus={(e) => e.target.removeAttribute('readonly')}
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Kosongkan jika tidak ingin mengubah password</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Nama Lengkap</label>
+                    <Input
+                      value={editUserForm.namaLengkap}
+                      onChange={(e) => setEditUserForm(prev => ({ ...prev, namaLengkap: e.target.value }))}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Role</label>
+                    <select
+                      value={editUserForm.role}
+                      onChange={(e) => setEditUserForm(prev => ({ ...prev, role: e.target.value }))}
+                      className="mt-1 w-full h-10 px-3 border border-gray-200 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    >
+                      <option value="verifikator">Verifikator</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <label className="text-sm font-medium text-gray-700">Status</label>
+                    <button
+                      type="button"
+                      onClick={() => setEditUserForm(prev => ({ ...prev, aktif: !prev.aktif }))}
+                      className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                        editUserForm.aktif
+                          ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                      }`}
+                    >
+                      {editUserForm.aktif ? <><CheckCircle2 className="w-3 h-3" /> Aktif</> : <><XCircle className="w-3 h-3" /> Nonaktif</>}
+                    </button>
+                  </div>
+                </div>
+                <DialogFooter className="gap-2">
+                  <Button variant="outline" onClick={() => setEditUserOpen(false)}>Batal</Button>
+                  <Button onClick={handleEditUser} disabled={userSaving} className="bg-violet-600 hover:bg-violet-700">
+                    {userSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    Simpan
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Edit Profile Dialog */}
+            <Dialog open={editProfileOpen} onOpenChange={setEditProfileOpen}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <UserCog className="w-5 h-5 text-violet-600" />
+                    Edit Profil Saya
+                  </DialogTitle>
+                  <DialogDescription>Ubah data profil dan password akun Anda</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Username</label>
+                    <Input
+                      value={editProfileForm.username}
+                      onChange={(e) => setEditProfileForm(prev => ({ ...prev, username: e.target.value }))}
+                      className="mt-1"
+                      autoComplete="off"
+                      readOnly
+                      onFocus={(e) => e.target.removeAttribute('readonly')}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Nama Lengkap</label>
+                    <Input
+                      value={editProfileForm.namaLengkap}
+                      onChange={(e) => setEditProfileForm(prev => ({ ...prev, namaLengkap: e.target.value }))}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Password Baru</label>
+                    <Input
+                      type="text"
+                      value={editProfileForm.password}
+                      onChange={(e) => setEditProfileForm(prev => ({ ...prev, password: e.target.value }))}
+                      placeholder="Kosongkan jika tidak ingin mengubah password"
+                      className="mt-1"
+                      autoComplete="off"
+                      readOnly
+                      onFocus={(e) => e.target.removeAttribute('readonly')}
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Kosongkan jika tidak ingin mengubah password</p>
+                  </div>
+                </div>
+                <DialogFooter className="gap-2">
+                  <Button variant="outline" onClick={() => setEditProfileOpen(false)}>Batal</Button>
+                  <Button onClick={handleUpdateProfile} disabled={editProfileSaving} className="bg-violet-600 hover:bg-violet-700">
+                    {editProfileSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    Simpan
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Delete User Dialog */}
+            <Dialog open={deleteUserOpen} onOpenChange={setDeleteUserOpen}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2 text-red-700">
+                    <Trash2 className="w-5 h-5" />
+                    Hapus User
+                  </DialogTitle>
+                  <DialogDescription>Apakah Anda yakin ingin menghapus user <strong>{deleteUserTarget?.namaLengkap}</strong>?</DialogDescription>
+                </DialogHeader>
+                <p className="text-sm text-gray-500">Tindakan ini tidak dapat dibatalkan. User yang dihapus tidak akan bisa login ke sistem.</p>
+                <DialogFooter className="gap-2">
+                  <Button variant="outline" onClick={() => setDeleteUserOpen(false)}>Batal</Button>
+                  <Button onClick={handleDeleteUser} disabled={deleteUserLoading} variant="destructive">
+                    {deleteUserLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                    Hapus
                   </Button>
                 </DialogFooter>
               </DialogContent>

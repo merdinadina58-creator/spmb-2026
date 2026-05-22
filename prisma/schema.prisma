@@ -82,7 +82,7 @@ model User {
   username    String   @unique
   password    String   // Hashed password
   namaLengkap String
-  role        String   @default("admin")  // admin, operator
+  role        String   @default("admin")  // admin, verifikator
   aktif       Boolean  @default(true)
   lastLogin   DateTime?
   createdAt   DateTime @default(now())
