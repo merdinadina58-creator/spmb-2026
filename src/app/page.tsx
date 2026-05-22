@@ -2706,11 +2706,13 @@ export default function Home() {
                       name="setup-nama-lengkap"
                       value={setupNamaLengkap}
                       onChange={(e) => setSetupNamaLengkap(e.target.value)}
+                      onFocus={(e) => e.target.removeAttribute('readonly')}
                       placeholder="Nama lengkap Anda"
                       className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-emerald-200/40 focus:border-emerald-400/50 focus:ring-emerald-400/30"
                       autoComplete="off"
                       data-lpignore="true"
                       data-1p-ignore
+                      readOnly
                       required
                     />
                   </div>
@@ -2723,11 +2725,13 @@ export default function Home() {
                       name="setup-username"
                       value={setupUsername}
                       onChange={(e) => setSetupUsername(e.target.value)}
+                      onFocus={(e) => e.target.removeAttribute('readonly')}
                       placeholder="Username untuk login"
                       className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-emerald-200/40 focus:border-emerald-400/50 focus:ring-emerald-400/30"
                       autoComplete="off"
                       data-lpignore="true"
                       data-1p-ignore
+                      readOnly
                       required
                       minLength={3}
                     />
@@ -2742,11 +2746,13 @@ export default function Home() {
                       name="setup-password"
                       value={setupPassword}
                       onChange={(e) => setSetupPassword(e.target.value)}
+                      onFocus={(e) => e.target.removeAttribute('readonly')}
                       placeholder="Minimal 6 karakter"
                       className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-emerald-200/40 focus:border-emerald-400/50 focus:ring-emerald-400/30 pr-10"
                       autoComplete="new-password"
                       data-lpignore="true"
                       data-1p-ignore
+                      readOnly
                       required
                       minLength={6}
                     />
@@ -2815,11 +2821,13 @@ export default function Home() {
                       name="username"
                       value={loginUsername}
                       onChange={(e) => setLoginUsername(e.target.value)}
+                      onFocus={(e) => e.target.removeAttribute('readonly')}
                       placeholder="Masukkan username"
                       className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-emerald-200/40 focus:border-emerald-400/50 focus:ring-emerald-400/30"
                       autoComplete="off"
                       data-lpignore="true"
                       data-1p-ignore
+                      readOnly
                       required
                       autoFocus
                     />
@@ -2834,11 +2842,13 @@ export default function Home() {
                       name="password"
                       value={loginPassword}
                       onChange={(e) => setLoginPassword(e.target.value)}
+                      onFocus={(e) => e.target.removeAttribute('readonly')}
                       placeholder="Masukkan password"
                       className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-emerald-200/40 focus:border-emerald-400/50 focus:ring-emerald-400/30 pr-10"
-                      autoComplete="current-password"
+                      autoComplete="new-password"
                       data-lpignore="true"
                       data-1p-ignore
+                      readOnly
                       required
                     />
                     <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-200/40 hover:text-emerald-200" onClick={() => setShowLoginPassword(!showLoginPassword)}>
@@ -6306,8 +6316,11 @@ export default function Home() {
                         type="email"
                         value={portalSyncEmail}
                         onChange={(e) => setPortalSyncEmail(e.target.value)}
+                        onFocus={(e) => e.target.removeAttribute('readonly')}
                         placeholder="email@disdik.sumutprov.go.id"
                         className="mt-1.5"
+                        autoComplete="off"
+                        readOnly
                       />
                     </div>
                     <div>
@@ -6318,8 +6331,11 @@ export default function Home() {
                         type="password"
                         value={portalSyncPassword}
                         onChange={(e) => setPortalSyncPassword(e.target.value)}
+                        onFocus={(e) => e.target.removeAttribute('readonly')}
                         placeholder="Masukkan password..."
                         className="mt-1.5"
+                        autoComplete="new-password"
+                        readOnly
                       />
                     </div>
                   </div>
@@ -6588,8 +6604,10 @@ export default function Home() {
                   name="current-password"
                   value={changePasswordCurrent}
                   onChange={(e) => setChangePasswordCurrent(e.target.value)}
+                  onFocus={(e) => e.target.removeAttribute('readonly')}
                   placeholder="Masukkan password lama"
-                  autoComplete="current-password"
+                  autoComplete="off"
+                  readOnly
                   required
                 />
                 <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600" onClick={() => setShowCurrentPassword(!showCurrentPassword)}>
@@ -6605,8 +6623,10 @@ export default function Home() {
                   name="new-password"
                   value={changePasswordNew}
                   onChange={(e) => setChangePasswordNew(e.target.value)}
+                  onFocus={(e) => e.target.removeAttribute('readonly')}
                   placeholder="Minimal 6 karakter"
                   autoComplete="new-password"
+                  readOnly
                   required
                   minLength={6}
                 />
@@ -6622,8 +6642,10 @@ export default function Home() {
                 name="confirm-new-password"
                 value={changePasswordConfirm}
                 onChange={(e) => setChangePasswordConfirm(e.target.value)}
+                onFocus={(e) => e.target.removeAttribute('readonly')}
                 placeholder="Ulangi password baru"
                 autoComplete="new-password"
+                readOnly
                 required
                 minLength={6}
               />
