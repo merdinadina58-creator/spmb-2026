@@ -119,6 +119,7 @@ interface Registration {
   jurusan: string
   npsnSekolahAsal: string
   namaSekolahAsal: string
+  noHp?: string | null
   status: string
   waktuDaftar: string
   verificationStatus: string
@@ -1013,6 +1014,7 @@ function LembarVerifikasiSheet({
       jurusan: reg.jurusan || '',
       npsnSekolahAsal: reg.npsnSekolahAsal || '',
       namaSekolahAsal: reg.namaSekolahAsal || '',
+      noHp: reg.noHp || '',
       skorJarak: reg.skorJarak || '',
       skorNilaiRaport: reg.skorNilaiRaport || '',
       kekuranganVerifikasi: reg.kekuranganVerifikasi || '',
@@ -1475,6 +1477,7 @@ function LembarVerifikasiSheet({
                     </span>
                   </TableHead>
                   <TableHead>Asal Sekolah</TableHead>
+                  <TableHead className="hidden md:table-cell">No. Hp</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
@@ -1482,14 +1485,14 @@ function LembarVerifikasiSheet({
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={14} className="text-center py-12">
+                    <TableCell colSpan={15} className="text-center py-12">
                       <Loader2 className="w-6 h-6 animate-spin mx-auto text-gray-400" />
                       <p className="text-sm text-gray-400 mt-2">Memuat data...</p>
                     </TableCell>
                   </TableRow>
                 ) : !data || data.registrations.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={14} className="text-center py-12">
+                    <TableCell colSpan={15} className="text-center py-12">
                       <Icon className={`w-10 h-10 mx-auto text-gray-300 mb-2`} />
                       <p className="text-gray-500 font-medium">Belum ada data pendaftar {config.label}</p>
                       <p className="text-sm text-gray-400">Import CSV untuk memulai verifikasi</p>
@@ -1694,6 +1697,8 @@ function LembarVerifikasiSheet({
                       <TableCell className="font-medium text-sm">{reg.nama}</TableCell>
                       {/* Asal Sekolah */}
                       <TableCell className="text-sm text-gray-600">{reg.namaSekolahAsal}</TableCell>
+                      {/* No. Hp */}
+                      <TableCell className="hidden md:table-cell text-sm text-gray-600">{reg.noHp || '-'}</TableCell>
                       {/* Status */}
                       <TableCell>
                         <Badge variant="outline" className={STATUS_COLORS[reg.verificationStatus]}>
@@ -2034,6 +2039,10 @@ function LembarVerifikasiSheet({
                   <div>
                     <label className="text-xs text-gray-500 font-medium">Nama Sekolah Asal</label>
                     <Input value={editForm.namaSekolahAsal || ''} onChange={e => setEditForm({...editForm, namaSekolahAsal: e.target.value})} className="mt-1" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-500 font-medium">No. Hp</label>
+                    <Input value={editForm.noHp || '' } onChange={e => setEditForm({...editForm, noHp: e.target.value})} className="mt-1" />
                   </div>
                 </div>
               </div>
@@ -2987,6 +2996,7 @@ export default function Home() {
     // Phone numbers
     result['noTelpSiswa'] = findNextLine('No.Telp/Hp Siswa') || findNextLine('No. Telp/Hp Siswa') || findNextLine('NoTelp/Hp Siswa')
     result['noTelpOrangtua'] = findNextLine('No.Telp/Hp Orangtua') || findNextLine('No. Telp/Hp Orangtua') || findNextLine('NoTelp/Hp Orangtua/Wali')
+    result['noHp'] = result['noTelpSiswa'] || ''
 
     // Asal Sekolah
     result['namaSekolahAsal'] = findNextLine('Asal Sekolah')
@@ -3363,6 +3373,7 @@ export default function Home() {
         jurusan: row['Jurusan'] || '',
         npsnSekolahAsal: row['NPSN Sekolah Asal'] || '',
         namaSekolahAsal: row['Nama Sekolah Asal'] || '',
+        noHp: row['No. Hp'] || row['No Hp'] || row['No.Hp'] || '',
         status: row['Status'] || importStatus,
         waktuDaftar: row['Waktu Daftar'] || '',
       }))
@@ -3563,6 +3574,7 @@ export default function Home() {
       jurusan: reg.jurusan || '',
       npsnSekolahAsal: reg.npsnSekolahAsal || '',
       namaSekolahAsal: reg.namaSekolahAsal || '',
+      noHp: reg.noHp || '',
       skorJarak: reg.skorJarak || '',
       skorNilaiRaport: reg.skorNilaiRaport || '',
       kekuranganVerifikasi: reg.kekuranganVerifikasi || '',
@@ -3653,6 +3665,7 @@ export default function Home() {
         <td style="padding:6px 8px;border:1px solid #ddd">${reg.nama}</td>
         <td style="padding:6px 8px;border:1px solid #ddd">${reg.nisn}</td>
         <td style="padding:6px 8px;border:1px solid #ddd">${reg.subJalur}</td>
+        <td style="padding:6px 8px;border:1px solid #ddd">${reg.noHp || '-'}</td>
         <td style="padding:6px 8px;border:1px solid #ddd">${reg.namaSekolahAsal}</td>
         <td style="padding:6px 8px;border:1px solid #ddd">${reg.jurusan}</td>
         <td style="padding:6px 8px;border:1px solid #ddd">${reg.tanggalVerif || '-'}</td>
@@ -3662,7 +3675,7 @@ export default function Home() {
     printWindow.document.write(`<!DOCTYPE html><html><head><title>${title}</title>
       <style>body{font-family:Arial,sans-serif;margin:20px}table{width:100%;border-collapse:collapse}th{background:#f5f5f5;padding:8px;border:1px solid #ddd;text-align:left}h1{text-align:center;font-size:18px}h2{text-align:center;font-size:14px;color:#666}</style></head>
       <body><h1>${title}</h1><h2>SPMB 2026</h2><p style="text-align:center;color:#888">Dicetak pada: ${new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
-      <table><thead><tr><th>No</th><th>No. Registrasi</th><th>Nama</th><th>NISN</th><th>Sub Jalur</th><th>Sekolah Asal</th><th>Jurusan</th><th>Tanggal Verif</th>${type === 'ditolak' ? '<th>Alasan Penolakan</th>' : ''}</tr></thead><tbody>${rows}</tbody></table></body></html>`)
+      <table><thead><tr><th>No</th><th>No. Registrasi</th><th>Nama</th><th>NISN</th><th>Sub Jalur</th><th>No. Hp</th><th>Sekolah Asal</th><th>Jurusan</th><th>Tanggal Verif</th>${type === 'ditolak' ? '<th>Alasan Penolakan</th>' : ''}</tr></thead><tbody>${rows}</tbody></table></body></html>`)
     printWindow.document.close()
     printWindow.print()
   }
@@ -3723,6 +3736,7 @@ export default function Home() {
         <td style="padding:6px 8px;border:1px solid #ddd;text-align:center"><span style="display:inline-block;width:26px;height:26px;line-height:26px;border-radius:50%;background:${rankBg};color:${rankColor};font-size:11px;font-weight:bold">${rankNum}</span></td>
         <td style="padding:6px 8px;border:1px solid #ddd;text-align:center;font-size:11px">${r.subJalur as string}${jalurRank > 0 ? `<br><span style="font-size:9px;color:#0369a1">#${jalurRank}</span>` : ''}</td>
         <td style="padding:6px 8px;border:1px solid #ddd;font-size:12px"><strong>${r.nama as string}</strong><br><span style="font-size:9px;color:#999">NISN: ${r.nisn as string}</span></td>
+        <td style="padding:6px 8px;border:1px solid #ddd;font-size:11px">${r.noHp as string || '-'}</td>
         <td style="padding:6px 8px;border:1px solid #ddd;font-size:11px">${r.namaSekolahAsal as string}</td>
         <td style="padding:6px 8px;border:1px solid #ddd;font-size:11px">${r.jurusan as string}</td>
         <td style="padding:6px 8px;border:1px solid #ddd;text-align:right;font-size:11px;font-weight:${rankingTampilan === 'jarak' ? 'bold' : 'normal'};color:${jarakNum > 0 ? '#0369a1' : '#ccc'}">${r.lokasiJarak as string || '-'}</td>
@@ -3771,6 +3785,7 @@ export default function Home() {
             <th style="width:40px">No</th>
             <th style="width:90px">Jalur</th>
             <th>Nama Pendaftar</th>
+            <th>No. Hp</th>
             <th>Sekolah Asal</th>
             <th>Jurusan</th>
             <th class="${rankingTampilan === 'jarak' ? 'active' : ''}" style="width:80px">Jarak</th>
@@ -3853,6 +3868,7 @@ export default function Home() {
         'No. Registrasi': r.noRegistrasi as string,
         'Nama': r.nama as string,
         'NISN': r.nisn as string,
+        'No. Hp': r.noHp as string,
         'Sekolah Asal': r.namaSekolahAsal as string,
         'Jurusan': r.jurusan as string,
         'Jarak': r.lokasiJarak as string || '-',
@@ -4638,6 +4654,7 @@ export default function Home() {
                         </TableHead>
                         <TableHead className="hidden md:table-cell">NISN</TableHead>
                         <TableHead>Sub Jalur</TableHead>
+                        <TableHead className="hidden md:table-cell">No. Hp</TableHead>
                         <TableHead className="hidden lg:table-cell">Sekolah Asal</TableHead>
                         <TableHead className="hidden lg:table-cell">Jurusan</TableHead>
                         <TableHead>Status</TableHead>
@@ -4647,14 +4664,14 @@ export default function Home() {
                     <TableBody>
                       {loading ? (
                         <TableRow>
-                          <TableCell colSpan={10} className="text-center py-12">
+                          <TableCell colSpan={11} className="text-center py-12">
                             <Loader2 className="w-6 h-6 animate-spin mx-auto text-gray-400" />
                             <p className="text-sm text-gray-400 mt-2">Memuat data...</p>
                           </TableCell>
                         </TableRow>
                       ) : registrations.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={10} className="text-center py-12">
+                          <TableCell colSpan={11} className="text-center py-12">
                             <FileSpreadsheet className="w-10 h-10 mx-auto text-gray-300 mb-2" />
                             <p className="text-gray-500 font-medium">Belum ada data pendaftar</p>
                             <p className="text-sm text-gray-400">Import CSV untuk memulai verifikasi</p>
@@ -4688,6 +4705,7 @@ export default function Home() {
                                 {reg.subJalur}
                               </Badge>
                             </TableCell>
+                            <TableCell className="hidden md:table-cell text-sm text-gray-600">{reg.noHp || '-'}</TableCell>
                             <TableCell className="hidden lg:table-cell text-sm">{reg.namaSekolahAsal}</TableCell>
                             <TableCell className="hidden lg:table-cell">
                               <Badge variant="secondary">{reg.jurusan}</Badge>
@@ -5308,6 +5326,7 @@ export default function Home() {
                         </TableHead>
                         <TableHead className="hidden md:table-cell">NISN</TableHead>
                         <TableHead>Sub Jalur</TableHead>
+                        <TableHead className="hidden md:table-cell">No. Hp</TableHead>
                         <TableHead className="hidden lg:table-cell">Sekolah Asal</TableHead>
                         <TableHead className="hidden lg:table-cell">Jurusan</TableHead>
                         <TableHead className="hidden sm:table-cell">Tanggal Verif</TableHead>
@@ -5337,6 +5356,7 @@ export default function Home() {
                                 {reg.subJalur}
                               </Badge>
                             </TableCell>
+                            <TableCell className="hidden md:table-cell text-sm text-gray-600">{reg.noHp || '-'}</TableCell>
                             <TableCell className="hidden lg:table-cell text-sm">{reg.namaSekolahAsal}</TableCell>
                             <TableCell className="hidden lg:table-cell">
                               <Badge variant="secondary">{reg.jurusan}</Badge>
@@ -5360,7 +5380,7 @@ export default function Home() {
                           </TableRow>
                         )) : (
                           <TableRow>
-                            <TableCell colSpan={9} className="text-center py-12">
+                            <TableCell colSpan={10} className="text-center py-12">
                               <UserCheck className="w-10 h-10 mx-auto text-gray-300 mb-2" />
                               <p className="text-gray-500 font-medium">Belum ada pendaftar yang diterima</p>
                               <p className="text-sm text-gray-400">Verifikasi pendaftar untuk menerimanya</p>
@@ -5485,6 +5505,7 @@ export default function Home() {
                         </TableHead>
                         <TableHead className="hidden md:table-cell">NISN</TableHead>
                         <TableHead>Sub Jalur</TableHead>
+                        <TableHead className="hidden md:table-cell">No. Hp</TableHead>
                         <TableHead className="hidden lg:table-cell">Sekolah Asal</TableHead>
                         <TableHead className="hidden lg:table-cell">Jurusan</TableHead>
                         <TableHead className="hidden sm:table-cell">Alasan Penolakan</TableHead>
@@ -5511,6 +5532,7 @@ export default function Home() {
                                 {reg.subJalur}
                               </Badge>
                             </TableCell>
+                            <TableCell className="hidden md:table-cell text-sm text-gray-600">{reg.noHp || '-'}</TableCell>
                             <TableCell className="hidden lg:table-cell text-sm">{reg.namaSekolahAsal}</TableCell>
                             <TableCell className="hidden lg:table-cell">
                               <Badge variant="secondary">{reg.jurusan}</Badge>
@@ -5534,7 +5556,7 @@ export default function Home() {
                           </TableRow>
                         )) : (
                           <TableRow>
-                            <TableCell colSpan={9} className="text-center py-12">
+                            <TableCell colSpan={10} className="text-center py-12">
                               <UserX className="w-10 h-10 mx-auto text-gray-300 mb-2" />
                               <p className="text-gray-500 font-medium">Belum ada pendaftar yang ditolak</p>
                               <p className="text-sm text-gray-400">Semua pendaftar dalam proses verifikasi</p>
@@ -5741,6 +5763,7 @@ export default function Home() {
                         <TableHead>No. Registrasi</TableHead>
                         <TableHead>Nama Peserta</TableHead>
                         <TableHead>Sub Jalur</TableHead>
+                        <TableHead className="hidden md:table-cell">No. Hp</TableHead>
                         <TableHead>Sekolah Asal</TableHead>
                         <TableHead>Status Verifikasi</TableHead>
                         <TableHead>Status Kelulusan</TableHead>
@@ -5757,7 +5780,7 @@ export default function Home() {
                         if (allKelulusanData.length === 0) {
                           return (
                             <TableRow>
-                              <TableCell colSpan={9} className="text-center py-12">
+                              <TableCell colSpan={10} className="text-center py-12">
                                 <GraduationCap className="w-10 h-10 mx-auto text-gray-300 mb-2" />
                                 <p className="text-gray-500 font-medium">Belum ada data kelulusan</p>
                                 <p className="text-sm text-gray-400">Tentukan status kelulusan peserta dari menu aksi</p>
@@ -5786,6 +5809,7 @@ export default function Home() {
                                 {reg.subJalur}
                               </Badge>
                             </TableCell>
+                            <TableCell className="hidden md:table-cell text-sm text-gray-600">{reg.noHp || '-'}</TableCell>
                             <TableCell className="text-sm text-gray-600">{reg.namaSekolahAsal}</TableCell>
                             <TableCell>
                               <Badge variant="outline" className={STATUS_COLORS[reg.verificationStatus]}>
@@ -6080,6 +6104,7 @@ export default function Home() {
                         <TableHead>No. Registrasi</TableHead>
                         <TableHead>Nama Peserta</TableHead>
                         <TableHead>Sub Jalur</TableHead>
+                        <TableHead className="hidden md:table-cell">No. Hp</TableHead>
                         <TableHead>Sekolah Asal</TableHead>
                         <TableHead>Status Kelulusan</TableHead>
                         <TableHead>Status Daftar Ulang</TableHead>
@@ -6096,7 +6121,7 @@ export default function Home() {
                         if (allDUData.length === 0) {
                           return (
                             <TableRow>
-                              <TableCell colSpan={9} className="text-center py-12">
+                              <TableCell colSpan={10} className="text-center py-12">
                                 <ClipboardCheck className="w-10 h-10 mx-auto text-gray-300 mb-2" />
                                 <p className="text-gray-500 font-medium">Belum ada data daftar ulang</p>
                                 <p className="text-sm text-gray-400">Tentukan status daftar ulang peserta dari menu aksi</p>
@@ -6125,6 +6150,7 @@ export default function Home() {
                                 {reg.subJalur}
                               </Badge>
                             </TableCell>
+                            <TableCell className="hidden md:table-cell text-sm text-gray-600">{reg.noHp || '-'}</TableCell>
                             <TableCell className="text-sm text-gray-600">{reg.namaSekolahAsal}</TableCell>
                             <TableCell>
                               <Badge variant="outline" className={STATUS_LULUS_COLORS[reg.statusLulus || 'BELUM']}>
@@ -6758,7 +6784,7 @@ export default function Home() {
                 <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
                 <div className="text-sm text-amber-700">
                   <p className="font-medium">Format CSV yang diharapkan:</p>
-                  <p className="mt-1">No.Registrasi, Nama, NISN, Sub Jalur, NPSN Sekolah Pilihan, Nama Sekolah Pilihan, Jurusan, NPSN Sekolah Asal, Nama Sekolah Asal, Status, Waktu Daftar</p>
+                  <p className="mt-1">No.Registrasi, Nama, NISN, Sub Jalur, NPSN Sekolah Pilihan, Nama Sekolah Pilihan, Jurusan, NPSN Sekolah Asal, Nama Sekolah Asal, No. Hp, Status, Waktu Daftar</p>
                 </div>
               </div>
             </div>
@@ -7615,6 +7641,12 @@ export default function Home() {
                         <p className="text-sm font-mono">{detailTarget.noTelpSiswa}</p>
                       </div>
                     )}
+                    {detailTarget.noHp && (
+                      <div className="bg-gray-50 rounded-lg p-2">
+                        <label className="text-xs text-gray-500 font-medium">No. Hp</label>
+                        <p className="text-sm font-mono">{detailTarget.noHp}</p>
+                      </div>
+                    )}
                     {detailTarget.noTelpOrangtua && (
                       <div className="bg-gray-50 rounded-lg p-2">
                         <label className="text-xs text-gray-500 font-medium">Telp Orangtua</label>
@@ -7967,6 +7999,10 @@ export default function Home() {
                   <div>
                     <label className="text-xs text-gray-500 font-medium">Nama Sekolah Asal</label>
                     <Input value={editForm.namaSekolahAsal || ''} onChange={e => setEditForm({...editForm, namaSekolahAsal: e.target.value})} className="mt-1" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-500 font-medium">No. Hp</label>
+                    <Input value={editForm.noHp || '' } onChange={e => setEditForm({...editForm, noHp: e.target.value})} className="mt-1" />
                   </div>
                 </div>
               </div>
