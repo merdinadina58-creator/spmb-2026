@@ -11,10 +11,7 @@ echo "DATABASE_URL=$DATABASE_URL" > /home/z/my-project/.env
 bun install
 
 # Generate Prisma Client
-npx prisma generate
-
-# Push schema to database
-npx prisma db push
+DATABASE_URL="$DATABASE_URL" npx prisma generate
 
 # Start dev server
-bun run dev
+DATABASE_URL="$DATABASE_URL" bun run dev

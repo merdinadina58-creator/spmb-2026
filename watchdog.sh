@@ -4,9 +4,8 @@ export DATABASE_URL="postgresql://neondb_owner:npg_lJQ5pe2ayVGH@ep-bitter-salad-
 echo "DATABASE_URL=$DATABASE_URL" > /home/z/my-project/.env
 
 while true; do
-  echo "[$(date)] Starting dev server..." >> /home/z/my-project/dev.log
+  echo "[$(date)] Starting dev server..." > /home/z/my-project/dev.log
   ./node_modules/.bin/next dev -p 3000 >> /home/z/my-project/dev.log 2>&1
-  EXIT=$?
-  echo "[$(date)] Server exited with code $EXIT, restarting in 2s..." >> /home/z/my-project/dev.log
+  echo "[$(date)] Server exited, restarting in 2s..." >> /home/z/my-project/dev.log
   sleep 2
 done
