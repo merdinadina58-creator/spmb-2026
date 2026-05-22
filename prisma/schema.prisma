@@ -21,7 +21,6 @@ model Registration {
   jurusan             String
   npsnSekolahAsal     String
   namaSekolahAsal     String
-  noHp                String?
   status              String   @default("ON PROGRESS")
   waktuDaftar         String
   verificationStatus  String   @default("PENDING") // PENDING, VERIFIED, REJECTED

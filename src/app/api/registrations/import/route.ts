@@ -11,7 +11,6 @@ interface CSVPayload {
   jurusan: string;
   npsnSekolahAsal: string;
   namaSekolahAsal: string;
-  noHp?: string;
   status: string;
   waktuDaftar: string;
   // Portal fields
@@ -135,7 +134,6 @@ export async function POST(request: NextRequest) {
           mergeField('jurusan', row.jurusan, existing.jurusan);
           mergeField('npsnSekolahAsal', row.npsnSekolahAsal, existing.npsnSekolahAsal);
           mergeField('namaSekolahAsal', row.namaSekolahAsal, existing.namaSekolahAsal);
-          mergeField('noHp', row.noHp, existing.noHp);
           mergeField('status', row.status, existing.status);
           mergeField('waktuDaftar', row.waktuDaftar, existing.waktuDaftar);
           mergeField('npsnSekolahPilihan', row.npsnSekolahPilihan, existing.npsnSekolahPilihan);
@@ -181,7 +179,6 @@ export async function POST(request: NextRequest) {
               jurusan: row.jurusan || '',
               npsnSekolahAsal: row.npsnSekolahAsal || '',
               namaSekolahAsal: row.namaSekolahAsal || '',
-              noHp: row.noHp || '',
               status: row.status || 'ON PROGRESS',
               waktuDaftar: row.waktuDaftar || '',
               // Map CSV status to verificationStatus: DITERIMA→VERIFIED, DITOLAK→REJECTED, else PENDING
