@@ -2399,6 +2399,7 @@ export default function Home() {
   // Pengaturan state
   const [kuota, setKuota] = useState(0)
   const [appName, setAppName] = useState('SPMB 2026')
+  const [schoolName, setSchoolName] = useState('')
   const [jalurConfigs, setJalurConfigs] = useState<Array<{ id: string; nama: string; persentase: number; urutan: number; aktif: boolean }>>([])
   const [settingsLoading, setSettingsLoading] = useState(false)
   const [settingsSaving, setSettingsSaving] = useState(false)
@@ -2781,6 +2782,7 @@ export default function Home() {
       setKuota(data.kuota || 0)
       setJalurConfigs(data.jalurConfigs || [])
       setAppName(data.appName || 'SPMB 2026')
+      setSchoolName(data.schoolName || '')
     } catch {
       toast({ title: 'Error', description: 'Gagal memuat pengaturan', variant: 'destructive' })
     } finally {
@@ -2844,6 +2846,7 @@ export default function Home() {
         if (res.ok) {
           const data = await res.json()
           if (data.appName) setAppName(data.appName)
+          if (data.schoolName) setSchoolName(data.schoolName)
         }
       } catch {
         // silently fail, default name will be used
@@ -2900,7 +2903,8 @@ export default function Home() {
           <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-2xl shadow-emerald-500/30 animate-pulse">
             <ShieldCheck className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-xl font-bold text-white mb-2">{appName}</h1>
+          <h1 className="text-xl font-bold text-white mb-1">{appName}</h1>
+          {schoolName && <p className="text-emerald-200 text-base font-semibold mb-2">{schoolName}</p>}
           <p className="text-emerald-200 text-sm">Memuat sistem...</p>
         </div>
       </div>
@@ -2917,7 +2921,8 @@ export default function Home() {
             <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-2xl shadow-emerald-500/30">
               <ShieldCheck className="w-10 h-10 text-white" />
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">{appName}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">{appName}</h1>
+            {schoolName && <p className="text-emerald-200 text-lg font-semibold mb-2">{schoolName}</p>}
             <p className="text-emerald-200/80 text-sm">Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
             <div className="mt-4 inline-flex items-center gap-2 bg-amber-500/20 border border-amber-400/30 rounded-full px-4 py-1.5">
               <AlertCircle className="w-4 h-4 text-amber-300" />
@@ -3033,7 +3038,8 @@ export default function Home() {
             <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-2xl shadow-emerald-500/30">
               <ShieldCheck className="w-10 h-10 text-white" />
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">{appName}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">{appName}</h1>
+            {schoolName && <p className="text-emerald-200 text-lg sm:text-xl font-semibold mb-1">{schoolName}</p>}
             <p className="text-emerald-200/80 text-sm">Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
           </div>
 
@@ -3116,7 +3122,7 @@ export default function Home() {
 
           {/* Footer */}
           <p className="text-center text-emerald-200/40 text-xs mt-6">
-            &copy; 2026 {appName}
+            &copy; 2026 {appName}{schoolName ? ` — ${schoolName}` : ''}
           </p>
         </div>
       </div>
@@ -3419,18 +3425,18 @@ export default function Home() {
     }
   }
 
-  // Save app name
+  // Save app name & school name
   const saveAppName = async () => {
     setSettingsSaving(true)
     try {
       const res = await fetch('/api/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ appName }),
+        body: JSON.stringify({ appName, schoolName }),
       })
       const data = await res.json()
       if (data.success) {
-        toast({ title: 'Tersimpan', description: `Nama aplikasi: ${appName}` })
+        toast({ title: 'Tersimpan', description: `Nama aplikasi: ${appName}${schoolName ? ' — ' + schoolName : ''}` })
       }
     } catch {
       toast({ title: 'Gagal', description: 'Gagal menyimpan nama aplikasi', variant: 'destructive' })
@@ -3921,7 +3927,7 @@ export default function Home() {
     `).join('')
     printWindow.document.write(`<!DOCTYPE html><html><head><title>${title}</title>
       <style>body{font-family:Arial,sans-serif;margin:20px}table{width:100%;border-collapse:collapse}th{background:#f5f5f5;padding:8px;border:1px solid #ddd;text-align:left}h1{text-align:center;font-size:18px}h2{text-align:center;font-size:14px;color:#666}</style></head>
-      <body><h1>${title}</h1><h2>${appName}</h2><p style="text-align:center;color:#888">Dicetak pada: ${new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+      <body><h1>${title}</h1><h2>${appName}</h2>${schoolName ? `<h3 style="text-align:center;font-size:13px;color:#555">${schoolName}</h3>` : ''}<p style="text-align:center;color:#888">Dicetak pada: ${new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
       <table><thead><tr><th>No</th><th>No. Registrasi</th><th>Nama</th><th>NISN</th><th>Sub Jalur</th><th>Sekolah Asal</th><th>Jurusan</th><th>Tanggal Verif</th>${type === 'ditolak' ? '<th>Alasan Penolakan</th>' : ''}</tr></thead><tbody>${rows}</tbody></table></body></html>`)
     printWindow.document.close()
     printWindow.print()
@@ -3999,6 +4005,7 @@ export default function Home() {
         .header { text-align: center; margin-bottom: 15px; border-bottom: 3px double #333; padding-bottom: 10px; }
         .header h1 { font-size: 18px; margin: 0 0 4px 0; letter-spacing: 2px; }
         .header h2 { font-size: 14px; margin: 0 0 4px 0; color: #555; }
+        .header h3 { font-size: 12px; margin: 0 0 4px 0; color: #777; }
         .header p { font-size: 10px; color: #888; margin: 2px 0; }
         .filters { display: flex; gap: 15px; justify-content: center; margin-bottom: 10px; font-size: 10px; color: #666; }
         .filters span { background: #f5f5f5; padding: 2px 8px; border-radius: 4px; border: 1px solid #ddd; }
@@ -4015,8 +4022,9 @@ export default function Home() {
     <body>
       <div class="header">
         <h1>LAPORAN PERANGKINGAN</h1>
-        <h2>${appName} — Sistem Penerimaan Peserta Didik Baru</h2>
-        <p>Diurutkan berdasarkan: <strong>${sortLabel}</strong> · Dicetak pada: ${new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+        <h2>${appName}</h2>
+        ${schoolName ? `<h3>${schoolName}</h3>` : ''}
+        <p>Sistem Penerimaan Peserta Didik Baru · Diurutkan berdasarkan: <strong>${sortLabel}</strong> · Dicetak pada: ${new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
       </div>
       <div class="filters">
         <span>Jalur: ${jalurLabel}</span>
@@ -4140,7 +4148,7 @@ export default function Home() {
 
     // Add a summary sheet
     const summaryData = [
-      { 'Keterangan': `LAPORAN PERANGKINGAN ${appName}`, 'Nilai': '' },
+      { 'Keterangan': `LAPORAN PERANGKINGAN ${appName}${schoolName ? ' — ' + schoolName : ''}`, 'Nilai': '' },
       { 'Keterangan': 'Diurutkan Berdasarkan', 'Nilai': sortLabel },
       { 'Keterangan': 'Jalur', 'Nilai': jalurLabel },
       { 'Keterangan': 'Sekolah Asal', 'Nilai': rankingSekolah !== 'all' ? rankingSekolah : 'Semua Sekolah' },
@@ -4179,7 +4187,8 @@ export default function Home() {
               </div>
               <div>
                 <h1 className="text-base sm:text-xl font-bold text-white tracking-tight">{appName}</h1>
-                <p className="text-[10px] sm:text-xs text-emerald-200 hidden xs:block">Sistem Verifikasi Pendaftaran</p>
+                {schoolName && <p className="text-[10px] sm:text-xs text-emerald-200 font-medium">{schoolName}</p>}
+                <p className="text-[10px] sm:text-xs text-emerald-200/60 hidden xs:block">Sistem Verifikasi Pendaftaran</p>
               </div>
             </div>
             <div className="flex items-center gap-1.5 sm:gap-2">
@@ -4251,6 +4260,7 @@ export default function Home() {
               </div>
               <div>
                 <h2 className="text-sm font-bold text-gray-900 tracking-tight">{appName}</h2>
+                {schoolName && <p className="text-[10px] text-gray-500 font-medium leading-tight">{schoolName}</p>}
                 <p className="text-[10px] text-gray-400 font-medium">Menu Navigasi</p>
               </div>
             </div>
@@ -4521,6 +4531,7 @@ export default function Home() {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                 <div>
                   <h2 className="text-lg sm:text-2xl font-bold tracking-tight">Selamat Datang di {appName}</h2>
+                  {schoolName && <p className="text-emerald-100 text-sm font-semibold">{schoolName}</p>}
                   <p className="text-emerald-100 mt-0.5 text-xs sm:text-sm">Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
                 </div>
                 <div className="flex gap-2 sm:gap-3">
@@ -5583,7 +5594,7 @@ export default function Home() {
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
                   <div>
                     <h2 className="text-lg sm:text-2xl font-bold tracking-wide">LAPORAN PESERTA DITERIMA</h2>
-                    <p className="text-emerald-100 mt-0.5 sm:mt-1 text-xs sm:text-sm">{appName} — Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
+                    <p className="text-emerald-100 mt-0.5 sm:mt-1 text-xs sm:text-sm">{appName}{schoolName ? ` — ${schoolName}` : ''} — Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
                   </div>
                   <Button variant="secondary" size="sm" className="bg-white/20 hover:bg-white/30 text-white border-white/30" onClick={() => handlePrintReport('diterima')}>
                     <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2" /> <span className="text-xs sm:text-sm">Cetak</span>
@@ -5772,7 +5783,7 @@ export default function Home() {
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
                   <div>
                     <h2 className="text-lg sm:text-2xl font-bold tracking-wide">LAPORAN PESERTA DITOLAK</h2>
-                    <p className="text-red-100 mt-0.5 sm:mt-1 text-xs sm:text-sm">{appName} — Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
+                    <p className="text-red-100 mt-0.5 sm:mt-1 text-xs sm:text-sm">{appName}{schoolName ? ` — ${schoolName}` : ''} — Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
                   </div>
                   <Button variant="secondary" size="sm" className="bg-white/20 hover:bg-white/30 text-white border-white/30" onClick={() => handlePrintReport('ditolak')}>
                     <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2" /> <span className="text-xs sm:text-sm">Cetak</span>
@@ -5946,7 +5957,7 @@ export default function Home() {
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
                   <div>
                     <h2 className="text-lg sm:text-2xl font-bold tracking-wide">KELULUSAN</h2>
-                    <p className="text-emerald-100 mt-0.5 sm:mt-1 text-xs sm:text-sm">{appName} — Status Kelulusan Peserta Didik Baru</p>
+                    <p className="text-emerald-100 mt-0.5 sm:mt-1 text-xs sm:text-sm">{appName}{schoolName ? ` — ${schoolName}` : ''} — Status Kelulusan Peserta Didik Baru</p>
                   </div>
                   <Button variant="secondary" size="sm" className="bg-white/20 hover:bg-white/30 text-white border-white/30" onClick={() => handlePrintReport('kelulusan')}>
                     <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2" /> <span className="text-xs sm:text-sm">Cetak</span>
@@ -6285,7 +6296,7 @@ export default function Home() {
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
                   <div>
                     <h2 className="text-lg sm:text-2xl font-bold tracking-wide">DAFTAR ULANG</h2>
-                    <p className="text-blue-100 mt-0.5 sm:mt-1 text-xs sm:text-sm">{appName} — Status Daftar Ulang Peserta Didik Baru</p>
+                    <p className="text-blue-100 mt-0.5 sm:mt-1 text-xs sm:text-sm">{appName}{schoolName ? ` — ${schoolName}` : ''} — Status Daftar Ulang Peserta Didik Baru</p>
                   </div>
                   <Button variant="secondary" size="sm" className="bg-white/20 hover:bg-white/30 text-white border-white/30" onClick={() => handlePrintReport('daftar-ulang')}>
                     <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2" /> <span className="text-xs sm:text-sm">Cetak</span>
@@ -6625,7 +6636,7 @@ export default function Home() {
                   <Settings className="w-6 h-6 sm:w-8 sm:h-8" />
                   <div>
                     <h2 className="text-lg sm:text-2xl font-bold tracking-wide">PENGATURAN SISTEM</h2>
-                    <p className="text-sky-100 mt-0.5 sm:mt-1 text-xs sm:text-sm">{appName} — Atur user, kuota siswa, dan persentase jalur pendaftaran</p>
+                    <p className="text-sky-100 mt-0.5 sm:mt-1 text-xs sm:text-sm">{appName}{schoolName ? ` — ${schoolName}` : ''} — Atur user, kuota siswa, dan persentase jalur pendaftaran</p>
                   </div>
                 </div>
               </div>
@@ -6784,28 +6795,40 @@ export default function Home() {
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-4">
-                  <div className="flex-1">
-                    <label className="text-sm text-gray-500 font-medium">Nama yang ditampilkan di header, sidebar, dan halaman login</label>
-                    <div className="flex items-center gap-2 mt-2">
+                  <div className="flex-1 space-y-3">
+                    <div>
+                      <label className="text-sm text-gray-500 font-medium">Nama Aplikasi</label>
+                      <p className="text-[10px] text-gray-400">Ditampilkan di baris pertama (contoh: SPMB 2026)</p>
                       <Input
                         value={appName}
                         onChange={(e) => setAppName(e.target.value)}
-                        className="text-lg font-bold"
-                        placeholder="Contoh: SPMB 2026 SMA Negeri 1 Telukdalam"
+                        className="text-lg font-bold mt-1"
+                        placeholder="Contoh: SPMB 2026"
                       />
-                      <Button
-                        onClick={saveAppName}
-                        disabled={settingsSaving}
-                        className="bg-emerald-600 hover:bg-emerald-700"
-                      >
-                        {settingsSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                        Simpan
-                      </Button>
                     </div>
+                    <div>
+                      <label className="text-sm text-gray-500 font-medium">Nama Sekolah</label>
+                      <p className="text-[10px] text-gray-400">Ditampilkan di baris kedua (contoh: SMA Negeri 1 Telukdalam)</p>
+                      <Input
+                        value={schoolName}
+                        onChange={(e) => setSchoolName(e.target.value)}
+                        className="text-base font-semibold mt-1"
+                        placeholder="Contoh: SMA Negeri 1 Telukdalam"
+                      />
+                    </div>
+                    <Button
+                      onClick={saveAppName}
+                      disabled={settingsSaving}
+                      className="bg-emerald-600 hover:bg-emerald-700"
+                    >
+                      {settingsSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                      Simpan
+                    </Button>
                   </div>
                   <div className="bg-emerald-50 rounded-xl p-5 text-center border border-emerald-100 min-w-[200px]">
                     <p className="text-lg font-bold text-emerald-700 leading-tight">{appName}</p>
-                    <p className="text-xs text-emerald-600 font-medium mt-1">Nama Aplikasi</p>
+                    {schoolName && <p className="text-sm font-semibold text-emerald-600 mt-0.5">{schoolName}</p>}
+                    <p className="text-xs text-emerald-500 font-medium mt-1">Nama Aplikasi</p>
                   </div>
                 </div>
               </CardContent>
@@ -7204,7 +7227,7 @@ export default function Home() {
                     <Plus className="w-5 h-5 text-emerald-600" />
                     Tambah Jalur Baru
                   </DialogTitle>
-                  <DialogDescription>Tambahkan jalur pendaftaran baru untuk {appName}</DialogDescription>
+                  <DialogDescription>Tambahkan jalur pendaftaran baru untuk {appName}{schoolName ? ` — ${schoolName}` : ''}</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
@@ -7253,7 +7276,7 @@ export default function Home() {
                     <Plus className="w-5 h-5 text-emerald-600" />
                     Tambah User Baru
                   </DialogTitle>
-                  <DialogDescription>Tambahkan user baru untuk mengakses sistem {appName}</DialogDescription>
+                  <DialogDescription>Tambahkan user baru untuk mengakses sistem {appName}{schoolName ? ` — ${schoolName}` : ''}</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
@@ -7478,7 +7501,7 @@ export default function Home() {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-1 sm:gap-2">
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" />
-              <p className="text-xs sm:text-sm text-emerald-100 font-medium">&copy; 2026 {appName}</p>
+              <p className="text-xs sm:text-sm text-emerald-100 font-medium">&copy; 2026 {appName}{schoolName ? ` — ${schoolName}` : ''}</p>
             </div>
             <p className="text-[10px] sm:text-xs text-emerald-200/60">Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
           </div>
@@ -7706,7 +7729,7 @@ export default function Home() {
               {/* Header Preview */}
               <div className="text-center mb-4 pb-3 border-b-4 border-double border-gray-300">
                 <h2 className="text-lg font-bold tracking-wider">LAPORAN PERANGKINGAN</h2>
-                <p className="text-sm text-gray-500">{appName} — Sistem Penerimaan Peserta Didik Baru</p>
+                <p className="text-sm text-gray-500">{appName}{schoolName ? ` — ${schoolName}` : ''} — Sistem Penerimaan Peserta Didik Baru</p>
                 <p className="text-xs text-gray-400 mt-1">
                   Diurutkan berdasarkan: <strong>{rankingTampilan === 'jarak' ? 'Jarak Terdekat' : rankingTampilan === 'nilai' ? 'Nilai Tertinggi' : 'Skor Komposit'}</strong>
                   {' · '}Dicetak pada: {new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
@@ -8206,7 +8229,7 @@ export default function Home() {
             </DialogTitle>
             <DialogDescription>
               {verifyAction === 'VERIFIED'
-                ? `Apakah Anda yakin ingin MENERIMA pendaftar ini? Data akan diverifikasi dan diterima di ${appName}.`
+                ? `Apakah Anda yakin ingin MENERIMA pendaftar ini? Data akan diverifikasi dan diterima di ${appName}${schoolName ? ' — ' + schoolName : ''}.`
                 : 'Apakah Anda yakin ingin MENOLAK pendaftar ini? Berikan alasan penolakan jika diperlukan.'}
             </DialogDescription>
           </DialogHeader>
@@ -8327,7 +8350,7 @@ export default function Home() {
               <Users className="w-5 h-5 text-emerald-600" />
               Detail Pendaftar
             </DialogTitle>
-            <DialogDescription>Informasi lengkap pendaftar {appName}</DialogDescription>
+            <DialogDescription>Informasi lengkap pendaftar {appName}{schoolName ? ` — ${schoolName}` : ''}</DialogDescription>
           </DialogHeader>
 
           {detailTarget && (
