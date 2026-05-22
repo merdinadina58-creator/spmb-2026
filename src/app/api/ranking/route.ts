@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (sekolah !== 'all') {
-      where.namaSekolahPilihan = sekolah
+      where.namaSekolahAsal = sekolah
     }
 
     if (jurusan !== 'all') {
@@ -206,7 +206,7 @@ export async function GET(request: NextRequest) {
     // Get available filter options
     const allRegistrations = await db.registration.findMany()
     const jalurOptions = [...new Set(allRegistrations.map(r => r.subJalur))].sort()
-    const sekolahOptions = [...new Set(allRegistrations.map(r => r.namaSekolahPilihan))].sort()
+    const sekolahOptions = [...new Set(allRegistrations.map(r => r.namaSekolahAsal))].sort()
     const jurusanOptions = [...new Set(allRegistrations.map(r => r.jurusan))].sort()
 
     // Calculate kuota per jalur

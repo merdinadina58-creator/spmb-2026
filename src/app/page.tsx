@@ -156,7 +156,7 @@ interface DashboardStats {
   rejected: number
   pending: number
   bySubJalur: { name: string; count: number }[]
-  bySekolahPilihan: { name: string; count: number }[]
+  bySekolahAsal: { name: string; count: number }[]
   byJurusan: { name: string; count: number }[]
   byStatus: { name: string; count: number }[]
   verifiedBySubJalur: { name: string; count: number }[]
@@ -3650,7 +3650,7 @@ export default function Home() {
         <td style="padding:6px 8px;border:1px solid #ddd">${reg.nama}</td>
         <td style="padding:6px 8px;border:1px solid #ddd">${reg.nisn}</td>
         <td style="padding:6px 8px;border:1px solid #ddd">${reg.subJalur}</td>
-        <td style="padding:6px 8px;border:1px solid #ddd">${reg.namaSekolahPilihan}</td>
+        <td style="padding:6px 8px;border:1px solid #ddd">${reg.namaSekolahAsal}</td>
         <td style="padding:6px 8px;border:1px solid #ddd">${reg.jurusan}</td>
         <td style="padding:6px 8px;border:1px solid #ddd">${reg.tanggalVerif || '-'}</td>
         ${type === 'ditolak' ? `<td style="padding:6px 8px;border:1px solid #ddd">${reg.verificationNote || '-'}</td>` : ''}
@@ -3659,7 +3659,7 @@ export default function Home() {
     printWindow.document.write(`<!DOCTYPE html><html><head><title>${title}</title>
       <style>body{font-family:Arial,sans-serif;margin:20px}table{width:100%;border-collapse:collapse}th{background:#f5f5f5;padding:8px;border:1px solid #ddd;text-align:left}h1{text-align:center;font-size:18px}h2{text-align:center;font-size:14px;color:#666}</style></head>
       <body><h1>${title}</h1><h2>SPMB 2026</h2><p style="text-align:center;color:#888">Dicetak pada: ${new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
-      <table><thead><tr><th>No</th><th>No. Registrasi</th><th>Nama</th><th>NISN</th><th>Sub Jalur</th><th>Sekolah Pilihan</th><th>Jurusan</th><th>Tanggal Verif</th>${type === 'ditolak' ? '<th>Alasan Penolakan</th>' : ''}</tr></thead><tbody>${rows}</tbody></table></body></html>`)
+      <table><thead><tr><th>No</th><th>No. Registrasi</th><th>Nama</th><th>NISN</th><th>Sub Jalur</th><th>Sekolah Asal</th><th>Jurusan</th><th>Tanggal Verif</th>${type === 'ditolak' ? '<th>Alasan Penolakan</th>' : ''}</tr></thead><tbody>${rows}</tbody></table></body></html>`)
     printWindow.document.close()
     printWindow.print()
   }
@@ -3720,7 +3720,7 @@ export default function Home() {
         <td style="padding:6px 8px;border:1px solid #ddd;text-align:center"><span style="display:inline-block;width:26px;height:26px;line-height:26px;border-radius:50%;background:${rankBg};color:${rankColor};font-size:11px;font-weight:bold">${rankNum}</span></td>
         <td style="padding:6px 8px;border:1px solid #ddd;text-align:center;font-size:11px">${r.subJalur as string}${jalurRank > 0 ? `<br><span style="font-size:9px;color:#0369a1">#${jalurRank}</span>` : ''}</td>
         <td style="padding:6px 8px;border:1px solid #ddd;font-size:12px"><strong>${r.nama as string}</strong><br><span style="font-size:9px;color:#999">NISN: ${r.nisn as string}</span></td>
-        <td style="padding:6px 8px;border:1px solid #ddd;font-size:11px">${r.namaSekolahPilihan as string}</td>
+        <td style="padding:6px 8px;border:1px solid #ddd;font-size:11px">${r.namaSekolahAsal as string}</td>
         <td style="padding:6px 8px;border:1px solid #ddd;font-size:11px">${r.jurusan as string}</td>
         <td style="padding:6px 8px;border:1px solid #ddd;text-align:right;font-size:11px;font-weight:${rankingTampilan === 'jarak' ? 'bold' : 'normal'};color:${jarakNum > 0 ? '#0369a1' : '#ccc'}">${r.lokasiJarak as string || '-'}</td>
         <td style="padding:6px 8px;border:1px solid #ddd;text-align:right;font-size:11px;font-weight:${rankingTampilan === 'nilai' ? 'bold' : 'normal'};color:${nilaiNum > 0 ? '#047857' : '#ccc'}">${r.nilaiRataRata as string || r.skorNilaiRaport as string || '-'}</td>
@@ -3768,7 +3768,7 @@ export default function Home() {
             <th style="width:40px">No</th>
             <th style="width:90px">Jalur</th>
             <th>Nama Pendaftar</th>
-            <th>Sekolah Pilihan</th>
+            <th>Sekolah Asal</th>
             <th>Jurusan</th>
             <th class="${rankingTampilan === 'jarak' ? 'active' : ''}" style="width:80px">Jarak</th>
             <th class="${rankingTampilan === 'nilai' ? 'active' : ''}" style="width:70px">Nilai</th>
@@ -3850,9 +3850,8 @@ export default function Home() {
         'No. Registrasi': r.noRegistrasi as string,
         'Nama': r.nama as string,
         'NISN': r.nisn as string,
-        'Sekolah Pilihan': r.namaSekolahPilihan as string,
-        'Jurusan': r.jurusan as string,
         'Sekolah Asal': r.namaSekolahAsal as string,
+        'Jurusan': r.jurusan as string,
         'Jarak': r.lokasiJarak as string || '-',
         'Skor Jarak': r.skorJarak as string || '-',
         'Nilai Rata-Rata': r.nilaiRataRata as string || '-',
@@ -3881,7 +3880,7 @@ export default function Home() {
       { 'Keterangan': 'LAPORAN PERANGKINGAN SPMB 2026', 'Nilai': '' },
       { 'Keterangan': 'Diurutkan Berdasarkan', 'Nilai': sortLabel },
       { 'Keterangan': 'Jalur', 'Nilai': jalurLabel },
-      { 'Keterangan': 'Sekolah Pilihan', 'Nilai': rankingSekolah !== 'all' ? rankingSekolah : 'Semua Sekolah' },
+      { 'Keterangan': 'Sekolah Asal', 'Nilai': rankingSekolah !== 'all' ? rankingSekolah : 'Semua Sekolah' },
       { 'Keterangan': 'Jurusan', 'Nilai': rankingJurusan !== 'all' ? rankingJurusan : 'Semua Jurusan' },
       { 'Keterangan': 'Status Verifikasi', 'Nilai': rankingStatus !== 'all' ? (rankingStatus === 'VERIFIED' ? 'Diterima' : rankingStatus === 'REJECTED' ? 'Ditolak' : 'Menunggu') : 'Semua Status' },
       { 'Keterangan': 'Total Pendaftar', 'Nilai': reRanked.length.toString() },
@@ -4181,20 +4180,20 @@ export default function Home() {
                 </CardContent>
               </Card>
 
-              {/* By Sekolah Pilihan */}
+              {/* By Sekolah Asal */}
               <Card className="shadow-sm">
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
                     <School className="w-4 h-4" />
-                    Berdasarkan Sekolah Pilihan
+                    Berdasarkan Sekolah Asal
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3 max-h-64 overflow-y-auto">
-                    {(stats?.bySekolahPilihan || []).map((item) => (
+                    {(stats?.bySekolahAsal || []).map((item) => (
                       <StatBar key={item.name} label={item.name} count={item.count} total={stats?.total || 0} color="bg-sky-500" />
                     ))}
-                    {(stats?.bySekolahPilihan || []).length === 0 && (
+                    {(stats?.bySekolahAsal || []).length === 0 && (
                       <p className="text-sm text-gray-400 text-center py-4">Belum ada data</p>
                     )}
                   </div>
@@ -4445,7 +4444,7 @@ export default function Home() {
                         </TableHead>
                         <TableHead className="hidden md:table-cell">NISN</TableHead>
                         <TableHead>Sub Jalur</TableHead>
-                        <TableHead className="hidden lg:table-cell">Sekolah Pilihan</TableHead>
+                        <TableHead className="hidden lg:table-cell">Sekolah Asal</TableHead>
                         <TableHead className="hidden lg:table-cell">Jurusan</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">Aksi</TableHead>
@@ -4495,7 +4494,7 @@ export default function Home() {
                                 {reg.subJalur}
                               </Badge>
                             </TableCell>
-                            <TableCell className="hidden lg:table-cell text-sm">{reg.namaSekolahPilihan}</TableCell>
+                            <TableCell className="hidden lg:table-cell text-sm">{reg.namaSekolahAsal}</TableCell>
                             <TableCell className="hidden lg:table-cell">
                               <Badge variant="secondary">{reg.jurusan}</Badge>
                             </TableCell>
@@ -4660,7 +4659,7 @@ export default function Home() {
                   </div>
                   {/* Sekolah Filter */}
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-gray-500">Sekolah Pilihan</label>
+                    <label className="text-xs font-medium text-gray-500">Sekolah Asal</label>
                     <Select value={rankingSekolah} onValueChange={setRankingSekolah}>
                       <SelectTrigger className="h-9 text-xs">
                         <SelectValue />
@@ -4734,7 +4733,7 @@ export default function Home() {
                             </span>
                             <div className="flex-1 min-w-0">
                               <p className="text-xs font-medium text-gray-900 truncate">{r.nama as string}</p>
-                              <p className="text-[10px] text-gray-500">{r.namaSekolahPilihan as string} — {r.jurusan as string}</p>
+                              <p className="text-[10px] text-gray-500">{r.namaSekolahAsal as string} — {r.jurusan as string}</p>
                             </div>
                             <div className="text-right shrink-0">
                               <p className="text-xs font-bold text-sky-700">{r.lokasiJarak as string || '-'}</p>
@@ -4777,7 +4776,7 @@ export default function Home() {
                             </span>
                             <div className="flex-1 min-w-0">
                               <p className="text-xs font-medium text-gray-900 truncate">{r.nama as string}</p>
-                              <p className="text-[10px] text-gray-500">{r.namaSekolahPilihan as string} — {r.jurusan as string}</p>
+                              <p className="text-[10px] text-gray-500">{r.namaSekolahAsal as string} — {r.jurusan as string}</p>
                             </div>
                             <div className="text-right shrink-0">
                               <p className="text-xs font-bold text-emerald-700">{r.nilaiRataRata as string || r.skorNilaiRaport as string || '-'}</p>
@@ -4862,7 +4861,7 @@ export default function Home() {
                               {namaSortRanking === 'none' ? <ArrowUpDown className="w-3 h-3 text-gray-400" /> : namaSortRanking === 'asc' ? <ArrowUpAZ className="w-3 h-3 text-amber-600" /> : <ArrowDownAZ className="w-3 h-3 text-amber-600" />}
                             </span>
                           </TableHead>
-                          <TableHead className="font-semibold text-xs">Sekolah Pilihan</TableHead>
+                          <TableHead className="font-semibold text-xs">Sekolah Asal</TableHead>
                           <TableHead className="font-semibold text-xs">Jurusan</TableHead>
                           <TableHead className="text-right font-semibold text-xs cursor-pointer select-none group" onClick={() => setRankingTampilan('jarak')}>
                             <span className="inline-flex items-center gap-1">
@@ -4960,7 +4959,7 @@ export default function Home() {
                                   <p className="text-[10px] text-gray-400">NISN: {r.nisn as string}</p>
                                 </div>
                               </TableCell>
-                              <TableCell className="text-xs text-gray-700">{r.namaSekolahPilihan as string}</TableCell>
+                              <TableCell className="text-xs text-gray-700">{r.namaSekolahAsal as string}</TableCell>
                               <TableCell className="text-xs text-gray-600">{r.jurusan as string}</TableCell>
                               <TableCell className="text-right" style={rankingTampilan === 'jarak' ? { backgroundColor: 'rgba(186, 230, 253, 0.3)' } : undefined}>
                                 <span className={`text-xs font-semibold ${jarakNum > 0 ? 'text-sky-700' : 'text-gray-300'}`}>
@@ -5071,7 +5070,7 @@ export default function Home() {
                     </SelectContent>
                   </Select>
                   <Select value={diterimaFilterSekolah} onValueChange={setDiterimaFilterSekolah}>
-                    <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Sekolah Pilihan" /></SelectTrigger>
+                    <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Sekolah Asal" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Semua Sekolah</SelectItem>
                       {(stats?.verifiedBySekolah || []).map((item) => (
@@ -5084,7 +5083,7 @@ export default function Home() {
                       const list = stats?.verifiedList || []
                       const filtered = list.filter(r =>
                         (diterimaFilterJalur === 'all' || r.subJalur === diterimaFilterJalur) &&
-                        (diterimaFilterSekolah === 'all' || r.namaSekolahPilihan === diterimaFilterSekolah)
+                        (diterimaFilterSekolah === 'all' || r.namaSekolahAsal === diterimaFilterSekolah)
                       )
                       return filtered.length
                     })()} dari {stats?.verified || 0} peserta
@@ -5115,7 +5114,7 @@ export default function Home() {
                         </TableHead>
                         <TableHead className="hidden md:table-cell">NISN</TableHead>
                         <TableHead>Sub Jalur</TableHead>
-                        <TableHead className="hidden lg:table-cell">Sekolah Pilihan</TableHead>
+                        <TableHead className="hidden lg:table-cell">Sekolah Asal</TableHead>
                         <TableHead className="hidden lg:table-cell">Jurusan</TableHead>
                         <TableHead className="hidden sm:table-cell">Tanggal Verif</TableHead>
                         <TableHead className="text-right">Aksi</TableHead>
@@ -5126,7 +5125,7 @@ export default function Home() {
                         const list = stats?.verifiedList || []
                         const filtered = list.filter(r =>
                           (diterimaFilterJalur === 'all' || r.subJalur === diterimaFilterJalur) &&
-                          (diterimaFilterSekolah === 'all' || r.namaSekolahPilihan === diterimaFilterSekolah)
+                          (diterimaFilterSekolah === 'all' || r.namaSekolahAsal === diterimaFilterSekolah)
                         )
                         const sorted = [...filtered].sort((a, b) => {
                           if (namaSortDiterima === 'asc') return (a.nama || '').localeCompare(b.nama || '')
@@ -5144,7 +5143,7 @@ export default function Home() {
                                 {reg.subJalur}
                               </Badge>
                             </TableCell>
-                            <TableCell className="hidden lg:table-cell text-sm">{reg.namaSekolahPilihan}</TableCell>
+                            <TableCell className="hidden lg:table-cell text-sm">{reg.namaSekolahAsal}</TableCell>
                             <TableCell className="hidden lg:table-cell">
                               <Badge variant="secondary">{reg.jurusan}</Badge>
                             </TableCell>
@@ -5292,7 +5291,7 @@ export default function Home() {
                         </TableHead>
                         <TableHead className="hidden md:table-cell">NISN</TableHead>
                         <TableHead>Sub Jalur</TableHead>
-                        <TableHead className="hidden lg:table-cell">Sekolah Pilihan</TableHead>
+                        <TableHead className="hidden lg:table-cell">Sekolah Asal</TableHead>
                         <TableHead className="hidden lg:table-cell">Jurusan</TableHead>
                         <TableHead className="hidden sm:table-cell">Alasan Penolakan</TableHead>
                         <TableHead className="text-right">Aksi</TableHead>
@@ -5318,7 +5317,7 @@ export default function Home() {
                                 {reg.subJalur}
                               </Badge>
                             </TableCell>
-                            <TableCell className="hidden lg:table-cell text-sm">{reg.namaSekolahPilihan}</TableCell>
+                            <TableCell className="hidden lg:table-cell text-sm">{reg.namaSekolahAsal}</TableCell>
                             <TableCell className="hidden lg:table-cell">
                               <Badge variant="secondary">{reg.jurusan}</Badge>
                             </TableCell>
@@ -5548,7 +5547,7 @@ export default function Home() {
                         <TableHead>No. Registrasi</TableHead>
                         <TableHead>Nama Peserta</TableHead>
                         <TableHead>Sub Jalur</TableHead>
-                        <TableHead>Sekolah Pilihan</TableHead>
+                        <TableHead>Sekolah Asal</TableHead>
                         <TableHead>Status Verifikasi</TableHead>
                         <TableHead>Status Kelulusan</TableHead>
                         <TableHead className="text-right">Aksi</TableHead>
@@ -5593,7 +5592,7 @@ export default function Home() {
                                 {reg.subJalur}
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-sm text-gray-600">{reg.namaSekolahPilihan}</TableCell>
+                            <TableCell className="text-sm text-gray-600">{reg.namaSekolahAsal}</TableCell>
                             <TableCell>
                               <Badge variant="outline" className={STATUS_COLORS[reg.verificationStatus]}>
                                 {reg.verificationStatus === 'PENDING' ? 'Menunggu' :
@@ -5887,7 +5886,7 @@ export default function Home() {
                         <TableHead>No. Registrasi</TableHead>
                         <TableHead>Nama Peserta</TableHead>
                         <TableHead>Sub Jalur</TableHead>
-                        <TableHead>Sekolah Pilihan</TableHead>
+                        <TableHead>Sekolah Asal</TableHead>
                         <TableHead>Status Kelulusan</TableHead>
                         <TableHead>Status Daftar Ulang</TableHead>
                         <TableHead className="text-right">Aksi</TableHead>
@@ -5932,7 +5931,7 @@ export default function Home() {
                                 {reg.subJalur}
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-sm text-gray-600">{reg.namaSekolahPilihan}</TableCell>
+                            <TableCell className="text-sm text-gray-600">{reg.namaSekolahAsal}</TableCell>
                             <TableCell>
                               <Badge variant="outline" className={STATUS_LULUS_COLORS[reg.statusLulus || 'BELUM']}>
                                 {reg.statusLulus === 'LULUS' ? 'Lulus' :
@@ -6753,7 +6752,7 @@ export default function Home() {
                       <TableHead className="w-10 text-center font-semibold">No</TableHead>
                       <TableHead className="w-20 text-center font-semibold">Jalur</TableHead>
                       <TableHead className="font-semibold">Nama Pendaftar</TableHead>
-                      <TableHead className="font-semibold">Sekolah Pilihan</TableHead>
+                      <TableHead className="font-semibold">Sekolah Asal</TableHead>
                       <TableHead className="font-semibold">Jurusan</TableHead>
                       <TableHead className={`text-right font-semibold ${rankingTampilan === 'jarak' ? 'bg-amber-50' : ''}`}>Jarak</TableHead>
                       <TableHead className={`text-right font-semibold ${rankingTampilan === 'nilai' ? 'bg-amber-50' : ''}`}>Nilai</TableHead>
@@ -6811,7 +6810,7 @@ export default function Home() {
                             <p className="text-xs font-medium">{r.nama as string}</p>
                             <p className="text-[9px] text-gray-400">NISN: {r.nisn as string}</p>
                           </TableCell>
-                          <TableCell className="text-xs p-1">{r.namaSekolahPilihan as string}</TableCell>
+                          <TableCell className="text-xs p-1">{r.namaSekolahAsal as string}</TableCell>
                           <TableCell className="text-xs p-1 text-gray-600">{r.jurusan as string}</TableCell>
                           <TableCell className={`text-right p-1 ${rankingTampilan === 'jarak' ? 'bg-sky-50/50 font-bold' : ''}`}>
                             <span className={`text-xs ${jarakNum > 0 ? 'text-sky-700' : 'text-gray-300'}`}>{r.lokasiJarak as string || '-'}</span>
@@ -7387,18 +7386,10 @@ export default function Home() {
               </div>
 
               <div className="border-t pt-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Sekolah Pilihan</h4>
-                <div className="bg-sky-50 rounded-lg p-3">
-                  <p className="text-sm font-medium text-sky-800">{detailTarget.namaSekolahPilihan}</p>
-                  <p className="text-xs text-sky-600">NPSN: {detailTarget.npsnSekolahPilihan}</p>
-                </div>
-              </div>
-
-              <div>
                 <h4 className="text-sm font-medium text-gray-700 mb-2">Sekolah Asal</h4>
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <p className="text-sm font-medium">{detailTarget.namaSekolahAsal}</p>
-                  <p className="text-xs text-gray-500">NPSN: {detailTarget.npsnSekolahAsal}</p>
+                <div className="bg-sky-50 rounded-lg p-3">
+                  <p className="text-sm font-medium text-sky-800">{detailTarget.namaSekolahAsal}</p>
+                  <p className="text-xs text-sky-600">NPSN: {detailTarget.npsnSekolahAsal}</p>
                 </div>
               </div>
 

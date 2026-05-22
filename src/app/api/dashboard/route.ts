@@ -26,9 +26,9 @@ export async function GET() {
       orderBy: { _count: { id: 'desc' } },
     });
 
-    // By sekolah pilihan (all)
-    const bySekolahPilihan = await db.registration.groupBy({
-      by: ['namaSekolahPilihan'],
+    // By sekolah asal (all)
+    const bySekolahAsal = await db.registration.groupBy({
+      by: ['namaSekolahAsal'],
       _count: { id: true },
       orderBy: { _count: { id: 'desc' } },
     });
@@ -56,7 +56,7 @@ export async function GET() {
     });
 
     const verifiedBySekolah = await db.registration.groupBy({
-      by: ['namaSekolahPilihan'],
+      by: ['namaSekolahAsal'],
       _count: { id: true },
       where: { verificationStatus: 'VERIFIED' },
       orderBy: { _count: { id: 'desc' } },
@@ -84,7 +84,7 @@ export async function GET() {
     });
 
     const rejectedBySekolah = await db.registration.groupBy({
-      by: ['namaSekolahPilihan'],
+      by: ['namaSekolahAsal'],
       _count: { id: true },
       where: { verificationStatus: 'REJECTED' },
       orderBy: { _count: { id: 'desc' } },
@@ -190,8 +190,8 @@ export async function GET() {
         name: item.subJalur,
         count: item._count.id,
       })),
-      bySekolahPilihan: bySekolahPilihan.map(item => ({
-        name: item.namaSekolahPilihan,
+      bySekolahAsal: bySekolahAsal.map(item => ({
+        name: item.namaSekolahAsal,
         count: item._count.id,
       })),
       byJurusan: byJurusan.map(item => ({
@@ -208,7 +208,7 @@ export async function GET() {
         count: item._count.id,
       })),
       verifiedBySekolah: verifiedBySekolah.map(item => ({
-        name: item.namaSekolahPilihan,
+        name: item.namaSekolahAsal,
         count: item._count.id,
       })),
       verifiedByJurusan: verifiedByJurusan.map(item => ({
@@ -222,7 +222,7 @@ export async function GET() {
         count: item._count.id,
       })),
       rejectedBySekolah: rejectedBySekolah.map(item => ({
-        name: item.namaSekolahPilihan,
+        name: item.namaSekolahAsal,
         count: item._count.id,
       })),
       rejectedByJurusan: rejectedByJurusan.map(item => ({
