@@ -4825,7 +4825,6 @@ export default function Home() {
                             {groupBySekolah ? <ChevronDown className="w-3 h-3 text-emerald-600" /> : <ChevronUp className="w-3 h-3 text-gray-400" />}
                           </span>
                         </TableHead>
-                        <TableHead className="hidden lg:table-cell">Jurusan</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">Aksi</TableHead>
                       </TableRow>
@@ -4833,14 +4832,14 @@ export default function Home() {
                     <TableBody>
                       {loading ? (
                         <TableRow>
-                          <TableCell colSpan={11} className="text-center py-12">
+                          <TableCell colSpan={10} className="text-center py-12">
                             <Loader2 className="w-6 h-6 animate-spin mx-auto text-gray-400" />
                             <p className="text-sm text-gray-400 mt-2">Memuat data...</p>
                           </TableCell>
                         </TableRow>
                       ) : registrations.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={11} className="text-center py-12">
+                          <TableCell colSpan={10} className="text-center py-12">
                             <FileSpreadsheet className="w-10 h-10 mx-auto text-gray-300 mb-2" />
                             <p className="text-gray-500 font-medium">Belum ada data pendaftar</p>
                             <p className="text-sm text-gray-400">Import CSV untuk memulai verifikasi</p>
@@ -4879,9 +4878,6 @@ export default function Home() {
                                   </Badge>
                                 </TableCell>
                                 <TableCell className="hidden lg:table-cell text-sm">{reg.namaSekolahAsal}</TableCell>
-                                <TableCell className="hidden lg:table-cell">
-                                  <Badge variant="secondary">{reg.jurusan}</Badge>
-                                </TableCell>
                                 <TableCell>
                                   <Badge variant="outline" className={STATUS_COLORS[reg.verificationStatus]}>
                                     {reg.verificationStatus === 'PENDING' && <Clock className="w-3 h-3" />}
@@ -4984,9 +4980,6 @@ export default function Home() {
                                     </Badge>
                                   </TableCell>
                                   <TableCell className="hidden lg:table-cell text-sm">{reg.namaSekolahAsal}</TableCell>
-                                  <TableCell className="hidden lg:table-cell">
-                                    <Badge variant="secondary">{reg.jurusan}</Badge>
-                                  </TableCell>
                                   <TableCell>
                                     <Badge variant="outline" className={STATUS_COLORS[reg.verificationStatus]}>
                                       {reg.verificationStatus === 'PENDING' && <Clock className="w-3 h-3" />}
