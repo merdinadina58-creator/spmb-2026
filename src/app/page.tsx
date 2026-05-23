@@ -1555,7 +1555,7 @@ function LembarVerifikasiSheet({
                             <div className="group/reason relative">
                               <div className="text-[10px] text-red-600 leading-tight whitespace-normal break-words pr-5">
                                 {reg.kekuranganVerifikasi.split(' | ').map((reason, i) => (
-                                  <span key={i} className="block">• {reason}</span>
+                                  <span key={i} className="block">{reason}</span>
                                 ))}
                               </div>
                               <button
@@ -8546,7 +8546,7 @@ export default function Home() {
                         </div>
                         <div className="text-sm text-red-700">
                           {detailTarget.kekuranganVerifikasi.split(' | ').map((reason, i) => (
-                            <p key={i} className="mt-0.5">• {reason}</p>
+                            <p key={i} className="mt-0.5">{reason}</p>
                           ))}
                         </div>
                       </div>
