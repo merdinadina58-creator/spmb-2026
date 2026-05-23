@@ -114,3 +114,26 @@ Stage Summary:
 - No more standalone mode - standard Next.js build
 - Dev cache automatically cleaned before build
 - App fully functional in Preview Panel
+---
+Task ID: 4
+Agent: Main
+Task: Fix Z.ai 500 deployment error - restore standalone mode and fix Google Fonts
+
+Work Log:
+- User reported new error: "Sorry, there was a problem deploying the code" (500 instead of 412)
+- Identified that removing output:"standalone" broke Z.ai deployment (Z.ai requires standalone)
+- Restored output:"standalone" in next.config.ts
+- Restored build script with standalone + static copy + optimization
+- Enhanced optimize-standalone.js to remove more unused packages from standalone build
+- Fixed Google Fonts timeout (Geist/Geist_Mono from fonts.gstatic.com) by switching to system fonts
+- Changed layout.tsx from next/font/google to simple font-sans CSS class
+- Final build: standalone size = 18.5MB (down from 153MB original, 88% reduction!)
+- All API endpoints tested and working
+- Dev server running normally
+
+Stage Summary:
+- Standalone build restored: 18.5MB (from 153MB original)
+- Google Fonts replaced with system fonts (no network dependency)
+- 24 unused packages removed from dependencies
+- No native binaries in build (no Prisma engine, no sharp)
+- Ready for Z.ai publish attempt

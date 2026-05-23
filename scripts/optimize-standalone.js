@@ -44,15 +44,19 @@ function removeFiles(dirPath, pattern, label) {
 
 function getDirSize(dirPath) {
   let size = 0;
-  const files = fs.readdirSync(dirPath);
-  for (const file of files) {
-    const filePath = path.join(dirPath, file);
-    const stat = fs.statSync(filePath);
-    if (stat.isDirectory()) {
-      size += getDirSize(filePath);
-    } else {
-      size += stat.size;
+  try {
+    const files = fs.readdirSync(dirPath);
+    for (const file of files) {
+      const filePath = path.join(dirPath, file);
+      const stat = fs.statSync(filePath);
+      if (stat.isDirectory()) {
+        size += getDirSize(filePath);
+      } else {
+        size += stat.size;
+      }
     }
+  } catch (e) {
+    // ignore permission errors
   }
   return size;
 }
@@ -66,12 +70,33 @@ function formatBytes(bytes) {
 // Remove @img/sharp binaries (not needed with images.unoptimized)
 removeDir('node_modules/@img', '@img/sharp binaries');
 
+// Remove sharp package itself
+removeDir('node_modules/sharp', 'sharp package');
+
 // Remove typescript (not needed at runtime)
 removeDir('node_modules/typescript', 'typescript runtime');
 
-// Remove non-postgresql WASM engines from Prisma
-const prismaRuntime = 'node_modules/@prisma/client/runtime';
-removeFiles(prismaRuntime, /^(query_compiler_bg|query_engine_bg)\.(cockroachdb|mysql|sqlserver|sqlite)\./, 'non-postgresql Prisma engines');
+// Remove prisma (we use @neondatabase/serverless directly)
+removeDir('node_modules/@prisma', '@prisma packages');
+removeDir('node_modules/prisma', 'prisma CLI');
+
+// Remove other unused heavy packages if they somehow ended up in standalone
+removeDir('node_modules/@mdxeditor', '@mdxeditor packages');
+removeDir('node_modules/framer-motion', 'framer-motion');
+removeDir('node_modules/next-auth', 'next-auth');
+removeDir('node_modules/react-syntax-highlighter', 'react-syntax-highlighter');
+removeDir('node_modules/@tanstack', '@tanstack packages');
+removeDir('node_modules/@dnd-kit', '@dnd-kit packages');
+removeDir('node_modules/ws', 'ws');
+removeDir('node_modules/date-fns', 'date-fns');
+removeDir('node_modules/react-markdown', 'react-markdown');
+removeDir('node_modules/next-intl', 'next-intl');
+removeDir('node_modules/zustand', 'zustand');
+removeDir('node_modules/zod', 'zod');
+removeDir('node_modules/uuid', 'uuid');
 
 console.log(`\n✅ Total saved: ${formatBytes(savedBytes)}`);
-console.log(`📦 Standalone build optimized`);
+
+// Report final size
+const finalSize = getDirSize(standaloneDir);
+console.log(`📦 Final standalone size: ${formatBytes(finalSize)}`);

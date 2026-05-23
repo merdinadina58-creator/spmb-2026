@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000",
-    "build": "rm -rf .next/dev && next build",
+    "build": "next build && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/ && node scripts/optimize-standalone.js",
     "start": "next start -p 3000",
     "lint": "eslint ."
   },

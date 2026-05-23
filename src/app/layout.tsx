@@ -1,18 +1,7 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const viewport: Viewport = {
   themeColor: "#059669",
@@ -47,7 +36,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icon-192.png" />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
+        className="antialiased bg-background text-foreground font-sans"
       >
         <ErrorBoundary>
           {children}
@@ -62,20 +51,17 @@ export default function RootLayout({
                   navigator.serviceWorker.register('/sw.js', { scope: '/' })
                     .then(function(reg) {
                       console.log('[PWA] Service Worker registered, scope:', reg.scope);
-                      // Check for updates on load
                       reg.update().catch(function() {});
                     })
                     .catch(function(err) {
                       console.warn('[PWA] Service Worker registration failed:', err);
                     });
 
-                  // Handle controller change (new SW activated)
                   navigator.serviceWorker.addEventListener('controllerchange', function() {
                     console.log('[PWA] New Service Worker activated');
                   });
                 });
 
-                // Listen for messages from SW
                 navigator.serviceWorker.addEventListener('message', function(event) {
                   if (event.data && event.data.type === 'SW_UPDATED') {
                     console.log('[PWA] App updated, refresh recommended');
