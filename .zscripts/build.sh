@@ -27,9 +27,7 @@ mkdir -p "$BUILD_DIR"
 echo "📦 Installing dependencies..."
 bun install
 
-# Generate Prisma Client
-echo "🔧 Generating Prisma Client..."
-DATABASE_URL="$DATABASE_URL" npx prisma generate
+# NOTE: Prisma generate removed - we use @neondatabase/serverless directly
 
 # Build Next.js with standalone output
 echo "🔨 Building Next.js application..."
@@ -69,20 +67,7 @@ if [ -d "public" ]; then
     cp -r public "$BUILD_DIR/next-service-dist/"
 fi
 
-# Copy Prisma files (needed for runtime Prisma Client)
-if [ -d "prisma" ]; then
-    echo "  - Copying prisma directory"
-    cp -r prisma "$BUILD_DIR/next-service-dist/"
-fi
-
-# Ensure Prisma Client is in node_modules of standalone
-if [ ! -d "$BUILD_DIR/next-service-dist/node_modules/.prisma" ]; then
-    echo "  - Copying Prisma Client to standalone node_modules"
-    mkdir -p "$BUILD_DIR/next-service-dist/node_modules/.prisma"
-    cp -r node_modules/.prisma/* "$BUILD_DIR/next-service-dist/node_modules/.prisma/" 2>/dev/null || true
-    mkdir -p "$BUILD_DIR/next-service-dist/node_modules/@prisma"
-    cp -r node_modules/@prisma/client "$BUILD_DIR/next-service-dist/node_modules/@prisma/" 2>/dev/null || true
-fi
+# NOTE: Prisma files copy removed - we use @neondatabase/serverless directly
 
 # Copy Caddyfile
 if [ -f "Caddyfile" ]; then
