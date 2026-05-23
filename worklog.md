@@ -81,3 +81,36 @@ Stage Summary:
 - Build: 153MB → 25MB (no @prisma, no native engine, no sharp)
 - All 20 API endpoints working with Neon SQL queries
 - Ready for Z.ai serverless deployment
+---
+Task ID: 3
+Agent: Main
+Task: Fix persistent Z.ai 412 "function is pending state" publish error - major dependency cleanup
+
+Work Log:
+- Analyzed all 87 npm dependencies for actual usage in src/ code
+- Found 24 heavy packages completely UNUSED in the codebase:
+  - @mdxeditor/editor (~5MB+), @prisma/client, @prisma/adapter-neon, prisma
+  - framer-motion (~300KB), react-syntax-highlighter (~2MB)
+  - @tanstack/react-table, @tanstack/react-query
+  - next-auth, @dnd-kit/*, ws, date-fns, react-markdown, next-intl
+  - zustand, @reactuses/core, @hookform/resolvers, uuid, zod, z-ai-web-dev-sdk
+  - tailwindcss-animate (re-added as devDep)
+- Removed all 24 unused packages: `bun remove ...`
+- Removed `output: "standalone"` from next.config.ts (Z.ai handles build differently)
+- Removed Prisma scripts from package.json (db:push, db:generate, db:migrate, db:reset)
+- Added dev cache cleanup to build script: `rm -rf .next/dev && next build`
+- Build result: .next directory went from 207MB → 13MB (94% reduction!)
+  - .next/server: 9.7MB
+  - .next/static: 1.8MB
+  - .next/build: 796K
+  - The 180MB dev/ cache was completely unnecessary for production
+- Re-added tailwindcss-animate as devDependency (needed by tailwind.config.ts)
+- All API endpoints tested and working after cleanup
+- Dev server running normally
+
+Stage Summary:
+- Removed 24 unused dependencies (saved ~15MB+ in node_modules)
+- Build size: 207MB → 13MB (94% reduction)
+- No more standalone mode - standard Next.js build
+- Dev cache automatically cleaned before build
+- App fully functional in Preview Panel
