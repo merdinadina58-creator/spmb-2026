@@ -1,0 +1,79 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# logs
+*.log
+dev.log
+dev.out.log
+server.log
+
+# Sandbox / AI-specific files
+local-*
+.claude
+.z-ai-config
+/skills/
+/agent-ctx/
+worklog.md
+
+# Sandbox scripts
+dev-daemon.sh
+run-server.sh
+start-dev.sh
+prod-keepalive.sh
+auto-restart.sh
+keep-alive.sh
+dev-keepalive.sh
+Caddyfile
+
+# Upload & download folders (temporary data)
+/upload/
+/download/
+
+# Database file (will be created on deploy)
+/db/
+
+# Examples
+/examples/
+
+# Test & prompt
+test
+prompt

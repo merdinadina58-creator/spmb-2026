@@ -14,6 +14,8 @@ interface PortalPastePayload {
   namaSekolahAsal: string;
   status: string;
   waktuDaftar: string;
+  verificationStatus?: string;
+  verificationNote?: string;
   nik?: string;
   tanggalLahir?: string;
   alamat?: string;
@@ -34,6 +36,7 @@ interface PortalPastePayload {
   terbitKK?: string;
   lamaKK?: string;
   dokumen?: string;
+  tahap?: number;
 }
 
 export async function POST(request: NextRequest) {
@@ -46,6 +49,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const data = body as PortalPastePayload;
+    const tahap = data.tahap || 1;
 
     if (!data.noRegistrasi && !data.nisn) {
       return NextResponse.json({ error: 'No. Registrasi atau NISN wajib diisi' }, { status: 400 });
@@ -56,6 +60,10 @@ export async function POST(request: NextRequest) {
     }
 
     const npsnSekolahPilihan = data.npsnSekolahPilihan || '0';
+
+    // Determine verification status from the payload
+    // The frontend sends verificationStatus directly from the dialog
+    const isRejected = data.verificationStatus === 'REJECTED' || data.status === 'DITOLAK';
 
     // Build optional portal fields - only include non-empty values
     const portalFields: Record<string, string> = {};
@@ -74,27 +82,74 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // STEP 1: Try to find existing record by NISN + npsnSekolahPilihan (primary dedup)
+    // Also add verificationNote if provided
+    if (data.verificationNote && data.verificationNote.trim()) {
+      portalFields['verificationNote'] = data.verificationNote.trim();
+    }
+
+    // STEP 1: For DITOLAK records, ALWAYS create a new record (no dedup)
+    // This ensures students rejected multiple times appear as separate entries
+    if (isRejected) {
+      const created = await db.registration.create({
+        data: {
+          noRegistrasi: data.noRegistrasi || '',
+          nama: data.nama || '',
+          nisn: data.nisn || '',
+          subJalur: data.subJalur || '',
+          npsnSekolahPilihan,
+          namaSekolahPilihan: data.namaSekolahPilihan || '',
+          jurusan: data.jurusan || '',
+          npsnSekolahAsal: data.npsnSekolahAsal || '',
+          namaSekolahAsal: data.namaSekolahAsal || '',
+          status: 'DITOLAK',
+          waktuDaftar: data.waktuDaftar || '',
+          verificationStatus: 'REJECTED',
+          tahap,
+          ...portalFields,
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        action: 'created',
+        data: created,
+        message: `Data ditolak baru untuk ${data.nama} (NISN: ${data.nisn}) berhasil ditambahkan`,
+      });
+    }
+
+    // STEP 2: For non-DITOLAK records, find existing record by NISN + subJalur (primary dedup)
+    // This ensures students who register in multiple jalur are kept as separate records
     let existing = null;
     if (data.nisn && data.nisn.trim()) {
       existing = await db.registration.findFirst({
         where: {
           nisn: data.nisn.trim(),
-          npsnSekolahPilihan,
+          subJalur: data.subJalur?.trim() || undefined,
         },
       });
     }
 
-    // STEP 2: Try by NISN alone (without npsnSekolahPilihan) - handles portal paste where NPSN might differ
+    // STEP 3: Try by NISN + npsnSekolahPilihan
     if (!existing && data.nisn && data.nisn.trim()) {
       existing = await db.registration.findFirst({
         where: {
           nisn: data.nisn.trim(),
+          npsnSekolahPilihan,
         },
       });
     }
 
-    // STEP 3: Fallback - try by noRegistrasi + npsnSekolahPilihan
+    // STEP 4: Fallback - try by noRegistrasi + subJalur
+    if (!existing && data.noRegistrasi && data.noRegistrasi.trim()) {
+      existing = await db.registration.findFirst({
+        where: {
+          noRegistrasi: data.noRegistrasi.trim(),
+          subJalur: data.subJalur?.trim() || undefined,
+        },
+      });
+    }
+
+    // STEP 5: Fallback - try by noRegistrasi + npsnSekolahPilihan
     if (!existing && data.noRegistrasi && data.noRegistrasi.trim()) {
       existing = await db.registration.findFirst({
         where: {
@@ -104,21 +159,22 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // STEP 4: Fallback - try by noRegistrasi alone
-    if (!existing && data.noRegistrasi && data.noRegistrasi.trim()) {
-      existing = await db.registration.findFirst({
-        where: {
-          noRegistrasi: data.noRegistrasi.trim(),
-        },
-      });
-    }
-
-    // STEP 5: Fallback - try by nama + subJalur (for cases where NISN/noRegistrasi differ)
+    // STEP 6: Fallback - try by nama + subJalur (for cases where NISN/noRegistrasi differ)
     if (!existing && data.nama && data.nama.trim() && data.subJalur && data.subJalur.trim()) {
       existing = await db.registration.findFirst({
         where: {
           nama: data.nama.trim(),
           subJalur: data.subJalur.trim(),
+        },
+      });
+    }
+
+    // STEP 7: Last resort - try by NISN alone (broader match)
+    // Only use this if no subJalur-specific match was found
+    if (!existing && data.nisn && data.nisn.trim()) {
+      existing = await db.registration.findFirst({
+        where: {
+          nisn: data.nisn.trim(),
         },
       });
     }
@@ -148,9 +204,21 @@ export async function POST(request: NextRequest) {
       mergeField('waktuDaftar', data.waktuDaftar, existing.waktuDaftar);
       mergeField('npsnSekolahPilihan', data.npsnSekolahPilihan, existing.npsnSekolahPilihan);
 
+      // Always set verificationStatus if provided (from the dialog)
+      if (data.verificationStatus) {
+        updateData['verificationStatus'] = data.verificationStatus;
+      }
+
+      // Always set verificationNote if provided
+      if (data.verificationNote && data.verificationNote.trim()) {
+        updateData['verificationNote'] = data.verificationNote.trim();
+      }
+
       // Portal fields - only fill empty fields (don't overwrite existing verification data)
       for (const [key, value] of Object.entries(portalFields)) {
         if (value && value.trim()) {
+          // Skip verificationNote here — already handled above
+          if (key === 'verificationNote') continue;
           const existingValue = (existing as Record<string, unknown>)[key] as string | null | undefined;
           // Only update if existing value is empty/null
           if (!existingValue || existingValue.trim() === '') {
@@ -182,6 +250,10 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // CREATE new record
+      // Determine verificationStatus: use from payload, or derive from status
+      const verifStatus = data.verificationStatus ||
+        (data.status === 'DITERIMA' ? 'VERIFIED' : data.status === 'DITOLAK' ? 'REJECTED' : 'PENDING');
+
       const created = await db.registration.create({
         data: {
           noRegistrasi: data.noRegistrasi || '',
@@ -195,7 +267,8 @@ export async function POST(request: NextRequest) {
           namaSekolahAsal: data.namaSekolahAsal || '',
           status: data.status || 'ON PROGRESS',
           waktuDaftar: data.waktuDaftar || '',
-          verificationStatus: data.status === 'DITERIMA' ? 'VERIFIED' : data.status === 'DITOLAK' ? 'REJECTED' : 'PENDING',
+          verificationStatus: verifStatus,
+          tahap,
           ...portalFields,
         },
       });

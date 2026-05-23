@@ -1,0 +1,29 @@
+# ============================================
+# SPMB 2026 - Caddyfile untuk Production
+# ============================================
+# Ganti spmb.sekolah.sch.id dengan domain Anda
+# Caddy akan otomatis mendapatkan SSL certificate (Let's Encrypt)
+
+spmb.sekolah.sch.id {
+    reverse_proxy spmb-app:3000 {
+        header_up Host {host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Real-IP {remote_host}
+    }
+
+    # Compression
+    encode gzip
+
+    # Security headers
+    header {
+        X-Frame-Options "SAMEORIGIN"
+        X-Content-Type-Options "nosniff"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    # Static file caching
+    @static path *.js *.css *.png *.jpg *.svg *.ico *.woff2
+    header @static Cache-Control "public, max-age=31536000, immutable"
+}

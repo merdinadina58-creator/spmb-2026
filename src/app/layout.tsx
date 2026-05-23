@@ -11,11 +11,11 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: "SPMB 2026 - Sistem Verifikasi Pendaftaran",
-  description: "Sistem Verifikasi Penerimaan Peserta Didik Baru Tahun 2026",
-  manifest: "/manifest.json",
+  description: "Sistem Verifikasi Penerimaan Murid Baru Tahun 2026",
+  manifest: "/api/manifest",
   icons: {
-    icon: "/icon-192.png",
-    apple: "/icon-192.png",
+    icon: "/api/app-icon?size=192",
+    apple: "/api/app-icon?size=192",
   },
   appleWebApp: {
     capable: true,
@@ -33,7 +33,8 @@ export default function RootLayout({
   return (
     <html lang="id" suppressHydrationWarning>
       <head>
-        <link rel="apple-touch-icon" href="/icon-192.png" />
+        <link rel="apple-touch-icon" href="/api/app-icon?size=192" />
+        <link rel="apple-touch-icon" sizes="512x512" href="/api/app-icon?size=512" />
       </head>
       <body
         className="antialiased bg-background text-foreground font-sans"

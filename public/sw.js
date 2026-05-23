@@ -1,7 +1,7 @@
-// SPMB 2026 Service Worker — v3
+// SPMB 2026 Service Worker — v4
 // Network-first for all requests, only cache for offline fallback
 
-const CACHE_NAME = 'spmb2026-v3'
+const CACHE_NAME = 'spmb2026-v4'
 
 // Install event — just activate immediately, no pre-caching
 self.addEventListener('install', () => {
@@ -33,6 +33,12 @@ self.addEventListener('fetch', (event) => {
   // Skip non-http requests
   if (!url.protocol.startsWith('http')) return
 
+  // For dynamic manifest and app-icon: network-first with short cache (always get latest)
+  if (url.pathname === '/api/manifest' || url.pathname === '/api/app-icon') {
+    event.respondWith(networkFirstManifest(request))
+    return
+  }
+
   // For API calls: network-first, offline fallback
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(networkFirstAPI(request))
@@ -42,6 +48,22 @@ self.addEventListener('fetch', (event) => {
   // For everything else: network-first with cache fallback
   event.respondWith(networkFirst(request))
 })
+
+// Network-first for manifest/icon — always prefer fresh, cache briefly
+async function networkFirstManifest(request) {
+  try {
+    const response = await fetch(request)
+    if (response.ok) {
+      const cache = await caches.open(CACHE_NAME)
+      cache.put(request, response.clone())
+    }
+    return response
+  } catch {
+    const cached = await caches.match(request)
+    if (cached) return cached
+    return new Response('', { status: 503, statusText: 'Offline' })
+  }
+}
 
 // Network-first for API — with offline fallback
 async function networkFirstAPI(request) {

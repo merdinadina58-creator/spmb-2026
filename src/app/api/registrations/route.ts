@@ -18,8 +18,14 @@ export async function GET(request: NextRequest) {
     const verificationStatus = searchParams.get('verificationStatus') || '';
     const sekolahPilihan = searchParams.get('sekolahPilihan') || '';
     const jurusan = searchParams.get('jurusan') || '';
+    const tahapParam = searchParams.get('tahap') || '';
 
     const where: Record<string, unknown> = {};
+
+    // Tahap filter
+    if (tahapParam) {
+      where.tahap = parseInt(tahapParam);
+    }
 
     if (search) {
       where.OR = [

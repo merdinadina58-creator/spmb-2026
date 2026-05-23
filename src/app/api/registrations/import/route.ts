@@ -42,7 +42,8 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { rows } = body as { rows: CSVPayload[] };
+    const { rows, overrideStatus, tahap } = body as { rows: CSVPayload[]; overrideStatus?: boolean; tahap?: number };
+    const recordTahap = tahap || 1;
 
     if (!rows || !Array.isArray(rows) || rows.length === 0) {
       return NextResponse.json({ error: 'No data provided' }, { status: 400 });
@@ -54,11 +55,21 @@ export async function POST(request: NextRequest) {
     let skipped = 0;
     const errors: string[] = [];
 
+    // Helper: map status string to verificationStatus
+    const statusToVerification = (status: string): string => {
+      const s = status.trim();
+      if (s === 'DITERIMA') return 'VERIFIED';
+      if (s === 'DITOLAK') return 'REJECTED';
+      return 'PENDING';
+    };
+
     for (const row of rows) {
       try {
         const noRegistrasi = row.noRegistrasi;
         const nisn = row.nisn;
         const npsnSekolahPilihan = row.npsnSekolahPilihan || '0';
+        const rowStatus = (row.status || '').trim();
+        const isRejected = rowStatus === 'DITOLAK' || statusToVerification(rowStatus) === 'REJECTED';
 
         if (!noRegistrasi && !nisn) {
           skipped++;
@@ -82,41 +93,70 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // STEP 1: Try to find existing record by NISN + npsnSekolahPilihan (primary dedup)
+        // For DITOLAK records: ALWAYS create a new record (no dedup)
+        // This ensures students rejected multiple times appear as separate entries
+        if (isRejected) {
+          const statusValue = rowStatus || 'DITOLAK';
+          await db.registration.create({
+            data: {
+              noRegistrasi: noRegistrasi || '',
+              nama: row.nama || '',
+              nisn: nisn || '',
+              subJalur: row.subJalur || '',
+              npsnSekolahPilihan,
+              namaSekolahPilihan: row.namaSekolahPilihan || '',
+              jurusan: row.jurusan || '',
+              npsnSekolahAsal: row.npsnSekolahAsal || '',
+              namaSekolahAsal: row.namaSekolahAsal || '',
+              status: statusValue,
+              waktuDaftar: row.waktuDaftar || '',
+              verificationStatus: 'REJECTED',
+              tahap: recordTahap,
+              ...portalData,
+            },
+          });
+          created++;
+          imported++;
+          continue;
+        }
+
+        // For non-DITOLAK records: use the existing dedup logic
         let existing = null;
         if (nisn && nisn.trim()) {
           existing = await db.registration.findFirst({
             where: {
               nisn: nisn.trim(),
-              npsnSekolahPilihan,
+              subJalur: row.subJalur?.trim() || undefined,
             },
           });
         }
 
-        // STEP 2: Try by NISN alone (without npsnSekolahPilihan) - broader match
+        // STEP 2: Try by NISN + npsnSekolahPilihan
         if (!existing && nisn && nisn.trim()) {
           existing = await db.registration.findFirst({
             where: {
               nisn: nisn.trim(),
-            },
-          });
-        }
-
-        // STEP 3: Fallback - try by noRegistrasi + npsnSekolahPilihan
-        if (!existing && noRegistrasi && noRegistrasi.trim()) {
-          existing = await db.registration.findFirst({
-            where: {
-              noRegistrasi: noRegistrasi.trim(),
               npsnSekolahPilihan,
             },
           });
         }
 
-        // STEP 4: Fallback - try by noRegistrasi alone
+        // STEP 3: Try by noRegistrasi + subJalur
         if (!existing && noRegistrasi && noRegistrasi.trim()) {
           existing = await db.registration.findFirst({
             where: {
               noRegistrasi: noRegistrasi.trim(),
+              subJalur: row.subJalur?.trim() || undefined,
+            },
+          });
+        }
+
+        // STEP 4: Fallback - try by noRegistrasi + npsnSekolahPilihan
+        if (!existing && noRegistrasi && noRegistrasi.trim()) {
+          existing = await db.registration.findFirst({
+            where: {
+              noRegistrasi: noRegistrasi.trim(),
+              npsnSekolahPilihan,
             },
           });
         }
@@ -127,6 +167,15 @@ export async function POST(request: NextRequest) {
             where: {
               nama: row.nama.trim(),
               subJalur: row.subJalur.trim(),
+            },
+          });
+        }
+
+        // STEP 6: Last resort - try by NISN alone (broader match)
+        if (!existing && nisn && nisn.trim()) {
+          existing = await db.registration.findFirst({
+            where: {
+              nisn: nisn.trim(),
             },
           });
         }
@@ -142,7 +191,7 @@ export async function POST(request: NextRequest) {
             }
           };
 
-          // Core fields
+          // Core fields (except status - handled separately below)
           mergeField('noRegistrasi', noRegistrasi, existing.noRegistrasi);
           mergeField('nisn', nisn, existing.nisn);
           mergeField('nama', row.nama, existing.nama);
@@ -151,17 +200,30 @@ export async function POST(request: NextRequest) {
           mergeField('jurusan', row.jurusan, existing.jurusan);
           mergeField('npsnSekolahAsal', row.npsnSekolahAsal, existing.npsnSekolahAsal);
           mergeField('namaSekolahAsal', row.namaSekolahAsal, existing.namaSekolahAsal);
-          mergeField('status', row.status, existing.status);
           mergeField('waktuDaftar', row.waktuDaftar, existing.waktuDaftar);
           mergeField('npsnSekolahPilihan', row.npsnSekolahPilihan, existing.npsnSekolahPilihan);
 
-          // If status changed, also update verificationStatus accordingly
+          // Handle status field with override logic
           if (row.status && row.status.trim()) {
             const newStatus = row.status.trim();
-            const newVerificationStatus = newStatus === 'DITERIMA' ? 'VERIFIED' : newStatus === 'DITOLAK' ? 'REJECTED' : 'PENDING';
-            // Always sync verificationStatus with CSV status (allows updating from ON PROGRESS → DITERIMA/DITOLAK)
-            if (newVerificationStatus !== existing.verificationStatus) {
-              updateData['verificationStatus'] = newVerificationStatus;
+            const newVerificationStatus = statusToVerification(newStatus);
+
+            if (overrideStatus) {
+              // When overrideStatus is true, ALWAYS update status and verificationStatus
+              updateData['status'] = newStatus;
+              if (newVerificationStatus === 'VERIFIED' && existing.verificationStatus !== 'VERIFIED') {
+                updateData['verificationStatus'] = 'VERIFIED';
+              } else if (newVerificationStatus === 'REJECTED' && existing.verificationStatus === 'PENDING') {
+                updateData['verificationStatus'] = 'REJECTED';
+              }
+            } else {
+              // When overrideStatus is false (using CSV status), only update if existing is empty
+              mergeField('status', row.status, existing.status);
+              if (newVerificationStatus === 'VERIFIED' && existing.verificationStatus !== 'VERIFIED') {
+                updateData['verificationStatus'] = 'VERIFIED';
+              } else if (newVerificationStatus === 'REJECTED' && existing.verificationStatus === 'PENDING') {
+                updateData['verificationStatus'] = 'REJECTED';
+              }
             }
           }
 
@@ -185,6 +247,7 @@ export async function POST(request: NextRequest) {
           imported++;
         } else {
           // CREATE new record
+          const statusValue = row.status || 'ON PROGRESS';
           await db.registration.create({
             data: {
               noRegistrasi: noRegistrasi || '',
@@ -196,10 +259,10 @@ export async function POST(request: NextRequest) {
               jurusan: row.jurusan || '',
               npsnSekolahAsal: row.npsnSekolahAsal || '',
               namaSekolahAsal: row.namaSekolahAsal || '',
-              status: row.status || 'ON PROGRESS',
+              status: statusValue,
               waktuDaftar: row.waktuDaftar || '',
-              // Map CSV status to verificationStatus: DITERIMA→VERIFIED, DITOLAK→REJECTED, else PENDING
-              verificationStatus: row.status === 'DITERIMA' ? 'VERIFIED' : row.status === 'DITOLAK' ? 'REJECTED' : 'PENDING',
+              verificationStatus: statusToVerification(statusValue),
+              tahap: recordTahap,
               ...portalData,
             },
           });

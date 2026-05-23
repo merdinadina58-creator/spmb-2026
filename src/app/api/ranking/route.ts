@@ -107,9 +107,15 @@ export async function GET(request: NextRequest) {
     const jurusan = searchParams.get('jurusan') || 'all'
     const tampilan = searchParams.get('tampilan') || 'jarak'
     const statusFilter = searchParams.get('status') || 'all'
+    const tahapParam = searchParams.get('tahap') || ''
 
     // Build where clause
     const where: Record<string, unknown> = {}
+
+    // Tahap filter
+    if (tahapParam) {
+      where.tahap = parseInt(tahapParam)
+    }
 
     if (jalur !== 'all') {
       const jalurList = jalur.split(',').map(s => s.trim())

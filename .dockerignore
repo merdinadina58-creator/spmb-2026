@@ -1,0 +1,51 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Build output
+.next
+out
+
+# Development
+dev.log
+*.log
+npm-debug.log*
+
+# Environment (jangan include .env di Docker!)
+.env
+.env*.local
+
+# IDE
+.vscode
+.idea
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Uploads (development artifacts)
+upload/
+
+# Scripts & configs (tidak perlu di runtime)
+.zscripts
+agent-ctx
+skills
+dev-keeper*.sh
+keep-alive.sh
+server-wrapper.sh
+start-server.sh
+
+# Misc
+tsconfig.tsbuildinfo
+worklog.md
+bun.lock

@@ -6,22 +6,11 @@ import { saveAs } from 'file-saver'
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Dialog,
   DialogContent,
@@ -30,2173 +19,44 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
-import { Progress } from '@/components/ui/progress'
-import { Separator } from '@/components/ui/separator'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useToast } from '@/hooks/use-toast'
 import {
-  Upload,
-  Search,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  Users,
-  GraduationCap,
-  School,
-  Filter,
-  ChevronLeft,
-  ChevronRight,
-  FileSpreadsheet,
   ShieldCheck,
+  CheckCircle2,
   AlertTriangle,
   Loader2,
   Trash2,
-  Eye,
-  EyeOff,
-  UserCheck,
-  UserX,
-  ArrowRightLeft,
-  ListChecks,
-  ThumbsUp,
-  ThumbsDown,
-  FileText,
-  RotateCcw,
-  Check,
-  MapPin,
-  Heart,
-  Award,
-  BookOpen,
-  ClipboardCheck,
-  ArrowLeftRight,
-  Trophy,
-  UserCog,
-  ClipboardPaste,
-  MapPinned,
-  Phone,
-  CalendarDays,
-  IdCard,
-  Pencil,
-  CalendarClock,
-  Printer,
-  AlertCircle,
-  X,
-  Settings,
-  Plus,
-  Save,
-  Globe,
-  RefreshCw,
-  Lock,
-  Mail,
-  ArrowUpDown,
-  ArrowUpAZ,
-  ArrowDownAZ,
-  FileDown,
-  Maximize2,
-  Copy,
-  ListPlus,
-  X as XIcon,
-  Menu,
-  ChevronUp,
-  ChevronDown,
 } from 'lucide-react'
 
-interface Registration {
-  id: string
-  noRegistrasi: string
-  nama: string
-  nisn: string
-  subJalur: string
-  npsnSekolahPilihan: string
-  namaSekolahPilihan: string
-  jurusan: string
-  npsnSekolahAsal: string
-  namaSekolahAsal: string
-  status: string
-  waktuDaftar: string
-  verificationStatus: string
-  verificationNote: string | null
-  createdAt: string
-  updatedAt: string
-  // Portal SPMB fields
-  nik?: string | null
-  tanggalLahir?: string | null
-  alamat?: string | null
-  alamatLengkap?: string | null
-  noTelpSiswa?: string | null
-  noTelpOrangtua?: string | null
-  latitude?: string | null
-  longitude?: string | null
-  lokasiJarak?: string | null
-  nilaiRataRata?: string | null
-  skorJarak?: string | null
-  skor?: string | null
-  nilaiRapor?: string | null
-  // Verification-specific fields
-  skorNilaiRaport?: string | null
-  kekuranganVerifikasi?: string | null
-  tanggalVerif?: string | null
-  jamVerif?: string | null
-  terbitKK?: string | null
-  lamaKK?: string | null
-  dokumen?: string | null
-  // Kelulusan & Daftar Ulang
-  statusLulus?: string | null
-  statusDaftarUlang?: string | null
-}
+import type { Registration, DashboardStats, PaginationInfo, LembarVerifikasiData, LembarVerifikasiConfig } from '@/lib/types'
+import { STATUS_COLORS, STATUS_LULUS_COLORS, STATUS_DAFTAR_ULANG_COLORS, DEFAULT_KEKURANGAN_OPTIONS, SUB_JALUR_COLORS } from '@/lib/constants'
+import { hitungLamaKK, isKKKurangSetahun, dedupById, buildLembarVerifikasi, flattenLembarConfigs, getJalurIcon, getJalurColors, getJalurSubFilter, StatBar, JALUR_HIERARCHY } from '@/lib/utils-shared'
+import { parsePortalText } from '@/lib/parse-portal'
+
+import { getRankingPrintHTML, handleRankingExportExcel } from '@/lib/ranking-print'
+import LembarVerifikasiSheet from '@/components/LembarVerifikasiSheet'
+import ImportDialog from '@/components/ImportDialog'
+import ChangePasswordDialog from '@/components/ChangePasswordDialog'
+import RankingPreviewDialog from '@/components/RankingPreviewDialog'
+import PortalPasteDialog from '@/components/PortalPasteDialog'
+import SumutBerkahDialog from '@/components/SumutBerkahDialog'
+import { SingleVerifyDialog, BulkVerifyDialog, DeleteDialog } from '@/components/VerifyDialogs'
+import DetailDialog from '@/components/DetailDialog'
+import EditDialog from '@/components/EditDialog'
+import DuplicateCheckDialog from '@/components/DuplicateCheckDialog'
+
+// Extracted tab components
+import AuthScreens from '@/components/AuthScreens'
+import DashboardTab from '@/components/DashboardTab'
+import DataPendaftarTab from '@/components/DataPendaftarTab'
+import RankingTab from '@/components/RankingTab'
+import DiterimaTab from '@/components/DiterimaTab'
+import DitolakTab from '@/components/DitolakTab'
+import KelulusanTab from '@/components/KelulusanTab'
+import DaftarUlangTab from '@/components/DaftarUlangTab'
+import PengaturanTab from '@/components/PengaturanTab'
+import AppLayout from '@/components/AppLayout'
 
-interface DashboardStats {
-  total: number
-  verified: number
-  rejected: number
-  pending: number
-  bySubJalur: { name: string; count: number }[]
-  bySekolahAsal: { name: string; count: number }[]
-  byJurusan: { name: string; count: number }[]
-  byStatus: { name: string; count: number }[]
-  verifiedBySubJalur: { name: string; count: number }[]
-  verifiedBySekolah: { name: string; count: number }[]
-  verifiedByJurusan: { name: string; count: number }[]
-  verifiedList: Registration[]
-  rejectedBySubJalur: { name: string; count: number }[]
-  rejectedBySekolah: { name: string; count: number }[]
-  rejectedByJurusan: { name: string; count: number }[]
-  rejectedList: Registration[]
-  // Kelulusan
-  lulus: number
-  tidakLulus: number
-  belumLulus: number
-  lulusBySubJalur: { name: string; count: number }[]
-  tidakLulusBySubJalur: { name: string; count: number }[]
-  lulusList: Registration[]
-  tidakLulusList: Registration[]
-  // Daftar Ulang
-  daftarUlang: number
-  tidakDaftarUlang: number
-  belumDaftarUlang: number
-  daftarUlangBySubJalur: { name: string; count: number }[]
-  tidakDaftarUlangBySubJalur: { name: string; count: number }[]
-  daftarUlangList: Registration[]
-  tidakDaftarUlangList: Registration[]
-}
-
-interface PaginationInfo {
-  page: number
-  limit: number
-  total: number
-  totalPages: number
-}
-
-interface LembarVerifikasiData {
-  registrations: Registration[]
-  pagination: PaginationInfo
-  stats: {
-    total: number
-    verified: number
-    rejected: number
-    pending: number
-  }
-}
-
-const STATUS_COLORS: Record<string, string> = {
-  PENDING: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-  VERIFIED: 'bg-emerald-100 text-emerald-800 border-emerald-300',
-  REJECTED: 'bg-red-100 text-red-800 border-red-300',
-}
-
-const STATUS_LULUS_COLORS: Record<string, string> = {
-  BELUM: 'bg-gray-100 text-gray-600 border-gray-300',
-  LULUS: 'bg-emerald-100 text-emerald-800 border-emerald-300',
-  TIDAK_LULUS: 'bg-red-100 text-red-800 border-red-300',
-}
-
-const STATUS_DAFTAR_ULANG_COLORS: Record<string, string> = {
-  BELUM: 'bg-gray-100 text-gray-600 border-gray-300',
-  DAFTAR_ULANG: 'bg-blue-100 text-blue-800 border-blue-300',
-  TIDAK_DAFTAR_ULANG: 'bg-orange-100 text-orange-800 border-orange-300',
-}
-
-// Kategori Kekurangan Verifikasi (tanpa nomor, bisa ditambah, tanpa duplikat)
-const DEFAULT_KEKURANGAN_OPTIONS = [
-  ...new Set([
-    'Tidak Ada Kendala',
-    'Titik Koordinat tidak sesuai dengan Alamat di Kartu Keluarga',
-    'Tidak Foto Rapor Semester 2',
-    'Tidak Foto Rapor Semester 3',
-    'Tidak Foto Rapor Semester 4',
-    'Tidak Foto Rapor Semester 5',
-    'Foto KK Buram tidak dapat dibaca',
-    'Perubahan tempat dan tanggal tanda tangan pada surat pernyataan orang tua',
-    'Foto Surat Keterangan Keabsahan Nilai Buram/ tidak dapat dibaca',
-    'Tidak Ada Foto Surat Keterangan Kepala Sekolah (Keabsahan Nilai)',
-    'Nilai Raport yang dientri tidak sesuai dengan foto nilai Per Semester',
-    'Salah Input Nilai Raport Semester 1',
-    'Salah Input Nilai Raport Semester 2',
-    'Salah Input Nilai Raport Semester 3',
-    'Salah Input Nilai Raport Semester 4',
-    'Salah Input Nilai Raport Semester 5',
-    'Tidak Ada Foto Rapor Sem 1, Sem 2, Sem 3, Sem 4',
-    'Tidak Ada Foto Rapor Sem 1, Sem 2, Sem 3',
-    'Tidak Ada Foto Rapor Sem 1, Sem 2',
-    'Tidak Ada Foto Rapor Sem 1',
-    'Tidak Ada Foto Rapor Sem 2',
-    'Tidak Ada Foto Rapor Sem 3',
-    'Tidak Ada Foto Rapor Sem 4',
-    'Tidak Ada Foto Rapor Sem 5',
-    'Tidak Ada Foto Rapor Samasekali',
-    'Foto KK dan Surat Keterangan Buram',
-    'Foto KK dan Rapor Buram',
-    'Foto Surat Keterangan Kepala Sekolah dan Foto Rapor Buram',
-    'Surat Pernyataan Orangtua/ Wali Tidak Dibubuhi Materai 10.000',
-    'Titik Koordinat dan alamat di KK tidak sinkron',
-    'Umur KK Baru 13 Hari',
-    'Usia KK Masih Belum Setahun Silahkan Upload KK yang Diatas Satu tahun',
-    'Umur KK Belum 1 Tahun',
-    'Buram Foto Rapor Semester 2, 3, 4 dan 5',
-    'Buram Foto Rapor Semester 3, 4 dan 5',
-    'Buram Foto Rapor Semester 4 dan 5',
-    'Surat pernyataan orang tua salah',
-    'Foto raport yang di upload adalah foto raport asli dan bukan daftar kumpul',
-    'Salah Upload bukti dokumen PIP',
-    'Ditolak dinas',
-    'KK tidak aktif segera aktifkan ke dukcapil serta surat keterangan tidak mampu',
-    'KK tidak aktif segera aktifkan ke dukcapil supaya bisa mendaftar kembali',
-    'Titik koordinat berbeda dan kartu keluarga tidak dapat di scan',
-    'Kartu PKH sudah tidak aktif',
-    'Titik koordinat salah dan KK tidak aktif',
-    'Foto KK tidak dapat di scan',
-    'Dokumen PKH yang diunggah salah dan surat pernyataan tidak sesuai form',
-    'KK kurang dari 1 tahun dan nilai raport yang di input tidak sesuai dengan foto',
-    'Nilai raport yang di input tidak sesuai dengan yang di upload',
-    'KK tidak aktif, tidak ada kartu PKH, format pernyataan orang tua salah',
-    'KK tidak aktif dan ket. Tempat dan tanggal surat pernyataan orang tua tidak sesuai',
-    'KK tidak dapat dibaca dan hasil scan kartu KIP eror',
-    'Dokumen KIP salah dan surat pernyataan orang tua kurang jelas',
-    'KK tidak aktif dan titik koordinat salah',
-    'KK kurang 1 tahun, dokumen KIP buram dan surat pernyataan orang tua tidak sesuai',
-    'KK tidak aktif, foto raport tidak jelas dan tidak rapi',
-    'Foto raport salah di upload',
-    'KK blm 1 tahun, foto KIP buram dan tidak rapi',
-    'Foto KK tidak dapat di baca',
-    'Foto raport yang di upload pada semester 5 salah',
-    'Alamat titik koordinat tidak sesuai dengan alamat di KK dan surat pernyataan',
-    'Foto kartu KIP terpotong',
-    'KK dan KIP tidak ditemukan serta tanda tangan tidak mengenai materai',
-    'Nilai yang di input sem. 2 tidak sesuai dengan foto yang di upload',
-    'Umur KK kurang dari 1 tahun dan foto raport tidak sesuai',
-    'Nilai yang di input tidak sesuai dengan surat keabsahan nilai dari kasek',
-    'KK tidak aktif',
-    'Foto KK tdk dapat di scan',
-    'Nilai raport sem. 1 yang di upload berbeda dengan surat keabsahan nilai raport',
-    'Titik koordinat tidak sesuai, umur KK kurang dari 1 tahun, dokumen PKH salah',
-    'KK tidak dapat di scan, titik koordinat tidak sesuai KK, kartu KIP tidak dapat di scan',
-    'KK tidak dapat di baca dan kartu KIP eror saat di scan',
-    'KK tidak dapat di baca dan titik koordinat tidak sesuai (titik di hutan)',
-    'Foto raport semester 5 tidak lengkap dan KK tidak dapat discan',
-    'KK buram dan salah upload foto raport',
-    'KK tidak jelas, surat pernyataan salah',
-    'KK dan kartu KIP tidak ditemukan',
-    'Surat pernyataan keabsahan nilai raport salah',
-    'Foto KK',
-    'Kartu KIP tidak di upload',
-    'Nilai sem. 4 dan 5 yang di input tidak sesuai dengan foto raport, umur KK kurang 1 tahun',
-    'Titik koordinat tidak sesuai dengan KK, foto raport yang di upload tidak sesuai',
-    'Foto raport tidak lengkap',
-    'KK kurang 1 tahun dan surat keabsahan raport tidak sesuai',
-    'Surat pernyataan dan kartu PKH tidak sesuai',
-    'Umur KK kurang 1 tahun dan foto raport yang di upload salah',
-    'KK kurang 1 tahun dan surat pernyataan tidak sesuai',
-    'KK tidak aktif dan foto raport tidak lengkap',
-    'Umur KK kurang 1 tahun dan nilai raport tidak sesuai dengan yang di input',
-    'Foto raport semester 5 tidak lengkap',
-    'Dokumen surat tugas tidak lengkap dan KK tidak aktif',
-    'Foto raport terpotong',
-    'Umur KK kurang 1 tahun',
-    'Surat keabsahan yang di upload tidak sesuai',
-  ])
-]
-
-const SUB_JALUR_COLORS: Record<string, string> = {
-  'Domisili': 'bg-sky-100 text-sky-800 border-sky-200',
-  'Keluarga Tidak Mampu': 'bg-orange-100 text-orange-800 border-orange-200',
-  'Afirmasi': 'bg-orange-100 text-orange-800 border-orange-200',
-  'Disabilitas': 'bg-purple-100 text-purple-800 border-purple-200',
-  'Anak Guru': 'bg-violet-100 text-violet-800 border-violet-200',
-  'Prestasi': 'bg-emerald-100 text-emerald-800 border-emerald-200',
-  'Prestasi Non Akademik': 'bg-teal-100 text-teal-800 border-teal-200',
-  'Mutasi': 'bg-cyan-100 text-cyan-800 border-cyan-200',
-}
-
-// Hitung Lama KK dari tanggal Terbit KK
-function hitungLamaKK(terbitKK: string): string {
-  if (!terbitKK) return ''
-  const terbit = new Date(terbitKK)
-  if (isNaN(terbit.getTime())) return ''
-  const now = new Date()
-  let years = now.getFullYear() - terbit.getFullYear()
-  let months = now.getMonth() - terbit.getMonth()
-  let days = now.getDate() - terbit.getDate()
-  if (days < 0) {
-    months--
-    const prevMonth = new Date(now.getFullYear(), now.getMonth(), 0)
-    days += prevMonth.getDate()
-  }
-  if (months < 0) {
-    years--
-    months += 12
-  }
-  const parts: string[] = []
-  if (years > 0) parts.push(`${years} Tahun`)
-  if (months > 0) parts.push(`${months} Bulan`)
-  if (days > 0 && years === 0) parts.push(`${days} Hari`)
-  if (parts.length === 0) parts.push('0 Hari')
-  return parts.join(' ')
-}
-
-// Cek apakah KK kurang dari 1 tahun
-function isKKKurangSetahun(terbitKK: string): boolean {
-  if (!terbitKK) return false
-  const terbit = new Date(terbitKK)
-  if (isNaN(terbit.getTime())) return false
-  const now = new Date()
-  const diffMs = now.getTime() - terbit.getTime()
-  const diffDays = diffMs / (1000 * 60 * 60 * 24)
-  return diffDays < 365
-}
-
-// Lembar Verifikasi — built dynamically from jalurConfigs
-// Icon and color mapping by jalur nama keywords
-const JALUR_ICON_MAP: Record<string, any> = {
-  'domisili': MapPin,
-  'afirmasi': Heart,
-  'ktm': Heart,
-  'keluarga tidak mampu': Heart,
-  'disabilitas': BookOpen,
-  'penyandang disabilitas': BookOpen,
-  'anak guru': UserCog,
-  'mutasi': ArrowLeftRight,
-  'perpindahan': ArrowLeftRight,
-  'prestasi nilai rapor': Award,
-  'prestasi akademik': Award,
-  'prestasi': Award,
-  'non akademik': Trophy,
-  'nonakademik': Trophy,
-  'bencana': AlertTriangle,
-}
-
-const JALUR_COLOR_MAP: Record<string, { color: string; bgColor: string; borderColor: string; headerBg: string; iconBg: string; iconColor: string; btnColor: string }> = {
-  'domisili': { color: 'sky', bgColor: 'bg-sky-50', borderColor: 'border-sky-500', headerBg: 'bg-sky-50/80', iconBg: 'bg-sky-100', iconColor: 'text-sky-600', btnColor: 'bg-sky-600 hover:bg-sky-700' },
-  'afirmasi': { color: 'orange', bgColor: 'bg-orange-50', borderColor: 'border-orange-500', headerBg: 'bg-orange-50/80', iconBg: 'bg-orange-100', iconColor: 'text-orange-600', btnColor: 'bg-orange-600 hover:bg-orange-700' },
-  'ktm': { color: 'orange', bgColor: 'bg-orange-50', borderColor: 'border-orange-500', headerBg: 'bg-orange-50/80', iconBg: 'bg-orange-100', iconColor: 'text-orange-600', btnColor: 'bg-orange-600 hover:bg-orange-700' },
-  'keluarga tidak mampu': { color: 'orange', bgColor: 'bg-orange-50', borderColor: 'border-orange-500', headerBg: 'bg-orange-50/80', iconBg: 'bg-orange-100', iconColor: 'text-orange-600', btnColor: 'bg-orange-600 hover:bg-orange-700' },
-  'disabilitas': { color: 'purple', bgColor: 'bg-purple-50', borderColor: 'border-purple-500', headerBg: 'bg-purple-50/80', iconBg: 'bg-purple-100', iconColor: 'text-purple-600', btnColor: 'bg-purple-600 hover:bg-purple-700' },
-  'penyandang disabilitas': { color: 'purple', bgColor: 'bg-purple-50', borderColor: 'border-purple-500', headerBg: 'bg-purple-50/80', iconBg: 'bg-purple-100', iconColor: 'text-purple-600', btnColor: 'bg-purple-600 hover:bg-purple-700' },
-  'anak guru': { color: 'violet', bgColor: 'bg-violet-50', borderColor: 'border-violet-500', headerBg: 'bg-violet-50/80', iconBg: 'bg-violet-100', iconColor: 'text-violet-600', btnColor: 'bg-violet-600 hover:bg-violet-700' },
-  'mutasi': { color: 'cyan', bgColor: 'bg-cyan-50', borderColor: 'border-cyan-500', headerBg: 'bg-cyan-50/80', iconBg: 'bg-cyan-100', iconColor: 'text-cyan-600', btnColor: 'bg-cyan-600 hover:bg-cyan-700' },
-  'perpindahan': { color: 'cyan', bgColor: 'bg-cyan-50', borderColor: 'border-cyan-500', headerBg: 'bg-cyan-50/80', iconBg: 'bg-cyan-100', iconColor: 'text-cyan-600', btnColor: 'bg-cyan-600 hover:bg-cyan-700' },
-  'prestasi nilai rapor': { color: 'emerald', bgColor: 'bg-emerald-50', borderColor: 'border-emerald-500', headerBg: 'bg-emerald-50/80', iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600', btnColor: 'bg-emerald-600 hover:bg-emerald-700' },
-  'prestasi akademik': { color: 'emerald', bgColor: 'bg-emerald-50', borderColor: 'border-emerald-500', headerBg: 'bg-emerald-50/80', iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600', btnColor: 'bg-emerald-600 hover:bg-emerald-700' },
-  'prestasi non akademik': { color: 'teal', bgColor: 'bg-teal-50', borderColor: 'border-teal-500', headerBg: 'bg-teal-50/80', iconBg: 'bg-teal-100', iconColor: 'text-teal-600', btnColor: 'bg-teal-600 hover:bg-teal-700' },
-  'nonakademik': { color: 'teal', bgColor: 'bg-teal-50', borderColor: 'border-teal-500', headerBg: 'bg-teal-50/80', iconBg: 'bg-teal-100', iconColor: 'text-teal-600', btnColor: 'bg-teal-600 hover:bg-teal-700' },
-  'bencana': { color: 'red', bgColor: 'bg-red-50', borderColor: 'border-red-500', headerBg: 'bg-red-50/80', iconBg: 'bg-red-100', iconColor: 'text-red-600', btnColor: 'bg-red-600 hover:bg-red-700' },
-}
-
-// Fallback colors for custom jalur (cycling through these)
-const FALLBACK_COLORS = [
-  { color: 'rose', bgColor: 'bg-rose-50', borderColor: 'border-rose-500', headerBg: 'bg-rose-50/80', iconBg: 'bg-rose-100', iconColor: 'text-rose-600', btnColor: 'bg-rose-600 hover:bg-rose-700' },
-  { color: 'indigo', bgColor: 'bg-indigo-50', borderColor: 'border-indigo-500', headerBg: 'bg-indigo-50/80', iconBg: 'bg-indigo-100', iconColor: 'text-indigo-600', btnColor: 'bg-indigo-600 hover:bg-indigo-700' },
-  { color: 'amber', bgColor: 'bg-amber-50', borderColor: 'border-amber-500', headerBg: 'bg-amber-50/80', iconBg: 'bg-amber-100', iconColor: 'text-amber-600', btnColor: 'bg-amber-600 hover:bg-amber-700' },
-  { color: 'lime', bgColor: 'bg-lime-50', borderColor: 'border-lime-500', headerBg: 'bg-lime-50/80', iconBg: 'bg-lime-100', iconColor: 'text-lime-600', btnColor: 'bg-lime-600 hover:bg-lime-700' },
-  { color: 'fuchsia', bgColor: 'bg-fuchsia-50', borderColor: 'border-fuchsia-500', headerBg: 'bg-fuchsia-50/80', iconBg: 'bg-fuchsia-100', iconColor: 'text-fuchsia-600', btnColor: 'bg-fuchsia-600 hover:bg-fuchsia-700' },
-]
-
-// subJalurFilter mapping — maps jalur nama to the subJalur value used in Registration data
-// If a jalur name doesn't match the subJalur value in the data, add it here
-const JALUR_SUB_FILTER_MAP: Record<string, string> = {
-  'Afirmasi (KTM)': 'Keluarga Tidak Mampu',
-  'Keluarga Tidak Mampu': 'Keluarga Tidak Mampu',
-  'Penyandang Disabilitas': 'Disabilitas',
-  'Mutasi Orang tua/ Wali': 'Mutasi',
-  'Prestasi Akademik': 'Prestasi',
-  'Prestasi Nonakademik': 'Prestasi Non Akademik',
-  'Terdampak Bencana Alam': 'Terdampak Bencana Alam',
-}
-
-function getJalurIcon(nama: string) {
-  const lower = nama.toLowerCase()
-  for (const [keyword, icon] of Object.entries(JALUR_ICON_MAP)) {
-    if (lower.includes(keyword)) return icon
-  }
-  return ClipboardCheck // default icon
-}
-
-function getJalurColors(nama: string, index: number) {
-  const lower = nama.toLowerCase()
-  for (const [keyword, colors] of Object.entries(JALUR_COLOR_MAP)) {
-    if (lower.includes(keyword)) return colors
-  }
-  return FALLBACK_COLORS[index % FALLBACK_COLORS.length]
-}
-
-function getJalurSubFilter(nama: string) {
-  return JALUR_SUB_FILTER_MAP[nama] || nama
-}
-
-// Build Lembar Verifikasi config from jalurConfigs
-function buildLembarVerifikasi(jalurConfigs: Array<{ id: string; nama: string; urutan: number; aktif: boolean }>) {
-  const active = jalurConfigs.filter(j => j.aktif)
-  return active.map((jalur, idx) => {
-    const key = jalur.nama.toLowerCase().replace(/[^a-z0-9]+/g, '-')
-    const colors = getJalurColors(jalur.nama, idx)
-    const icon = getJalurIcon(jalur.nama)
-    const subJalurFilter = getJalurSubFilter(jalur.nama)
-    return {
-      key,
-      label: jalur.nama,
-      icon,
-      subJalurFilter,
-      ...colors,
-      description: `Verifikasi pendaftar jalur ${jalur.nama}`,
-    }
-  })
-}
-
-// Type for Lembar Verifikasi config
-interface LembarVerifikasiConfig {
-  key: string
-  label: string
-  icon: any
-  subJalurFilter: string
-  color: string
-  bgColor: string
-  borderColor: string
-  headerBg: string
-  iconBg: string
-  iconColor: string
-  btnColor: string
-  description: string
-}
-
-function StatBar({ label, count, total, color }: { label: string; count: number; total: number; color: string }) {
-  return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between text-sm">
-        <span className="font-medium text-gray-700">{label}</span>
-        <span className="text-gray-500 tabular-nums">{count} ({total > 0 ? Math.round((count / total) * 100) : 0}%)</span>
-      </div>
-      <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
-        <div
-          className={`h-2.5 rounded-full transition-all duration-700 ease-out ${color}`}
-          style={{ width: total > 0 ? `${(count / total) * 100}%` : '0%' }}
-        />
-      </div>
-    </div>
-  )
-}
-
-// VerifyKekuranganPicker: Inline multi-select for rejection dialog
-function VerifyKekuranganPicker({ value, onChange }: { value: string; onChange: (val: string) => void }) {
-  const [search, setSearch] = useState('')
-  const [newOption, setNewOption] = useState('')
-  const [copied, setCopied] = useState(false)
-  const [customOptions, setCustomOptions] = useState<string[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('spmb_custom_kekurangan')
-        return saved ? JSON.parse(saved) : []
-      } catch { return [] }
-    }
-    return []
-  })
-
-  const allOptions = [...new Set([...DEFAULT_KEKURANGAN_OPTIONS, ...customOptions])]
-  const selectedItems: string[] = value ? value.split(' | ').filter(Boolean) : []
-
-  const filtered = search
-    ? allOptions.filter(opt => opt.toLowerCase().includes(search.toLowerCase()))
-    : allOptions
-
-  const toggleItem = (opt: string) => {
-    let next: string[]
-    if (selectedItems.includes(opt)) {
-      next = selectedItems.filter(s => s !== opt)
-    } else {
-      next = [...selectedItems, opt]
-    }
-    onChange(next.join(' | '))
-  }
-
-  const addNewOption = () => {
-    const trimmed = newOption.trim()
-    if (!trimmed) return
-    if (allOptions.includes(trimmed)) {
-      if (!selectedItems.includes(trimmed)) toggleItem(trimmed)
-      setNewOption('')
-      return
-    }
-    const updated = [...customOptions, trimmed]
-    setCustomOptions(updated)
-    localStorage.setItem('spmb_custom_kekurangan', JSON.stringify(updated))
-    onChange([...selectedItems, trimmed].join(' | '))
-    setNewOption('')
-  }
-
-  const handleCopy = () => {
-    if (!value) return
-    navigator.clipboard.writeText(value).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    })
-  }
-
-  return (
-    <div className="border rounded-lg overflow-hidden">
-      <div className="bg-red-50 px-3 py-2 border-b flex items-center justify-between">
-        <label className="text-sm font-medium text-red-700 flex items-center gap-1.5">
-          <AlertTriangle className="w-4 h-4" /> Alasan Penolakan
-        </label>
-        {selectedItems.length > 0 && (
-          <div className="flex items-center gap-1">
-            <button
-              onClick={handleCopy}
-              className="text-xs flex items-center gap-1 px-2 py-1 rounded hover:bg-red-100 text-red-600 transition-colors"
-              title="Copy alasan untuk paste ke Portal SPMB"
-            >
-              {copied ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
-              {copied ? 'Tersalin!' : 'Copy'}
-            </button>
-            <button
-              onClick={() => onChange('')}
-              className="text-xs flex items-center gap-1 px-2 py-1 rounded hover:bg-red-100 text-red-600 transition-colors"
-            >
-              <XIcon className="w-3 h-3" /> Hapus
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Selected tags */}
-      {selectedItems.length > 0 && (
-        <div className="px-3 py-2 bg-white border-b flex flex-wrap gap-1">
-          {selectedItems.map((item, idx) => (
-            <span
-              key={`tag-${idx}`}
-              className="inline-flex items-center gap-0.5 text-[10px] bg-red-50 border border-red-200 rounded px-1.5 py-0.5 text-red-700"
-            >
-              {item.length > 50 ? item.substring(0, 48) + '…' : item}
-              <button onClick={() => toggleItem(item)} className="ml-0.5 hover:text-red-900 shrink-0">
-                <XIcon className="w-2.5 h-2.5" />
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* Search */}
-      <div className="flex items-center px-3 py-2 border-b gap-2 bg-gray-50">
-        <Search className="w-4 h-4 text-gray-400 shrink-0" />
-        <input
-          placeholder="Cari alasan kekurangan..."
-          className="flex-1 text-sm outline-none bg-transparent"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
-
-      {/* Options list */}
-      <div className="max-h-48 overflow-y-auto">
-        {filtered.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-4">Tidak ditemukan</p>
-        ) : (
-          filtered.map((opt, idx) => (
-            <div
-              key={`opt-${idx}`}
-              className={`px-3 py-1.5 text-xs cursor-pointer hover:bg-sky-50 transition-colors flex items-start gap-2 ${
-                selectedItems.includes(opt) ? 'bg-red-50' : ''
-              }`}
-              onClick={() => toggleItem(opt)}
-            >
-              <Checkbox checked={selectedItems.includes(opt)} className="mt-0.5 shrink-0" />
-              <span className={selectedItems.includes(opt) ? 'font-medium text-red-700' : 'text-gray-700'}>
-                {opt}
-              </span>
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* Add new option */}
-      <div className="border-t px-3 py-2 bg-gray-50">
-        <div className="flex items-center gap-2">
-          <input
-            placeholder="Tambah alasan baru..."
-            className="flex-1 text-xs outline-none bg-white border rounded px-2 py-1.5 focus:ring-1 focus:ring-sky-400"
-            value={newOption}
-            onChange={(e) => setNewOption(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addNewOption() } }}
-          />
-          <Button size="sm" variant="outline" className="h-7 px-2 text-xs shrink-0" onClick={addNewOption} disabled={!newOption.trim()}>
-            <ListPlus className="w-3 h-3 mr-1" /> Tambah
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// Multi-select Kekurangan Verifikasi Dropdown with copy & add new
-function KekuranganVerifSelect({ value, onChange }: { value: string; onChange: (val: string) => void }) {
-  const [open, setOpen] = useState(false)
-  const [search, setSearch] = useState('')
-  const [newOption, setNewOption] = useState('')
-  const [copied, setCopied] = useState(false)
-  const [customOptions, setCustomOptions] = useState<string[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('spmb_custom_kekurangan')
-        return saved ? JSON.parse(saved) : []
-      } catch { return [] }
-    }
-    return []
-  })
-
-  // All options = default + custom
-  const allOptions = [...new Set([...DEFAULT_KEKURANGAN_OPTIONS, ...customOptions])]
-
-  // Parse current value into array (separated by " | ")
-  const selectedItems: string[] = value ? value.split(' | ').filter(Boolean) : []
-
-  const filtered = search
-    ? allOptions.filter(opt => opt.toLowerCase().includes(search.toLowerCase()))
-    : allOptions
-
-  const toggleItem = (opt: string) => {
-    let next: string[]
-    if (selectedItems.includes(opt)) {
-      next = selectedItems.filter(s => s !== opt)
-    } else {
-      next = [...selectedItems, opt]
-    }
-    onChange(next.join(' | '))
-  }
-
-  const addNewOption = () => {
-    const trimmed = newOption.trim()
-    if (!trimmed) return
-    if (allOptions.includes(trimmed)) {
-      // Just select it if it already exists
-      if (!selectedItems.includes(trimmed)) {
-        toggleItem(trimmed)
-      }
-      setNewOption('')
-      return
-    }
-    // Add to custom options and select it
-    const updated = [...customOptions, trimmed]
-    setCustomOptions(updated)
-    localStorage.setItem('spmb_custom_kekurangan', JSON.stringify(updated))
-    const nextSelected = [...selectedItems, trimmed]
-    onChange(nextSelected.join(' | '))
-    setNewOption('')
-  }
-
-  const handleCopy = () => {
-    if (!value) return
-    navigator.clipboard.writeText(value).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    })
-  }
-
-  const clearAll = () => {
-    onChange('')
-    setOpen(false)
-    setSearch('')
-  }
-
-  // Display in cell
-  const cellDisplay = selectedItems.length === 0
-    ? <span className="text-gray-400">-</span>
-    : (
-      <span className="text-gray-800">
-        {selectedItems.length === 1
-          ? (selectedItems[0].length > 22 ? selectedItems[0].substring(0, 20) + '…' : selectedItems[0])
-          : <span className="inline-flex items-center gap-1">
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-sky-100 text-sky-700">{selectedItems.length} alasan</Badge>
-              <span className="text-[10px] text-gray-500 truncate max-w-[120px]">{selectedItems[0]}</span>
-            </span>
-        }
-      </span>
-    )
-
-  return (
-    <Popover open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setSearch(''); setNewOption('') } }}>
-      <PopoverTrigger asChild>
-        <span
-          className="cursor-pointer hover:bg-sky-50 px-1 py-0.5 rounded inline-flex items-center gap-1 group min-h-[24px] text-xs"
-          title={value || '-'}
-        >
-          {cellDisplay}
-          <Pencil className="w-3 h-3 text-gray-300 group-hover:text-sky-500 shrink-0" />
-        </span>
-      </PopoverTrigger>
-      <PopoverContent className="w-96 p-0" align="start" side="bottom">
-        {/* Search */}
-        <div className="flex items-center border-b px-3 py-2 gap-2">
-          <Search className="w-4 h-4 text-gray-400 shrink-0" />
-          <input
-            placeholder="Cari alasan kekurangan..."
-            className="flex-1 text-sm outline-none bg-transparent"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            autoFocus
-          />
-        </div>
-
-        {/* Selected items preview */}
-        {selectedItems.length > 0 && (
-          <div className="px-3 py-2 bg-red-50 border-b">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-medium text-red-700">Alasan dipilih ({selectedItems.length}):</span>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={handleCopy}
-                  className="text-xs flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-red-100 text-red-600 transition-colors"
-                  title="Copy alasan untuk paste ke Portal SPMB"
-                >
-                  {copied ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
-                  {copied ? 'Tersalin!' : 'Copy'}
-                </button>
-                <button
-                  onClick={clearAll}
-                  className="text-xs flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-red-100 text-red-600 transition-colors"
-                  title="Hapus semua pilihan"
-                >
-                  <XIcon className="w-3 h-3" /> Hapus
-                </button>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-1">
-              {selectedItems.map((item, idx) => (
-                <span
-                  key={`vtag-${idx}`}
-                  className="inline-flex items-center gap-0.5 text-[10px] bg-white border border-red-200 rounded px-1.5 py-0.5 text-red-700"
-                >
-                  {item.length > 40 ? item.substring(0, 38) + '…' : item}
-                  <button
-                    onClick={() => toggleItem(item)}
-                    className="ml-0.5 hover:text-red-900 shrink-0"
-                  >
-                    <XIcon className="w-2.5 h-2.5" />
-                  </button>
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Options list with checkboxes */}
-        <div className="max-h-56 overflow-y-auto">
-          {filtered.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-4">Tidak ditemukan</p>
-          ) : (
-            filtered.map((opt, idx) => (
-              <div
-                key={`vopt-${idx}`}
-                className={`px-3 py-1.5 text-xs cursor-pointer hover:bg-sky-50 transition-colors flex items-start gap-2 ${
-                  selectedItems.includes(opt) ? 'bg-red-50' : ''
-                }`}
-                onClick={() => toggleItem(opt)}
-              >
-                <Checkbox
-                  checked={selectedItems.includes(opt)}
-                  className="mt-0.5 shrink-0"
-                />
-                <span className={selectedItems.includes(opt) ? 'font-medium text-red-700' : 'text-gray-700'}>
-                  {opt}
-                </span>
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* Add new option */}
-        <div className="border-t px-3 py-2">
-          <div className="flex items-center gap-2">
-            <input
-              placeholder="Tambah alasan baru..."
-              className="flex-1 text-xs outline-none bg-gray-50 border rounded px-2 py-1.5 focus:ring-1 focus:ring-sky-400 focus:bg-white"
-              value={newOption}
-              onChange={(e) => setNewOption(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addNewOption() } }}
-            />
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 px-2 text-xs shrink-0"
-              onClick={addNewOption}
-              disabled={!newOption.trim()}
-            >
-              <ListPlus className="w-3 h-3 mr-1" /> Tambah
-            </Button>
-          </div>
-        </div>
-      </PopoverContent>
-    </Popover>
-  )
-}
-
-// Lembar Verifikasi Sheet Component
-function LembarVerifikasiSheet({
-  config,
-  subJalurOptions,
-  onVerify,
-  onBulkVerify,
-  onViewDetail,
-  toast,
-}: {
-  config: LembarVerifikasiConfig
-  subJalurOptions: Array<{ label: string; value: string }>
-  onVerify: (id: string, action: 'VERIFIED' | 'REJECTED') => void
-  onBulkVerify: (ids: string[], action: 'VERIFIED' | 'REJECTED') => void
-  onViewDetail: (reg: Registration) => void
-  toast: ReturnType<typeof useToast>['toast']
-}) {
-  const [data, setData] = useState<LembarVerifikasiData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
-  const [verificationFilter, setVerificationFilter] = useState('all')
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [page, setPage] = useState(1)
-  const [lembarLimit, setLembarLimit] = useState(20)
-  const [verifying, setVerifying] = useState(false)
-  const [verifyDialogOpen, setVerifyDialogOpen] = useState(false)
-  const [bulkVerifyDialogOpen, setBulkVerifyDialogOpen] = useState(false)
-  const [verifyAction, setVerifyAction] = useState<'VERIFIED' | 'REJECTED'>('VERIFIED')
-  const [verifyNote, setVerifyNote] = useState('')
-  const [verifyTargetId, setVerifyTargetId] = useState<string | null>(null)
-
-  // Sort by nama
-  const [namaSortLembar, setNamaSortLembar] = useState<'none' | 'asc' | 'desc'>('none')
-
-  // Inline editing state: key = "regId-fieldName"
-  const [editingCell, setEditingCell] = useState<string | null>(null)
-  const [editingValue, setEditingValue] = useState('')
-
-  // Edit dialog state
-  const [editDialogOpen, setEditDialogOpen] = useState(false)
-  const [editTarget, setEditTarget] = useState<Registration | null>(null)
-  const [editForm, setEditForm] = useState<Record<string, string>>({})
-  const [saving, setSaving] = useState(false)
-
-  // Delete dialog state
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [deleteTarget, setDeleteTarget] = useState<Registration | null>(null)
-  const [deleting, setDeleting] = useState(false)
-
-  const handleFieldUpdate = async (regId: string, field: string, value: string) => {
-    try {
-      const res = await fetch(`/api/registrations/${regId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ field, value }),
-      })
-      const result = await res.json()
-      if (result.success) {
-        // Update local data
-        if (data) {
-          setData({
-            ...data,
-            registrations: data.registrations.map(r =>
-              r.id === regId ? { ...r, [field]: value || null } : r
-            ),
-          })
-        }
-        toast({ title: 'Tersimpan', description: `Data ${field} berhasil diperbarui` })
-      } else {
-        toast({ title: 'Gagal', description: result.error || 'Gagal menyimpan', variant: 'destructive' })
-      }
-    } catch {
-      toast({ title: 'Gagal', description: 'Terjadi kesalahan', variant: 'destructive' })
-    }
-  }
-
-  // Update multiple fields at once (e.g. terbitKK + lamaKK)
-  const handleMultiFieldUpdate = async (regId: string, fields: Record<string, string>) => {
-    try {
-      const res = await fetch(`/api/registrations/${regId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(fields),
-      })
-      const result = await res.json()
-      if (result.success) {
-        // Update local data with all fields
-        if (data) {
-          setData({
-            ...data,
-            registrations: data.registrations.map(r =>
-              r.id === regId ? { ...r, ...Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, v || null])) } : r
-            ),
-          })
-        }
-        toast({ title: 'Tersimpan', description: 'Data berhasil diperbarui' })
-      } else {
-        toast({ title: 'Gagal', description: result.error || 'Gagal menyimpan', variant: 'destructive' })
-      }
-    } catch {
-      toast({ title: 'Gagal', description: 'Terjadi kesalahan', variant: 'destructive' })
-    }
-  }
-
-  const startEditing = (regId: string, field: string, currentValue: string) => {
-    setEditingCell(`${regId}-${field}`)
-    setEditingValue(currentValue || '')
-  }
-
-  const commitEdit = (regId: string, field: string) => {
-    handleFieldUpdate(regId, field, editingValue)
-    setEditingCell(null)
-    setEditingValue('')
-  }
-
-  const commitEditDirect = (regId: string, field: string, value: string) => {
-    handleFieldUpdate(regId, field, value)
-  }
-
-  // Commit terbitKK and auto-calculate lamaKK at once
-  const commitTerbitKK = (regId: string, newDate: string) => {
-    const calculatedLama = newDate ? hitungLamaKK(newDate) : ''
-    // Immediately update local state for instant UI feedback
-    if (data) {
-      setData({
-        ...data,
-        registrations: data.registrations.map(r =>
-          r.id === regId ? { ...r, terbitKK: newDate || null, lamaKK: calculatedLama || null } : r
-        ),
-      })
-    }
-    // Save both fields to backend in one request
-    handleMultiFieldUpdate(regId, { terbitKK: newDate, lamaKK: calculatedLama })
-    setEditingCell(null)
-    setEditingValue('')
-  }
-
-  const cancelEdit = () => {
-    setEditingCell(null)
-    setEditingValue('')
-  }
-
-  // Edit dialog functions
-  const openEditDialog = (reg: Registration) => {
-    setEditTarget(reg)
-    setEditForm({
-      noRegistrasi: reg.noRegistrasi || '',
-      nama: reg.nama || '',
-      nisn: reg.nisn || '',
-      subJalur: reg.subJalur || '',
-      nik: reg.nik || '',
-      tanggalLahir: reg.tanggalLahir || '',
-      alamat: reg.alamat || '',
-      alamatLengkap: reg.alamatLengkap || '',
-      noTelpSiswa: reg.noTelpSiswa || '',
-      noTelpOrangtua: reg.noTelpOrangtua || '',
-      npsnSekolahPilihan: reg.npsnSekolahPilihan || '',
-      namaSekolahPilihan: reg.namaSekolahPilihan || '',
-      jurusan: reg.jurusan || '',
-      npsnSekolahAsal: reg.npsnSekolahAsal || '',
-      namaSekolahAsal: reg.namaSekolahAsal || '',
-      skorJarak: reg.skorJarak || '',
-      skorNilaiRaport: reg.skorNilaiRaport || '',
-      kekuranganVerifikasi: reg.kekuranganVerifikasi || '',
-      tanggalVerif: reg.tanggalVerif || '',
-      jamVerif: reg.jamVerif || '',
-      terbitKK: reg.terbitKK || '',
-      latitude: reg.latitude || '',
-      longitude: reg.longitude || '',
-      lokasiJarak: reg.lokasiJarak || '',
-      nilaiRataRata: reg.nilaiRataRata || '',
-      statusLulus: reg.statusLulus || 'BELUM',
-      statusDaftarUlang: reg.statusDaftarUlang || 'BELUM',
-    })
-    setEditDialogOpen(true)
-  }
-
-  const handleSaveEdit = async () => {
-    if (!editTarget) return
-    setSaving(true)
-    try {
-      // Auto-calculate lamaKK when terbitKK is provided
-      const updateData = { ...editForm }
-      if (updateData.terbitKK) {
-        const calculatedLama = hitungLamaKK(updateData.terbitKK)
-        if (calculatedLama) updateData['lamaKK'] = calculatedLama
-      }
-
-      const res = await fetch(`/api/registrations/${editTarget.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updateData),
-      })
-      const result = await res.json()
-      if (result.success) {
-        toast({ title: 'Berhasil', description: `Data ${editTarget.nama} berhasil diperbarui` })
-        setEditDialogOpen(false)
-        setEditTarget(null)
-        fetchData()
-      } else {
-        toast({ title: 'Gagal', description: result.error || 'Gagal menyimpan', variant: 'destructive' })
-      }
-    } catch {
-      toast({ title: 'Gagal', description: 'Terjadi kesalahan', variant: 'destructive' })
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  // Delete dialog functions
-  const openDeleteDialog = (reg: Registration) => {
-    setDeleteTarget(reg)
-    setDeleteDialogOpen(true)
-  }
-
-  const handleDelete = async () => {
-    if (!deleteTarget) return
-    setDeleting(true)
-    try {
-      const res = await fetch(`/api/registrations/${deleteTarget.id}`, {
-        method: 'DELETE',
-      })
-      const result = await res.json()
-      if (result.success) {
-        toast({ title: 'Berhasil', description: `Data ${deleteTarget.nama} berhasil dihapus` })
-        setDeleteDialogOpen(false)
-        setDeleteTarget(null)
-        fetchData()
-      } else {
-        toast({ title: 'Gagal', description: result.error || 'Gagal menghapus', variant: 'destructive' })
-      }
-    } catch {
-      toast({ title: 'Gagal', description: 'Terjadi kesalahan', variant: 'destructive' })
-    } finally {
-      setDeleting(false)
-    }
-  }
-
-  const fetchData = useCallback(async () => {
-    setLoading(true)
-    try {
-      const params = new URLSearchParams()
-      params.set('page', page.toString())
-      params.set('limit', lembarLimit.toString())
-      params.set('subJalur', config.subJalurFilter)
-      if (search) params.set('search', search)
-      if (verificationFilter !== 'all') params.set('verificationStatus', verificationFilter)
-
-      const res = await fetch(`/api/registrations?${params}`)
-      const result = await res.json()
-
-      const regs: Registration[] = result.data || []
-      const pag = result.pagination || { page: 1, limit: lembarLimit, total: 0, totalPages: 0 }
-
-      // Calculate stats from current data set
-      const statsRes = await fetch('/api/dashboard')
-      const statsData = await statsRes.json()
-
-      // Filter stats for this sub jalur
-      const jalurNames = config.subJalurFilter.split(',').map(s => s.trim())
-      const relevantSubJalurStats = statsData.bySubJalur.filter(
-        (item: { name: string; count: number }) => jalurNames.includes(item.name)
-      )
-      const totalForJalur = relevantSubJalurStats.reduce((acc: number, item: { count: number }) => acc + item.count, 0)
-
-      const relevantVerifiedStats = statsData.verifiedBySubJalur.filter(
-        (item: { name: string; count: number }) => jalurNames.includes(item.name)
-      )
-      const verifiedForJalur = relevantVerifiedStats.reduce((acc: number, item: { count: number }) => acc + item.count, 0)
-
-      const relevantRejectedStats = statsData.rejectedBySubJalur.filter(
-        (item: { name: string; count: number }) => jalurNames.includes(item.name)
-      )
-      const rejectedForJalur = relevantRejectedStats.reduce((acc: number, item: { count: number }) => acc + item.count, 0)
-
-      const pendingForJalur = totalForJalur - verifiedForJalur - rejectedForJalur
-
-      setData({
-        registrations: regs,
-        pagination: pag,
-        stats: {
-          total: totalForJalur,
-          verified: verifiedForJalur,
-          rejected: rejectedForJalur,
-          pending: pendingForJalur,
-        },
-      })
-    } catch {
-      toast({ title: 'Error', description: 'Gagal memuat data', variant: 'destructive' })
-    } finally {
-      setLoading(false)
-    }
-  }, [page, search, verificationFilter, config.subJalurFilter, lembarLimit, toast])
-
-  useEffect(() => {
-    fetchData()
-  }, [fetchData])
-
-  const handleVerify = async () => {
-    if (!verifyTargetId) return
-    setVerifying(true)
-    try {
-      const res = await fetch('/api/registrations/verify', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: verifyTargetId,
-          verificationStatus: verifyAction,
-          verificationNote: verifyNote || undefined,
-        }),
-      })
-      const result = await res.json()
-      if (result.success) {
-        toast({
-          title: verifyAction === 'VERIFIED' ? 'Pendaftar Diterima' : 'Pendaftar Ditolak',
-          description: verifyAction === 'VERIFIED' ? 'Data telah diverifikasi dan diterima' : 'Data pendaftar telah ditolak',
-        })
-        setVerifyDialogOpen(false)
-        setVerifyNote('')
-        setVerifyTargetId(null)
-        fetchData()
-      } else {
-        toast({ title: 'Gagal', description: result.error || 'Terjadi kesalahan', variant: 'destructive' })
-      }
-    } catch {
-      toast({ title: 'Gagal', description: 'Terjadi kesalahan', variant: 'destructive' })
-    } finally {
-      setVerifying(false)
-    }
-  }
-
-  const handleBulkVerify = async () => {
-    if (selectedIds.size === 0) return
-    setVerifying(true)
-    try {
-      const res = await fetch('/api/registrations/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ids: Array.from(selectedIds),
-          verificationStatus: verifyAction,
-          verificationNote: verifyNote || undefined,
-        }),
-      })
-      const result = await res.json()
-      if (result.success) {
-        toast({
-          title: verifyAction === 'VERIFIED' ? 'Pendaftar Diterima' : 'Pendaftar Ditolak',
-          description: `${result.updated} pendaftar ${verifyAction === 'VERIFIED' ? 'diterima' : 'ditolak'}`,
-        })
-        setBulkVerifyDialogOpen(false)
-        setVerifyNote('')
-        setSelectedIds(new Set())
-        fetchData()
-      } else {
-        toast({ title: 'Gagal', description: result.error || 'Terjadi kesalahan', variant: 'destructive' })
-      }
-    } catch {
-      toast({ title: 'Gagal', description: 'Terjadi kesalahan', variant: 'destructive' })
-    } finally {
-      setVerifying(false)
-    }
-  }
-
-  const toggleSelectAll = () => {
-    if (!data) return
-    if (selectedIds.size === data.registrations.length) {
-      setSelectedIds(new Set())
-    } else {
-      setSelectedIds(new Set(data.registrations.map(r => r.id)))
-    }
-  }
-
-  const toggleSelect = (id: string) => {
-    const next = new Set(selectedIds)
-    if (next.has(id)) next.delete(id)
-    else next.add(id)
-    setSelectedIds(next)
-  }
-
-  const Icon = config.icon
-  const s = data?.stats || { total: 0, verified: 0, rejected: 0, pending: 0 }
-  const verifiedPct = s.total > 0 ? Math.round((s.verified / s.total) * 100) : 0
-  const rejectedPct = s.total > 0 ? Math.round((s.rejected / s.total) * 100) : 0
-  const pendingPct = s.total > 0 ? Math.round((s.pending / s.total) * 100) : 0
-  const progressPct = s.total > 0 ? Math.round(((s.verified + s.rejected) / s.total) * 100) : 0
-
-  return (
-    <div className="space-y-6">
-      {/* Header Card */}
-      <Card className={`${config.borderColor} border-l-4 shadow-sm hover:shadow-md transition-shadow`}>
-        <CardContent className="p-3 sm:p-5">
-          <div className="flex items-center gap-3 sm:gap-4">
-            <div className={`p-2 sm:p-3 ${config.iconBg} rounded-lg sm:rounded-xl shadow-sm`}>
-              <Icon className={`w-6 h-6 sm:w-8 sm:h-8 ${config.iconColor}`} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-base sm:text-xl font-bold text-gray-900">Lembar Verifikasi: {config.label}</h3>
-                {config.subCategories && (
-                  <div className="flex gap-1">
-                    {config.subCategories.map(sub => (
-                      <Badge key={sub} variant="outline" className={SUB_JALUR_COLORS[sub] || 'bg-gray-100 text-gray-800 border-gray-200'}>
-                        {sub}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <p className="text-sm text-gray-500 mt-0.5">{config.description}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Stats Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
-        <Card className={`${config.bgColor} shadow-sm hover:shadow-md transition-shadow`}>
-          <CardContent className="p-2.5 sm:p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] sm:text-sm text-gray-500">Total Pendaftar</p>
-                <p className="text-lg sm:text-2xl font-bold">{s.total}</p>
-              </div>
-              <div className={`p-1.5 sm:p-2.5 ${config.iconBg} rounded-lg sm:rounded-xl shadow-sm`}>
-                <Users className={`w-4 h-4 sm:w-5 sm:h-5 ${config.iconColor}`} />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-br from-amber-50 to-yellow-50/50 shadow-sm hover:shadow-md transition-shadow">
-          <CardContent className="p-2.5 sm:p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] sm:text-sm text-gray-500">Menunggu</p>
-                <p className="text-lg sm:text-2xl font-bold text-yellow-600">{s.pending}</p>
-              </div>
-              <div className="p-1.5 sm:p-2.5 bg-amber-100 rounded-lg sm:rounded-xl shadow-sm">
-                <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-br from-emerald-50 to-teal-50/50 shadow-sm hover:shadow-md transition-shadow">
-          <CardContent className="p-2.5 sm:p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] sm:text-sm text-gray-500">Diterima</p>
-                <p className="text-lg sm:text-2xl font-bold text-emerald-600">{s.verified}</p>
-              </div>
-              <div className="p-1.5 sm:p-2.5 bg-emerald-100 rounded-lg sm:rounded-xl shadow-sm">
-                <UserCheck className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-br from-red-50 to-rose-50/50 shadow-sm hover:shadow-md transition-shadow">
-          <CardContent className="p-2.5 sm:p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] sm:text-sm text-gray-500">Ditolak</p>
-                <p className="text-lg sm:text-2xl font-bold text-red-600">{s.rejected}</p>
-              </div>
-              <div className="p-1.5 sm:p-2.5 bg-red-100 rounded-lg sm:rounded-xl shadow-sm">
-                <UserX className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Progress */}
-      <Card className="shadow-sm">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700">Progres Verifikasi {config.label}</span>
-            <span className="text-sm text-gray-500">{progressPct}% selesai</span>
-          </div>
-          <Progress value={progressPct} className="h-3" />
-          <div className="flex justify-between mt-2 text-xs">
-            <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-              <span className="text-gray-600">Diterima: {s.verified} ({verifiedPct}%)</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
-              <span className="text-gray-600">Ditolak: {s.rejected} ({rejectedPct}%)</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-yellow-500" />
-              <span className="text-gray-600">Menunggu: {s.pending} ({pendingPct}%)</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Filters & Search */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                placeholder="Cari nama, no. registrasi, atau NISN..."
-                className="pl-9"
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value)
-                  setPage(1)
-                }}
-              />
-            </div>
-            <Select
-              value={verificationFilter}
-              onValueChange={(v) => {
-                setVerificationFilter(v)
-                setPage(1)
-              }}
-            >
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Status Verifikasi" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Status</SelectItem>
-                <SelectItem value="PENDING">Menunggu</SelectItem>
-                <SelectItem value="VERIFIED">Diterima</SelectItem>
-                <SelectItem value="REJECTED">Ditolak</SelectItem>
-              </SelectContent>
-            </Select>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">Tampilkan:</span>
-              <Select value={lembarLimit.toString()} onValueChange={(val) => {
-                const newLimit = val === 'all' ? 9999 : parseInt(val)
-                setLembarLimit(newLimit)
-                setPage(1)
-              }}>
-                <SelectTrigger className="w-24 h-8 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="20">20</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                  <SelectItem value="100">100</SelectItem>
-                  <SelectItem value="all">Semua</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {selectedIds.size > 0 && (
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  className="bg-emerald-600 hover:bg-emerald-700"
-                  onClick={() => {
-                    setVerifyAction('VERIFIED')
-                    setBulkVerifyDialogOpen(true)
-                  }}
-                >
-                  <ThumbsUp className="w-4 h-4" />
-                  Terima ({selectedIds.size})
-                </Button>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={() => {
-                    setVerifyAction('REJECTED')
-                    setBulkVerifyDialogOpen(true)
-                  }}
-                >
-                  <ThumbsDown className="w-4 h-4" />
-                  Tolak ({selectedIds.size})
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setSelectedIds(new Set())}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Verification Table */}
-      <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto max-h-[60vh] overflow-y-auto">
-            <Table>
-              <TableHeader className="sticky top-0 z-10 bg-white">
-                <TableRow className={config.headerBg}>
-                  <TableHead className="w-10 text-center">No</TableHead>
-                  <TableHead className="w-10 text-center">
-                    <Checkbox
-                      checked={data ? data.registrations.length > 0 && selectedIds.size === data.registrations.length : false}
-                      onCheckedChange={toggleSelectAll}
-                    />
-                  </TableHead>
-                  <TableHead>Skor Jarak</TableHead>
-                  <TableHead>Skor Nilai Raport</TableHead>
-                  <TableHead className="min-w-[180px]">
-                    <span className="inline-flex items-center gap-1 cursor-pointer group" onClick={() => {
-                      // Open a dialog to bulk-set kekurangan for selected rows, or just indicate the column purpose
-                      if (selectedIds.size > 0) {
-                        setVerifyAction('REJECTED')
-                        setBulkVerifyDialogOpen(true)
-                      }
-                    }}>
-                      Kekurangan Verifikasi
-                      <Pencil className="w-3 h-3 text-gray-300 group-hover:text-sky-500" />
-                    </span>
-                  </TableHead>
-                  <TableHead>Tanggal Verif</TableHead>
-                  <TableHead>Jam Verif</TableHead>
-                  <TableHead>Terbit KK</TableHead>
-                  <TableHead>Lama KK</TableHead>
-                  <TableHead>No. Registrasi</TableHead>
-                  <TableHead>Nama Peserta
-                    <span className="ml-1 cursor-pointer inline-flex align-middle" onClick={() => setNamaSortLembar(namaSortLembar === 'none' ? 'asc' : namaSortLembar === 'asc' ? 'desc' : 'none')}>
-                      {namaSortLembar === 'none' ? <ArrowUpDown className="w-3 h-3 text-gray-400" /> : namaSortLembar === 'asc' ? <ArrowUpAZ className="w-3 h-3 text-emerald-600" /> : <ArrowDownAZ className="w-3 h-3 text-emerald-600" />}
-                    </span>
-                  </TableHead>
-                  <TableHead>Asal Sekolah</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={15} className="text-center py-12">
-                      <Loader2 className="w-6 h-6 animate-spin mx-auto text-gray-400" />
-                      <p className="text-sm text-gray-400 mt-2">Memuat data...</p>
-                    </TableCell>
-                  </TableRow>
-                ) : !data || data.registrations.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={15} className="text-center py-12">
-                      <Icon className={`w-10 h-10 mx-auto text-gray-300 mb-2`} />
-                      <p className="text-gray-500 font-medium">Belum ada data pendaftar {config.label}</p>
-                      <p className="text-sm text-gray-400">Import CSV untuk memulai verifikasi</p>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  [...data.registrations].sort((a, b) => {
-                    if (namaSortLembar === 'asc') return (a.nama || '').localeCompare(b.nama || '')
-                    if (namaSortLembar === 'desc') return (b.nama || '').localeCompare(a.nama || '')
-                    return 0
-                  }).map((reg, idx) => (
-                    <TableRow key={reg.id} className={
-                      reg.verificationStatus === 'VERIFIED' ? 'bg-emerald-50/40' :
-                      reg.verificationStatus === 'REJECTED' ? 'bg-red-50/40' : ''
-                    }>
-                      {/* No */}
-                      <TableCell className="text-center text-sm text-gray-500">
-                        {(data.pagination.page - 1) * data.pagination.limit + idx + 1}
-                      </TableCell>
-                      {/* Checkbox */}
-                      <TableCell className="text-center">
-                        <Checkbox checked={selectedIds.has(reg.id)} onCheckedChange={() => toggleSelect(reg.id)} />
-                      </TableCell>
-                      {/* Skor Jarak */}
-                      <TableCell className="text-sm text-center">
-                        {reg.skorJarak || '-'}
-                      </TableCell>
-                      {/* Skor Nilai Raport */}
-                      <TableCell className="text-sm text-center">
-                        {editingCell === `${reg.id}-skorNilaiRaport` ? (
-                          <input
-                            type="text"
-                            className="w-20 px-1.5 py-0.5 text-sm border border-sky-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
-                            value={editingValue}
-                            onChange={(e) => setEditingValue(e.target.value)}
-                            onBlur={() => commitEdit(reg.id, 'skorNilaiRaport')}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') commitEdit(reg.id, 'skorNilaiRaport')
-                              if (e.key === 'Escape') cancelEdit()
-                            }}
-                            autoFocus
-                          />
-                        ) : (
-                          <span
-                            className="cursor-pointer hover:bg-sky-50 px-1 py-0.5 rounded inline-flex items-center gap-1 group"
-                            onClick={() => startEditing(reg.id, 'skorNilaiRaport', reg.skorNilaiRaport || reg.nilaiRataRata || '')}
-                          >
-                            {reg.skorNilaiRaport || reg.nilaiRataRata || '-'}
-                            <Pencil className="w-3 h-3 text-gray-300 group-hover:text-sky-500" />
-                          </span>
-                        )}
-                      </TableCell>
-                      {/* Kekurangan Verifikasi - Multi-Select Dropdown */}
-                      <TableCell className="text-sm align-top" style={{ maxWidth: '280px' }}>
-                        <div className="space-y-1">
-                          <KekuranganVerifSelect
-                            value={reg.kekuranganVerifikasi || ''}
-                            onChange={(val) => commitEditDirect(reg.id, 'kekuranganVerifikasi', val)}
-                          />
-                          {reg.kekuranganVerifikasi && (
-                            <div className="group/reason relative">
-                              <div className="text-[10px] text-red-600 leading-tight whitespace-normal break-words pr-5">
-                                {reg.kekuranganVerifikasi.split(' | ').map((reason, i) => (
-                                  <span key={i} className="block">{reason}</span>
-                                ))}
-                              </div>
-                              <button
-                                className="absolute top-0 right-0 opacity-0 group-hover/reason:opacity-100 transition-opacity p-0.5 rounded hover:bg-sky-100 text-gray-400 hover:text-sky-600"
-                                title="Copy alasan untuk paste ke Portal SPMB"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(reg.kekuranganVerifikasi || '')
-                                  toast({ title: 'Tersalin!', description: 'Alasan kekurangan sudah di-copy' })
-                                }}
-                              >
-                                <Copy className="w-3 h-3" />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      {/* Tanggal Verif */}
-                      <TableCell className="text-sm">
-                        {editingCell === `${reg.id}-tanggalVerif` ? (
-                          <input
-                            type="date"
-                            className="w-32 px-1.5 py-0.5 text-sm border border-sky-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
-                            value={editingValue}
-                            onChange={(e) => setEditingValue(e.target.value)}
-                            onBlur={() => commitEdit(reg.id, 'tanggalVerif')}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') commitEdit(reg.id, 'tanggalVerif')
-                              if (e.key === 'Escape') cancelEdit()
-                            }}
-                            autoFocus
-                          />
-                        ) : (
-                          <span
-                            className="cursor-pointer hover:bg-sky-50 px-1 py-0.5 rounded inline-flex items-center gap-1 group"
-                            onClick={() => startEditing(reg.id, 'tanggalVerif', reg.tanggalVerif || '')}
-                          >
-                            {reg.tanggalVerif || '-'}
-                            <Pencil className="w-3 h-3 text-gray-300 group-hover:text-sky-500" />
-                          </span>
-                        )}
-                      </TableCell>
-                      {/* Jam Verif */}
-                      <TableCell className="text-sm">
-                        {editingCell === `${reg.id}-jamVerif` ? (
-                          <input
-                            type="time"
-                            className="w-24 px-1.5 py-0.5 text-sm border border-sky-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
-                            value={editingValue}
-                            onChange={(e) => setEditingValue(e.target.value)}
-                            onBlur={() => commitEdit(reg.id, 'jamVerif')}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') commitEdit(reg.id, 'jamVerif')
-                              if (e.key === 'Escape') cancelEdit()
-                            }}
-                            autoFocus
-                          />
-                        ) : (
-                          <span
-                            className="cursor-pointer hover:bg-sky-50 px-1 py-0.5 rounded inline-flex items-center gap-1 group"
-                            onClick={() => startEditing(reg.id, 'jamVerif', reg.jamVerif || '')}
-                          >
-                            {reg.jamVerif || '-'}
-                            <Pencil className="w-3 h-3 text-gray-300 group-hover:text-sky-500" />
-                          </span>
-                        )}
-                      </TableCell>
-                      {/* Terbit KK */}
-                      <TableCell className="text-sm">
-                        {editingCell === `${reg.id}-terbitKK` ? (
-                          <div className="flex items-center gap-1">
-                            <input
-                              type="date"
-                              className="w-28 px-1.5 py-0.5 text-sm border border-sky-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
-                              value={editingValue}
-                              onChange={(e) => {
-                                setEditingValue(e.target.value)
-                              }}
-                              onBlur={() => {
-                                // Small delay to allow clear button click to register
-                                setTimeout(() => {
-                                  if (editingCell === `${reg.id}-terbitKK`) {
-                                    commitTerbitKK(reg.id, editingValue)
-                                  }
-                                }, 150)
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  commitTerbitKK(reg.id, editingValue)
-                                }
-                                if (e.key === 'Escape') cancelEdit()
-                              }}
-                              autoFocus
-                            />
-                            <button
-                              type="button"
-                              className="p-0.5 rounded hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors"
-                              title="Kosongkan tanggal"
-                              onMouseDown={(e) => {
-                                e.preventDefault() // Prevent blur from firing on the date input
-                                commitTerbitKK(reg.id, '')
-                              }}
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        ) : (
-                          <span
-                            className="cursor-pointer hover:bg-sky-50 px-1 py-0.5 rounded inline-flex items-center gap-1 group"
-                            onClick={() => startEditing(reg.id, 'terbitKK', reg.terbitKK || '')}
-                          >
-                            {reg.terbitKK || '-'}
-                            <Pencil className="w-3 h-3 text-gray-300 group-hover:text-sky-500" />
-                          </span>
-                        )}
-                      </TableCell>
-                      {/* Lama KK - Auto-calculated from Terbit KK */}
-                      <TableCell className="text-sm">
-                        <span
-                          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium ${
-                            !reg.terbitKK ? 'text-gray-400' :
-                            isKKKurangSetahun(reg.terbitKK)
-                              ? 'bg-red-100 text-red-700 border border-red-200'
-                              : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
-                          }`}
-                          title={reg.terbitKK ? `Terbit: ${reg.terbitKK}` : undefined}
-                        >
-                          {reg.terbitKK ? (
-                            <>
-                              <CalendarClock className="w-3 h-3" />
-                              {reg.lamaKK || hitungLamaKK(reg.terbitKK) || '-'}
-                            </>
-                          ) : '-'}
-                        </span>
-                      </TableCell>
-                      {/* No. Registrasi */}
-                      <TableCell className="font-mono text-sm">{reg.noRegistrasi}</TableCell>
-                      {/* Nama Peserta */}
-                      <TableCell className="font-medium text-sm">{reg.nama}</TableCell>
-                      {/* Asal Sekolah */}
-                      <TableCell className="text-sm text-gray-600">{reg.namaSekolahAsal}</TableCell>
-                      {/* Status */}
-                      <TableCell>
-                        <Badge variant="outline" className={STATUS_COLORS[reg.verificationStatus]}>
-                          {reg.verificationStatus === 'PENDING' && <Clock className="w-3 h-3" />}
-                          {reg.verificationStatus === 'VERIFIED' && <CheckCircle2 className="w-3 h-3" />}
-                          {reg.verificationStatus === 'REJECTED' && <XCircle className="w-3 h-3" />}
-                          {reg.verificationStatus === 'PENDING' ? 'Menunggu' :
-                           reg.verificationStatus === 'VERIFIED' ? 'Diterima' : 'Ditolak'}
-                        </Badge>
-                      </TableCell>
-                      {/* Aksi */}
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => onViewDetail(reg)} title="Lihat Detail">
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" className="text-blue-600 hover:text-white hover:bg-blue-600" title="Edit Data" onClick={() => openEditDialog(reg)}>
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" className="text-red-600 hover:text-white hover:bg-red-600" title="Hapus Data" onClick={() => openDeleteDialog(reg)}>
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                          {reg.verificationStatus !== 'VERIFIED' && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-emerald-600 hover:text-white hover:bg-emerald-600"
-                              title="Terima Pendaftar"
-                              onClick={() => {
-                                setVerifyTargetId(reg.id)
-                                setVerifyAction('VERIFIED')
-                                setVerifyNote('')
-                                setVerifyDialogOpen(true)
-                              }}
-                            >
-                              <ThumbsUp className="w-4 h-4" />
-                            </Button>
-                          )}
-                          {reg.verificationStatus !== 'REJECTED' && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-red-600 hover:text-white hover:bg-red-600"
-                              title="Tolak Pendaftar"
-                              onClick={() => {
-                                setVerifyTargetId(reg.id)
-                                setVerifyAction('REJECTED')
-                                setVerifyNote('')
-                                setVerifyDialogOpen(true)
-                              }}
-                            >
-                              <ThumbsDown className="w-4 h-4" />
-                            </Button>
-                          )}
-                          {reg.verificationStatus === 'VERIFIED' && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-yellow-600 hover:text-white hover:bg-yellow-500"
-                              title="Kembalikan ke Menunggu"
-                              onClick={() => {
-                                setVerifyTargetId(reg.id)
-                                setVerifyAction('REJECTED')
-                                setVerifyNote('')
-                                setVerifyDialogOpen(true)
-                              }}
-                            >
-                              <RotateCcw className="w-4 h-4" />
-                            </Button>
-                          )}
-                          {reg.verificationStatus === 'REJECTED' && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-emerald-600 hover:text-white hover:bg-emerald-600"
-                              title="Terima Ulang"
-                              onClick={() => {
-                                setVerifyTargetId(reg.id)
-                                setVerifyAction('VERIFIED')
-                                setVerifyNote('')
-                                setVerifyDialogOpen(true)
-                              }}
-                            >
-                              <RotateCcw className="w-4 h-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-
-          {/* Pagination */}
-          {data && data.pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t">
-              <p className="text-sm text-gray-500">
-                Menampilkan {(data.pagination.page - 1) * data.pagination.limit + 1}-
-                {Math.min(data.pagination.page * data.pagination.limit, data.pagination.total)} dari {data.pagination.total} pendaftar
-              </p>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                <span className="text-sm text-gray-600">Hal {page} / {data.pagination.totalPages}</span>
-                <Button variant="outline" size="sm" disabled={page >= data.pagination.totalPages} onClick={() => setPage(p => p + 1)}>
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Single Verify Dialog */}
-      <Dialog open={verifyDialogOpen} onOpenChange={setVerifyDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              {verifyAction === 'VERIFIED' ? (
-                <><ThumbsUp className="w-5 h-5 text-emerald-600" /> Terima Pendaftar</>
-              ) : (
-                <><ThumbsDown className="w-5 h-5 text-red-600" /> Tolak Pendaftar</>
-              )}
-            </DialogTitle>
-            <DialogDescription>
-              {verifyAction === 'VERIFIED'
-                ? `Apakah Anda yakin ingin MENERIMA pendaftar ini di jalur ${config.label}?`
-                : `Apakah Anda yakin ingin MENOLAK pendaftar ini di jalur ${config.label}?`}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            {verifyAction === 'REJECTED' && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium text-red-800">Perhatian!</p>
-                    <p className="text-sm text-red-700">Pendaftar yang ditolak tetap dapat diterima kembali nanti.</p>
-                  </div>
-                </div>
-              </div>
-            )}
-            {verifyAction === 'REJECTED' && (
-              <VerifyKekuranganPicker value={verifyNote} onChange={setVerifyNote} />
-            )}
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-1.5 block">
-                {verifyAction === 'VERIFIED' ? 'Catatan Verifikasi' : 'Catatan Tambahan'}
-              </label>
-              <Textarea
-                placeholder={verifyAction === 'VERIFIED' ? 'Catatan tambahan (opsional)...' : 'Catatan tambahan (opsional)...'}
-                value={verifyNote}
-                onChange={(e) => setVerifyNote(e.target.value)}
-                rows={2}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setVerifyDialogOpen(false)}>Batal</Button>
-            <Button
-              onClick={handleVerify}
-              disabled={verifying}
-              className={verifyAction === 'VERIFIED' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
-              variant={verifyAction === 'REJECTED' ? 'destructive' : 'default'}
-            >
-              {verifying ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> Memproses...</>
-              ) : verifyAction === 'VERIFIED' ? (
-                <><ThumbsUp className="w-4 h-4" /> Terima</>
-              ) : (
-                <><ThumbsDown className="w-4 h-4" /> Tolak</>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Bulk Verify Dialog */}
-      <Dialog open={bulkVerifyDialogOpen} onOpenChange={setBulkVerifyDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              {verifyAction === 'VERIFIED' ? (
-                <><ThumbsUp className="w-5 h-5 text-emerald-600" /> Terima {selectedIds.size} Pendaftar</>
-              ) : (
-                <><ThumbsDown className="w-5 h-5 text-red-600" /> Tolak {selectedIds.size} Pendaftar</>
-              )}
-            </DialogTitle>
-            <DialogDescription>
-              {verifyAction === 'VERIFIED'
-                ? `Terima ${selectedIds.size} pendaftar jalur ${config.label} yang dipilih?`
-                : `Tolak ${selectedIds.size} pendaftar jalur ${config.label} yang dipilih?`}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            {verifyAction === 'REJECTED' && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium text-red-800">Perhatian!</p>
-                    <p className="text-sm text-red-700">Pendaftar yang ditolak tetap dapat diterima kembali nanti.</p>
-                  </div>
-                </div>
-              </div>
-            )}
-            {verifyAction === 'REJECTED' && (
-              <VerifyKekuranganPicker value={verifyNote} onChange={setVerifyNote} />
-            )}
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-1.5 block">
-                {verifyAction === 'VERIFIED' ? 'Catatan Verifikasi' : 'Catatan Tambahan'}
-              </label>
-              <Textarea
-                placeholder={verifyAction === 'VERIFIED' ? 'Catatan untuk semua pendaftar (opsional)...' : 'Catatan tambahan (opsional)...'}
-                value={verifyNote}
-                onChange={(e) => setVerifyNote(e.target.value)}
-                rows={2}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setBulkVerifyDialogOpen(false)}>Batal</Button>
-            <Button
-              onClick={handleBulkVerify}
-              disabled={verifying}
-              className={verifyAction === 'VERIFIED' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
-              variant={verifyAction === 'REJECTED' ? 'destructive' : 'default'}
-            >
-              {verifying ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> Memproses...</>
-              ) : verifyAction === 'VERIFIED' ? (
-                <><ThumbsUp className="w-4 h-4" /> Terima Semua</>
-              ) : (
-                <><ThumbsDown className="w-4 h-4" /> Tolak Semua</>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Pencil className="w-5 h-5 text-blue-600" /> Edit Data Pendaftar
-            </DialogTitle>
-            <DialogDescription>
-              Edit data pendaftar <span className="font-semibold">{editTarget?.nama}</span> ({editTarget?.noRegistrasi})
-            </DialogDescription>
-          </DialogHeader>
-          {editTarget && (
-            <div className="space-y-6">
-              {/* Data Pendaftar */}
-              <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
-                  <Users className="w-4 h-4 text-gray-500" /> Data Pendaftar
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">No. Registrasi</label>
-                    <Input value={editForm.noRegistrasi || ''} onChange={e => setEditForm({...editForm, noRegistrasi: e.target.value})} className="mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Nama</label>
-                    <Input value={editForm.nama || ''} onChange={e => setEditForm({...editForm, nama: e.target.value})} className="mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">NISN</label>
-                    <Input value={editForm.nisn || ''} onChange={e => setEditForm({...editForm, nisn: e.target.value})} className="mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Sub Jalur</label>
-                    <Select value={editForm.subJalur || ''} onValueChange={v => setEditForm({...editForm, subJalur: v})}>
-                      <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih Sub Jalur" /></SelectTrigger>
-                      <SelectContent>
-                        {subJalurOptions.map(opt => (
-                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">NIK</label>
-                    <Input value={editForm.nik || ''} onChange={e => setEditForm({...editForm, nik: e.target.value})} className="mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Tanggal Lahir</label>
-                    <Input type="date" value={editForm.tanggalLahir || ''} onChange={e => setEditForm({...editForm, tanggalLahir: e.target.value})} className="mt-1" />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className="text-xs text-gray-500 font-medium">Alamat</label>
-                    <Input value={editForm.alamat || ''} onChange={e => setEditForm({...editForm, alamat: e.target.value})} className="mt-1" />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className="text-xs text-gray-500 font-medium">Alamat Lengkap</label>
-                    <Textarea value={editForm.alamatLengkap || ''} onChange={e => setEditForm({...editForm, alamatLengkap: e.target.value})} className="mt-1" rows={2} />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">No. Telp Siswa</label>
-                    <Input value={editForm.noTelpSiswa || ''} onChange={e => setEditForm({...editForm, noTelpSiswa: e.target.value})} className="mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">No. Telp Orangtua</label>
-                    <Input value={editForm.noTelpOrangtua || ''} onChange={e => setEditForm({...editForm, noTelpOrangtua: e.target.value})} className="mt-1" />
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Data Sekolah */}
-              <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
-                  <School className="w-4 h-4 text-gray-500" /> Data Sekolah
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">NPSN Sekolah Pilihan</label>
-                    <Input value={editForm.npsnSekolahPilihan || ''} onChange={e => setEditForm({...editForm, npsnSekolahPilihan: e.target.value})} className="mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Nama Sekolah Pilihan</label>
-                    <Input value={editForm.namaSekolahPilihan || ''} onChange={e => setEditForm({...editForm, namaSekolahPilihan: e.target.value})} className="mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Jurusan</label>
-                    <Input value={editForm.jurusan || ''} onChange={e => setEditForm({...editForm, jurusan: e.target.value})} className="mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">NPSN Sekolah Asal</label>
-                    <Input value={editForm.npsnSekolahAsal || ''} onChange={e => setEditForm({...editForm, npsnSekolahAsal: e.target.value})} className="mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Nama Sekolah Asal</label>
-                    <Input value={editForm.namaSekolahAsal || ''} onChange={e => setEditForm({...editForm, namaSekolahAsal: e.target.value})} className="mt-1" />
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Data Verifikasi */}
-              <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
-                  <ClipboardCheck className="w-4 h-4 text-gray-500" /> Data Verifikasi
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Skor Jarak</label>
-                    <Input value={editForm.skorJarak || ''} onChange={e => setEditForm({...editForm, skorJarak: e.target.value})} className="mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Skor Nilai Raport</label>
-                    <Input value={editForm.skorNilaiRaport || ''} onChange={e => setEditForm({...editForm, skorNilaiRaport: e.target.value})} className="mt-1" />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className="text-xs text-gray-500 font-medium">Kekurangan Verifikasi</label>
-                    <div className="mt-1">
-                      <KekuranganVerifSelect
-                        value={editForm.kekuranganVerifikasi || ''}
-                        onChange={(val) => setEditForm({...editForm, kekuranganVerifikasi: val})}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Tanggal Verifikasi</label>
-                    <Input type="date" value={editForm.tanggalVerif || ''} onChange={e => setEditForm({...editForm, tanggalVerif: e.target.value})} className="mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Jam Verifikasi</label>
-                    <Input type="time" value={editForm.jamVerif || ''} onChange={e => setEditForm({...editForm, jamVerif: e.target.value})} className="mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Terbit KK</label>
-                    <div className="flex items-center gap-1 mt-1">
-                      <Input type="date" value={editForm.terbitKK || ''} onChange={e => setEditForm({...editForm, terbitKK: e.target.value})} className="flex-1" />
-                      {editForm.terbitKK && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50 h-9 px-2"
-                          onClick={() => setEditForm({...editForm, terbitKK: ''})}
-                          title="Kosongkan"
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Lama KK</label>
-                    <Input value={editForm.terbitKK ? hitungLamaKK(editForm.terbitKK) : ''} readOnly className="mt-1 bg-gray-50" />
-                    <p className="text-xs text-gray-400 mt-1">Dihitung otomatis dari Terbit KK</p>
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Data Lokasi & Nilai */}
-              <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
-                  <MapPin className="w-4 h-4 text-gray-500" /> Lokasi & Nilai
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Latitude</label>
-                    <Input value={editForm.latitude || ''} onChange={e => setEditForm({...editForm, latitude: e.target.value})} className="mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Longitude</label>
-                    <Input value={editForm.longitude || ''} onChange={e => setEditForm({...editForm, longitude: e.target.value})} className="mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Lokasi Jarak</label>
-                    <Input value={editForm.lokasiJarak || ''} onChange={e => setEditForm({...editForm, lokasiJarak: e.target.value})} className="mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Nilai Rata-Rata</label>
-                    <Input value={editForm.nilaiRataRata || ''} onChange={e => setEditForm({...editForm, nilaiRataRata: e.target.value})} className="mt-1" />
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Status Kelulusan & Daftar Ulang */}
-              <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
-                  <GraduationCap className="w-4 h-4 text-gray-500" /> Kelulusan & Daftar Ulang
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Status Kelulusan</label>
-                    <Select value={editForm.statusLulus || 'BELUM'} onValueChange={v => setEditForm({...editForm, statusLulus: v})}>
-                      <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih Status" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="BELUM">Belum Ditentukan</SelectItem>
-                        <SelectItem value="LULUS">Lulus</SelectItem>
-                        <SelectItem value="TIDAK_LULUS">Tidak Lulus</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Status Daftar Ulang</label>
-                    <Select value={editForm.statusDaftarUlang || 'BELUM'} onValueChange={v => setEditForm({...editForm, statusDaftarUlang: v})}>
-                      <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih Status" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="BELUM">Belum Ditentukan</SelectItem>
-                        <SelectItem value="DAFTAR_ULANG">Daftar Ulang</SelectItem>
-                        <SelectItem value="TIDAK_DAFTAR_ULANG">Tidak Daftar Ulang</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Batal</Button>
-            <Button onClick={handleSaveEdit} disabled={saving} className="bg-blue-600 hover:bg-blue-700">
-              {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Menyimpan...</> : <><Pencil className="w-4 h-4" /> Simpan</>}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Trash2 className="w-5 h-5 text-red-600" /> Hapus Data Pendaftar
-            </DialogTitle>
-            <DialogDescription>
-              Apakah Anda yakin ingin menghapus data pendaftar <span className="font-semibold">{deleteTarget?.nama}</span>? Tindakan ini tidak dapat dibatalkan.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-            <div className="flex gap-2">
-              <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 shrink-0" />
-              <p className="text-sm text-red-700">Data yang sudah dihapus tidak dapat dikembalikan. Pastikan Anda yakin sebelum melanjutkan.</p>
-            </div>
-          </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Batal</Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
-              {deleting ? <><Loader2 className="w-4 h-4 animate-spin" /> Menghapus...</> : <><Trash2 className="w-4 h-4" /> Hapus</>}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  )
-}
 
 export default function Home() {
   const { toast } = useToast()
@@ -2240,7 +100,6 @@ export default function Home() {
 
     const checkAuth = async () => {
       try {
-        // Check setup status first
         const setupRes = await fetch('/api/auth/setup')
         if (setupRes.ok) {
           const setupData = await setupRes.json()
@@ -2251,7 +110,6 @@ export default function Home() {
           }
         }
 
-        // Check auth status
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), 8000)
 
@@ -2274,7 +132,6 @@ export default function Home() {
 
     checkAuth()
 
-    // Safety timeout: force auth loading off after 10 seconds
     const safetyTimeout = setTimeout(() => {
       if (!cancelled) setAuthLoading(false)
     }, 10000)
@@ -2345,7 +202,9 @@ export default function Home() {
 
   // Dialogs
   const [importDialogOpen, setImportDialogOpen] = useState(false)
-  const [importStatus, setImportStatus] = useState('ON PROGRESS')
+  const [importStatus, setImportStatus] = useState('DITERIMA')
+  const [useCsvStatus, setUseCsvStatus] = useState(false)
+  const [csvRowCount, setCsvRowCount] = useState<number>(0)
   const [verifyDialogOpen, setVerifyDialogOpen] = useState(false)
   const [detailDialogOpen, setDetailDialogOpen] = useState(false)
   const [bulkVerifyDialogOpen, setBulkVerifyDialogOpen] = useState(false)
@@ -2365,6 +224,20 @@ export default function Home() {
 
   // CSV file
   const [csvFile, setCsvFile] = useState<File | null>(null)
+  const handleSetCsvFile = async (file: File | null) => {
+    setCsvFile(file)
+    if (file) {
+      try {
+        const text = await file.text()
+        const rows = parseCSVClientSide(text)
+        setCsvRowCount(rows.length)
+      } catch {
+        setCsvRowCount(0)
+      }
+    } else {
+      setCsvRowCount(0)
+    }
+  }
 
   // Active tab
   const [activeTab, setActiveTab] = useState('dashboard')
@@ -2372,14 +245,15 @@ export default function Home() {
 
   // Lembar verifikasi sub-tab
   const [lembarTab, setLembarTab] = useState('')
+  const [lembarSubTab, setLembarSubTab] = useState('')
 
-  // Edit dialog state (Home component)
+  // Edit dialog state
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<Registration | null>(null)
   const [editForm, setEditForm] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
 
-  // Delete dialog state (Home component)
+  // Delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Registration | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -2395,11 +269,29 @@ export default function Home() {
   const [portalParsedData, setPortalParsedData] = useState<Record<string, string> | null>(null)
   const [portalParsing, setPortalParsing] = useState(false)
   const [portalSelectedJalur, setPortalSelectedJalur] = useState('')
+  // Portal quick verification fields
+  const [portalVerifStatus, setPortalVerifStatus] = useState<'VERIFIED' | 'REJECTED'>('VERIFIED')
+  const [portalKekurangan, setPortalKekurangan] = useState('')
+  const [portalVerifNote, setPortalVerifNote] = useState('')
+  const [portalTanggalVerif, setPortalTanggalVerif] = useState('')
+  const [portalJamVerif, setPortalJamVerif] = useState('')
+  const [portalTerbitKK, setPortalTerbitKK] = useState('')
+  // Highlight recently saved student in Lembar Verifikasi
+  const [highlightRegId, setHighlightRegId] = useState<string | null>(null)
+
+  // Sumut Berkah paste state
+  const [sumutBerkahOpen, setSumutBerkahOpen] = useState(false)
+  const [sumutBerkahText, setSumutBerkahText] = useState('')
+  const [sumutBerkahParsing, setSumutBerkahParsing] = useState(false)
+  const [sumutBerkahResult, setSumutBerkahResult] = useState<{ matched: number; updated: number; notFound: string[] } | null>(null)
+  const [sumutBerkahPreview, setSumutBerkahPreview] = useState<Array<{ nama: string; totalNilai: string; jarakKeSekolah: string }> | null>(null)
 
   // Pengaturan state
   const [kuota, setKuota] = useState(0)
   const [appName, setAppName] = useState('SPMB 2026')
   const [schoolName, setSchoolName] = useState('')
+  const [appIcon, setAppIcon] = useState('')
+  const [appSubtitle, setAppSubtitle] = useState('Sistem Verifikasi Penerimaan Murid Baru')
   const [jalurConfigs, setJalurConfigs] = useState<Array<{ id: string; nama: string; persentase: number; urutan: number; aktif: boolean }>>([])
   const [settingsLoading, setSettingsLoading] = useState(false)
   const [settingsSaving, setSettingsSaving] = useState(false)
@@ -2407,11 +299,15 @@ export default function Home() {
   const [newJalurPersentase, setNewJalurPersentase] = useState(0)
   const [addJalurOpen, setAddJalurOpen] = useState(false)
 
+  // Tahap Pendaftaran state
+  const [tahap, setTahap] = useState(1)
+  const [jalurAktifPerTahap, setJalurAktifPerTahap] = useState<string>('')
+
   // Ranking state
   const [rankingJalur, setRankingJalur] = useState('all')
   const [rankingSekolah, setRankingSekolah] = useState('all')
   const [rankingJurusan, setRankingJurusan] = useState('all')
-  const [rankingTampilan, setRankingTampilan] = useState('jarak') // jarak | nilai | komposit
+  const [rankingTampilan, setRankingTampilan] = useState('jarak')
   const [rankingStatus, setRankingStatus] = useState('all')
   const [rankingData, setRankingData] = useState<Array<Record<string, unknown>>>([])
   const [rankingFilters, setRankingFilters] = useState<{ jalurOptions: string[]; sekolahOptions: string[]; jurusanOptions: string[] }>({ jalurOptions: [], sekolahOptions: [], jurusanOptions: [] })
@@ -2422,18 +318,14 @@ export default function Home() {
   // Ranking print/preview state
   const [rankingPreviewOpen, setRankingPreviewOpen] = useState(false)
   const [rankingPreviewType, setRankingPreviewType] = useState<'pdf' | 'excel'>('pdf')
-  const [rankingPreviewJalur, setRankingPreviewJalur] = useState<string>('all') // 'all' or specific jalur name
+  const [rankingPreviewJalur, setRankingPreviewJalur] = useState<string>('all')
 
   // Build lembar verifikasi from jalurConfigs
   const lembarVerifikasi = buildLembarVerifikasi(jalurConfigs)
 
-  // Available subJalur options for dropdowns
-  const subJalurOptions = jalurConfigs
-    .filter(j => j.aktif)
-    .map(j => {
-      const filter = getJalurSubFilter(j.nama)
-      return { label: j.nama, value: filter }
-    })
+  // Available subJalur options for dropdowns (flattened from hierarchy)
+  const subJalurOptions = flattenLembarConfigs(lembarVerifikasi)
+    .map(cfg => ({ label: cfg.label, value: cfg.subJalurFilter }))
 
   // Auto-set lembarTab to first tab when configs load
   useEffect(() => {
@@ -2442,6 +334,11 @@ export default function Home() {
       if (firstKey) setLembarTab(firstKey)
     }
   }, [jalurConfigs, lembarTab, lembarVerifikasi])
+
+  // When lembarTab changes, reset lembarSubTab
+  useEffect(() => {
+    setLembarSubTab('')
+  }, [lembarTab])
 
   // Portal Sync state
   const [portalSyncOpen, setPortalSyncOpen] = useState(false)
@@ -2465,6 +362,13 @@ export default function Home() {
   const [deleteUserTarget, setDeleteUserTarget] = useState<{ id: string; namaLengkap: string } | null>(null)
   const [deleteUserLoading, setDeleteUserLoading] = useState(false)
 
+  // Reset Password state
+  const [resetPasswordOpen, setResetPasswordOpen] = useState(false)
+  const [resetPasswordTarget, setResetPasswordTarget] = useState<{ id: string; username: string; namaLengkap: string } | null>(null)
+  const [resetPasswordNew, setResetPasswordNew] = useState('')
+  const [resetPasswordLoading, setResetPasswordLoading] = useState(false)
+  const [showResetPassword, setShowResetPassword] = useState(false)
+
   // Admin profile edit
   const [editProfileOpen, setEditProfileOpen] = useState(false)
   const [editProfileForm, setEditProfileForm] = useState({ username: '', password: '', namaLengkap: '' })
@@ -2483,7 +387,6 @@ export default function Home() {
       })
       const data = await res.json()
       if (data.success) {
-        // Set session flag BEFORE isAuthenticated to prevent auto-logout race condition
         sessionStorage.setItem('spmb_session_active', 'true')
         setIsAuthenticated(true)
         setAuthUser(data.user)
@@ -2520,7 +423,6 @@ export default function Home() {
         })
         const loginData = await loginRes.json()
         if (loginData.success) {
-          // Set session flag BEFORE isAuthenticated to prevent auto-logout race condition
           sessionStorage.setItem('spmb_session_active', 'true')
           setIsAuthenticated(true)
           setAuthUser(loginData.user)
@@ -2688,6 +590,32 @@ export default function Home() {
     }
   }
 
+  // Reset password (admin)
+  const handleResetPassword = async () => {
+    if (!resetPasswordTarget || !resetPasswordNew || resetPasswordNew.length < 6) return
+    setResetPasswordLoading(true)
+    try {
+      const res = await fetch('/api/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: resetPasswordTarget.id, password: resetPasswordNew }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        toast({ title: 'Password Direset', description: `Password @{resetPasswordTarget.username} berhasil diubah` })
+        setResetPasswordOpen(false)
+        setResetPasswordNew('')
+        setResetPasswordTarget(null)
+      } else {
+        toast({ title: 'Gagal', description: data.error, variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Terjadi kesalahan', variant: 'destructive' })
+    } finally {
+      setResetPasswordLoading(false)
+    }
+  }
+
   // Update own profile
   const handleUpdateProfile = async () => {
     if (!editProfileForm.username || !editProfileForm.namaLengkap) {
@@ -2752,26 +680,29 @@ export default function Home() {
       if (subJalurFilter !== 'all') params.set('subJalur', subJalurFilter)
       if (verificationFilter !== 'all') params.set('verificationStatus', verificationFilter)
       if (jurusanFilter !== 'all') params.set('jurusan', jurusanFilter)
+      if (tahap) params.set('tahap', tahap.toString())
 
       const res = await fetch(`/api/registrations?${params}`)
       if (!res.ok) {
+        if (res.status === 401 || res.status === 403) return
         toast({ title: 'Error', description: 'Gagal memuat data pendaftar', variant: 'destructive' })
         return
       }
       const data = await res.json()
-      setRegistrations(data.data || [])
+      setRegistrations(dedupById(data.data || []))
       if (data.pagination) setPagination(prev => ({ ...prev, ...data.pagination }))
     } catch {
       toast({ title: 'Error', description: 'Gagal memuat data pendaftar', variant: 'destructive' })
     } finally {
       setLoading(false)
     }
-  }, [pagination.page, pagination.limit, search, subJalurFilter, verificationFilter, jurusanFilter, toast])
+  }, [pagination.page, pagination.limit, search, subJalurFilter, verificationFilter, jurusanFilter, tahap, toast])
 
   const fetchStats = useCallback(async () => {
     try {
-      const res = await fetch('/api/dashboard')
+      const res = await fetch(`/api/dashboard?tahap=${tahap}`)
       if (!res.ok) {
+        if (res.status === 401 || res.status === 403) return
         toast({ title: 'Error', description: 'Gagal memuat statistik', variant: 'destructive' })
         return
       }
@@ -2780,11 +711,18 @@ export default function Home() {
         toast({ title: 'Error', description: data.error, variant: 'destructive' })
         return
       }
+      // Deduplicate all list data to prevent React key errors
+      if (data.verifiedList) data.verifiedList = dedupById(data.verifiedList)
+      if (data.rejectedList) data.rejectedList = dedupById(data.rejectedList)
+      if (data.lulusList) data.lulusList = dedupById(data.lulusList)
+      if (data.tidakLulusList) data.tidakLulusList = dedupById(data.tidakLulusList)
+      if (data.daftarUlangList) data.daftarUlangList = dedupById(data.daftarUlangList)
+      if (data.tidakDaftarUlangList) data.tidakDaftarUlangList = dedupById(data.tidakDaftarUlangList)
       setStats(data)
     } catch {
-      toast({ title: 'Error', description: 'Gagal memuat statistik', variant: 'destructive' })
+      // Silently fail - stats will show empty, no need to alarm the user
     }
-  }, [toast])
+  }, [tahap, toast])
 
   const fetchSettings = useCallback(async () => {
     setSettingsLoading(true)
@@ -2795,12 +733,17 @@ export default function Home() {
       setJalurConfigs(data.jalurConfigs || [])
       setAppName(data.appName || 'SPMB 2026')
       setSchoolName(data.schoolName || '')
+      setAppIcon(data.appIcon || '')
+      setAppSubtitle(data.appSubtitle || 'Sistem Verifikasi Penerimaan Murid Baru')
+      // Load tahap from settings
+      if (data.tahap) setTahap(data.tahap)
+      if (data.jalurAktifPerTahap) setJalurAktifPerTahap(data.jalurAktifPerTahap)
     } catch {
-      toast({ title: 'Error', description: 'Gagal memuat pengaturan', variant: 'destructive' })
+      // Silently fail - settings will use defaults
     } finally {
       setSettingsLoading(false)
     }
-  }, [toast])
+  }, [])
 
   useEffect(() => {
     if (isAuthenticated) fetchRegistrations()
@@ -2828,12 +771,11 @@ export default function Home() {
     }
   }, [activeTab, authUser?.role])
 
-  // Auto-logout on refresh: clear session on every page load
+  // Auto-logout on refresh
   useEffect(() => {
     if (isAuthenticated) {
       const sessionFlag = sessionStorage.getItem('spmb_session_active')
       if (!sessionFlag) {
-        // This is a page refresh - logout
         fetch('/api/auth/logout', { method: 'POST' })
         setIsAuthenticated(false)
         setAuthUser(null)
@@ -2850,7 +792,7 @@ export default function Home() {
     }
   }, [isAuthenticated])
 
-  // Fetch app name early (even before login) for display on login page
+  // Fetch app name early
   useEffect(() => {
     const fetchAppName = async () => {
       try {
@@ -2859,15 +801,54 @@ export default function Home() {
           const data = await res.json()
           if (data.appName) setAppName(data.appName)
           if (data.schoolName) setSchoolName(data.schoolName)
+          if (data.appIcon) setAppIcon(data.appIcon)
+          if (data.appSubtitle) setAppSubtitle(data.appSubtitle)
         }
       } catch {
-        // silently fail, default name will be used
+        // silently fail
       }
     }
     fetchAppName()
   }, [])
 
-  // Clear session flag on beforeunload so refresh triggers logout
+  // Dynamically update document title and favicon
+  useEffect(() => {
+    if (appName) {
+      // Use first line of subtitle for the tab title (or the whole subtitle if no newline)
+      const subtitleFirstLine = appSubtitle.split('\n')[0] || appSubtitle
+      document.title = `${appName}${schoolName ? ' — ' + schoolName : ''} — ${subtitleFirstLine}`
+    }
+  }, [appName, schoolName, appSubtitle])
+
+  useEffect(() => {
+    if (appIcon) {
+      // Update favicon dynamically — use the dynamic API endpoint for consistency
+      // This ensures both the browser tab icon AND PWA install icon use the admin-uploaded icon
+      let link = document.querySelector<HTMLLinkElement>("link[rel~='icon']")
+      if (!link) {
+        link = document.createElement('link')
+        link.rel = 'icon'
+        document.head.appendChild(link)
+      }
+      // Use the dynamic icon endpoint with cache-busting so the browser fetches the latest icon
+      link.href = `/api/app-icon?size=192&t=${Date.now()}`
+
+      // Update all apple-touch-icon links (for iOS home screen)
+      const appleLinks = document.querySelectorAll<HTMLLinkElement>("link[rel='apple-touch-icon']")
+      appleLinks.forEach((appleLink, idx) => {
+        const size = idx === 0 ? '192' : '512'
+        appleLink.href = `/api/app-icon?size=${size}&t=${Date.now()}`
+      })
+
+      // Also update the manifest link with cache-busting to trigger PWA icon refresh
+      const manifestLink = document.querySelector<HTMLLinkElement>("link[rel='manifest']")
+      if (manifestLink) {
+        manifestLink.href = `/api/manifest?t=${Date.now()}`
+      }
+    }
+  }, [appIcon])
+
+  // Clear session flag on beforeunload
   useEffect(() => {
     const handleBeforeUnload = () => {
       sessionStorage.removeItem('spmb_session_active')
@@ -2886,8 +867,14 @@ export default function Home() {
       if (rankingJurusan !== 'all') params.set('jurusan', rankingJurusan)
       params.set('tampilan', rankingTampilan)
       if (rankingStatus !== 'all') params.set('status', rankingStatus)
+      if (tahap) params.set('tahap', tahap.toString())
 
       const res = await fetch(`/api/ranking?${params}`)
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) return
+        toast({ title: 'Error', description: 'Gagal memuat data perangkingan', variant: 'destructive' })
+        return
+      }
       const data = await res.json()
       if (data.success) {
         setRankingData(data.data || [])
@@ -2900,463 +887,68 @@ export default function Home() {
     } finally {
       setRankingLoading(false)
     }
-  }, [rankingJalur, rankingSekolah, rankingJurusan, rankingTampilan, rankingStatus, toast])
+  }, [rankingJalur, rankingSekolah, rankingJurusan, rankingTampilan, rankingStatus, tahap, toast])
 
   useEffect(() => {
     if (isAuthenticated) fetchRanking()
   }, [fetchRanking, isAuthenticated])
 
   // ==================== CONDITIONAL RENDERS ====================
-  // Auth loading screen
-  if (authLoading) {
+  // Auth screens
+  if (authLoading || needsSetup || !isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900" suppressHydrationWarning>
-        <div className="text-center" suppressHydrationWarning>
-          <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-2xl shadow-emerald-500/30 animate-pulse">
-            <ShieldCheck className="w-10 h-10 text-white" />
-          </div>
-          <h1 className="text-xl font-bold text-white mb-1">{appName}</h1>
-          {schoolName && <p className="text-emerald-200 text-base font-semibold mb-2">{schoolName}</p>}
-          <p className="text-emerald-200 text-sm">Memuat sistem...</p>
-        </div>
-      </div>
+      <AuthScreens
+        authLoading={authLoading}
+        needsSetup={needsSetup}
+        isAuthenticated={isAuthenticated}
+        appName={appName}
+        schoolName={schoolName}
+        appIcon={appIcon}
+        appSubtitle={appSubtitle}
+        loginUsername={loginUsername}
+        setLoginUsername={setLoginUsername}
+        loginPassword={loginPassword}
+        setLoginPassword={setLoginPassword}
+        loginLoading={loginLoading}
+        loginError={loginError}
+        showLoginPassword={showLoginPassword}
+        setShowLoginPassword={setShowLoginPassword}
+        handleLogin={handleLogin}
+        setupUsername={setupUsername}
+        setSetupUsername={setSetupUsername}
+        setupPassword={setupPassword}
+        setSetupPassword={setSetupPassword}
+        setupNamaLengkap={setupNamaLengkap}
+        setSetupNamaLengkap={setSetupNamaLengkap}
+        setupLoading={setupLoading}
+        setupError={setupError}
+        showSetupPassword={showSetupPassword}
+        setShowSetupPassword={setShowSetupPassword}
+        handleSetup={handleSetup}
+      />
     )
   }
 
-  // ==================== SETUP SCREEN (First Time) ====================
-  if (needsSetup) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 p-4">
-        <div className="w-full max-w-md">
-          {/* Logo & Title */}
-          <div className="text-center mb-8">
-            <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-2xl shadow-emerald-500/30">
-              <ShieldCheck className="w-10 h-10 text-white" />
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">{appName}</h1>
-            {schoolName && <p className="text-emerald-200 text-lg font-semibold mb-2">{schoolName}</p>}
-            <p className="text-emerald-200/80 text-sm">Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
-            <div className="mt-4 inline-flex items-center gap-2 bg-amber-500/20 border border-amber-400/30 rounded-full px-4 py-1.5">
-              <AlertCircle className="w-4 h-4 text-amber-300" />
-              <span className="text-amber-200 text-xs font-medium">Pengaturan Awal — Buat Akun Admin</span>
-            </div>
-          </div>
-
-          {/* Setup Form */}
-          <Card className="bg-white/10 backdrop-blur-xl border-white/20 shadow-2xl">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-white text-lg">Buat Akun Administrator</CardTitle>
-              <CardDescription className="text-emerald-200/60 text-xs">
-                Ini adalah akun pertama yang akan digunakan untuk mengelola sistem verifikasi.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSetup} className="space-y-4" autoComplete="off">
-                {setupError && (
-                  <div className="bg-red-500/20 border border-red-400/30 rounded-lg p-3 flex items-center gap-2">
-                    <XCircle className="w-4 h-4 text-red-300 shrink-0" />
-                    <p className="text-red-200 text-sm">{setupError}</p>
-                  </div>
-                )}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-emerald-100">Nama Lengkap</label>
-                  <div className="relative">
-                    <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-300/50" />
-                    <Input
-                      name="setup-nama-lengkap"
-                      value={setupNamaLengkap}
-                      onChange={(e) => setSetupNamaLengkap(e.target.value)}
-                      onFocus={(e) => e.target.removeAttribute('readonly')}
-                      placeholder="Nama lengkap Anda"
-                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-emerald-200/40 focus:border-emerald-400/50 focus:ring-emerald-400/30"
-                      autoComplete="off"
-                      data-lpignore="true"
-                      data-1p-ignore
-                      readOnly
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-emerald-100">Username</label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-300/50" />
-                    <Input
-                      name="setup-username"
-                      value={setupUsername}
-                      onChange={(e) => setSetupUsername(e.target.value)}
-                      onFocus={(e) => e.target.removeAttribute('readonly')}
-                      placeholder="Username untuk login"
-                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-emerald-200/40 focus:border-emerald-400/50 focus:ring-emerald-400/30"
-                      autoComplete="off"
-                      data-lpignore="true"
-                      data-1p-ignore
-                      readOnly
-                      required
-                      minLength={3}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-emerald-100">Password</label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-300/50" />
-                    <Input
-                      type={showSetupPassword ? 'text' : 'password'}
-                      name="setup-password"
-                      value={setupPassword}
-                      onChange={(e) => setSetupPassword(e.target.value)}
-                      onFocus={(e) => e.target.removeAttribute('readonly')}
-                      placeholder="Minimal 6 karakter"
-                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-emerald-200/40 focus:border-emerald-400/50 focus:ring-emerald-400/30 pr-10"
-                      autoComplete="new-password"
-                      data-lpignore="true"
-                      data-1p-ignore
-                      readOnly
-                      required
-                      minLength={6}
-                    />
-                    <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-200/40 hover:text-emerald-200" onClick={() => setShowSetupPassword(!showSetupPassword)}>
-                      {showSetupPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-                <Button
-                  type="submit"
-                  className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg shadow-emerald-500/30 h-11"
-                  disabled={setupLoading}
-                >
-                  {setupLoading ? (
-                    <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Membuat Akun...</>
-                  ) : (
-                    <><Save className="w-4 h-4 mr-2" /> Buat Akun & Mulai</>
-                  )}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    )
-  }
-
-  // ==================== LOGIN SCREEN ====================
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 p-4">
-        <div className="w-full max-w-md">
-          {/* Logo & Title */}
-          <div className="text-center mb-8">
-            <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-2xl shadow-emerald-500/30">
-              <ShieldCheck className="w-10 h-10 text-white" />
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">{appName}</h1>
-            {schoolName && <p className="text-emerald-200 text-lg sm:text-xl font-semibold mb-1">{schoolName}</p>}
-            <p className="text-emerald-200/80 text-sm">Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
-          </div>
-
-          {/* Login Form */}
-          <Card className="bg-white/10 backdrop-blur-xl border-white/20 shadow-2xl">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-white text-lg flex items-center gap-2">
-                <Lock className="w-5 h-5 text-emerald-400" />
-                Masuk ke Sistem
-              </CardTitle>
-              <CardDescription className="text-emerald-200/60 text-xs">
-                Masukkan username dan password untuk mengakses sistem verifikasi.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleLogin} className="space-y-4" autoComplete="off">
-                {loginError && (
-                  <div className="bg-red-500/20 border border-red-400/30 rounded-lg p-3 flex items-center gap-2">
-                    <XCircle className="w-4 h-4 text-red-300 shrink-0" />
-                    <p className="text-red-200 text-sm">{loginError}</p>
-                  </div>
-                )}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-emerald-100">Username</label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-300/50" />
-                    <Input
-                      name="username"
-                      value={loginUsername}
-                      onChange={(e) => setLoginUsername(e.target.value)}
-                      onFocus={(e) => e.target.removeAttribute('readonly')}
-                      placeholder="Masukkan username"
-                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-emerald-200/40 focus:border-emerald-400/50 focus:ring-emerald-400/30"
-                      autoComplete="off"
-                      data-lpignore="true"
-                      data-1p-ignore
-                      readOnly
-                      required
-                      autoFocus
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-emerald-100">Password</label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-300/50" />
-                    <Input
-                      type={showLoginPassword ? 'text' : 'password'}
-                      name="password"
-                      value={loginPassword}
-                      onChange={(e) => setLoginPassword(e.target.value)}
-                      onFocus={(e) => e.target.removeAttribute('readonly')}
-                      placeholder="Masukkan password"
-                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-emerald-200/40 focus:border-emerald-400/50 focus:ring-emerald-400/30 pr-10"
-                      autoComplete="new-password"
-                      data-lpignore="true"
-                      data-1p-ignore
-                      readOnly
-                      required
-                    />
-                    <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-200/40 hover:text-emerald-200" onClick={() => setShowLoginPassword(!showLoginPassword)}>
-                      {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-                <Button
-                  type="submit"
-                  className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg shadow-emerald-500/30 h-11"
-                  disabled={loginLoading}
-                >
-                  {loginLoading ? (
-                    <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Memproses...</>
-                  ) : (
-                    <><Lock className="w-4 h-4 mr-2" /> Masuk</>
-                  )}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-
-          {/* Footer */}
-          <p className="text-center text-emerald-200/40 text-xs mt-6">
-            &copy; 2026 {appName}{schoolName ? ` — ${schoolName}` : ''}
-          </p>
-        </div>
-      </div>
-    )
-  }
-
-  // Portal SPMB text parser
-  const parsePortalText = (text: string): Record<string, string> => {
-    const result: Record<string, string> = {}
-    const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
-
-    // Helper: find value after a label line
-    const findValueAfter = (label: string, startFrom = 0): { value: string; index: number } | null => {
-      for (let i = startFrom; i < lines.length; i++) {
-        if (lines[i].toLowerCase().includes(label.toLowerCase())) {
-          // Check if value is on same line after ":"
-          const colonIdx = lines[i].indexOf(':')
-          if (colonIdx !== -1 && lines[i].length > colonIdx + 1) {
-            return { value: lines[i].substring(colonIdx + 1).trim(), index: i }
-          }
-          // Value is on the next line
-          if (i + 1 < lines.length) {
-            return { value: lines[i + 1].trim(), index: i + 1 }
-          }
-        }
-      }
-      return null
-    }
-
-    // Helper: find value for a label that's on its own line
-    const findNextLine = (label: string): string => {
-      const found = findValueAfter(label)
-      return found?.value || ''
-    }
-
-    // No. Registrasi - from "No. Registrasi:" pattern
-    const noRegMatch = text.match(/No\.\s*Registrasi\s*:\s*(\S+)/i)
-    if (noRegMatch) result['noRegistrasi'] = noRegMatch[1]
-
-    // Sub Jalur - detect from the text using dynamic jalur from Pengaturan
-    // Build detection list from jalurConfigs (active jalur names + their subJalur mappings)
-    const activeJalurNames = jalurConfigs.filter(j => j.aktif).map(j => j.nama)
-    // Also include common aliases that might appear in portal text
-    const portalAliases: Record<string, string> = {
-      'Afirmasi': 'Afirmasi (KTM)',
-      'Keluarga Tidak Mampu': 'Afirmasi (KTM)',
-      'KTM': 'Afirmasi (KTM)',
-      'Penyandang Disabilitas': 'Disabilitas',
-      'Mutasi Orang tua/ Wali': 'Mutasi',
-      'Perpindahan Orang Tua': 'Mutasi',
-      'Prestasi Akademik': 'Prestasi Nilai Rapor',
-      'Prestasi Nonakademik': 'Prestasi Non Akademik',
-      'Non Akademik': 'Prestasi Non Akademik',
-      'Terdampak Bencana Alam': 'Terdampak Bencana Alam',
-    }
-    // Combine: active jalur names + their known aliases (only if alias maps to an active jalur)
-    const allDetectableNames = new Set<string>()
-    for (const name of activeJalurNames) {
-      allDetectableNames.add(name)
-    }
-    for (const [alias, targetJalur] of Object.entries(portalAliases)) {
-      if (activeJalurNames.includes(targetJalur)) {
-        allDetectableNames.add(alias)
-      }
-    }
-    // Try to detect jalur name from pasted text
-    for (const jalur of allDetectableNames) {
-      for (const line of lines) {
-        if (line === jalur || line.toLowerCase() === jalur.toLowerCase()) {
-          // Map alias to actual jalur config name, then to subJalur filter
-          const jalurConfigName = portalAliases[jalur] || jalur
-          result['subJalur'] = getJalurSubFilter(jalurConfigName)
-          result['_detectedJalurNama'] = jalurConfigName // store the jalur config name for dropdown
-          break
-        }
-      }
-      if (result['subJalur']) break
-    }
-
-    // Nama - after "Nama Peserta"
-    result['nama'] = findNextLine('Nama Peserta')
-    // Fallback: first line might be the name
-    if (!result['nama'] && lines.length > 0) {
-      // Check if first line looks like a name (not starting with a number or known label)
-      const firstLine = lines[0]
-      if (firstLine && !firstLine.match(/^\d/) && !firstLine.toLowerCase().includes('no.') && !firstLine.toLowerCase().includes('registrasi')) {
-        result['nama'] = firstLine
-      }
-    }
-
-    // Tanggal Lahir
-    result['tanggalLahir'] = findNextLine('Tanggal Lahir')
-
-    // NIK
-    result['nik'] = findNextLine('NIK')
-
-    // NISN
-    result['nisn'] = findNextLine('NISN')
-
-    // Alamat
-    result['alamat'] = findNextLine('Alamat')
-    // But "Alamat Lengkap" should be separate - handle that
-    const alamatLengkap = findNextLine('Alamat Lengkap')
-    if (alamatLengkap) {
-      result['alamatLengkap'] = alamatLengkap
-    }
-
-    // Phone numbers
-    result['noTelpSiswa'] = findNextLine('No.Telp/Hp Siswa') || findNextLine('No. Telp/Hp Siswa') || findNextLine('NoTelp/Hp Siswa')
-    result['noTelpOrangtua'] = findNextLine('No.Telp/Hp Orangtua') || findNextLine('No. Telp/Hp Orangtua') || findNextLine('NoTelp/Hp Orangtua/Wali')
-
-    // Asal Sekolah
-    result['namaSekolahAsal'] = findNextLine('Asal Sekolah')
-
-    // Sekolah Pilihan
-    result['namaSekolahPilihan'] = findNextLine('Sekolah Pilihan')
-
-    // Waktu Pendaftaran
-    result['waktuDaftar'] = findNextLine('Waktu Pendaftaran')
-
-    // Lokasi dan Jarak
-    result['lokasiJarak'] = findNextLine('Lokasi dan Jarak')
-
-    // Latitude / Longitude
-    result['latitude'] = findNextLine('Latitude')
-    result['longitude'] = findNextLine('Longitude')
-
-    // Nilai Rapor - parse subject grades
-    const subjects = ['Pendidikan Agama', 'PPKn', 'Bahasa Indonesia', 'Matematika', 'Ilmu Pengetahuan Alam', 'Ilmu Pengetahuan Sosial', 'Bahasa Inggris']
-    const grades: Record<string, string> = {}
-    for (const subject of subjects) {
-      // Find pattern: "Subject\n: value" or "Subject : value"
-      for (let i = 0; i < lines.length; i++) {
-        if (lines[i] === subject || lines[i].startsWith(subject)) {
-          // Check if value is on same line after ":"
-          if (lines[i].includes(':')) {
-            const val = lines[i].split(':').pop()?.trim()
-            if (val && val.match(/\d+/)) {
-              grades[subject] = val
-              break
-            }
-          }
-          // Check next line for ": value"
-          if (i + 1 < lines.length) {
-            const nextLine = lines[i + 1]
-            const match = nextLine.match(/:\s*(\d+[\.,]?\d*)/)
-            if (match) {
-              grades[subject] = match[1]
-              break
-            }
-          }
-        }
-      }
-    }
-    if (Object.keys(grades).length > 0) {
-      result['nilaiRapor'] = JSON.stringify(grades)
-    }
-
-    // Nilai Rata-rata
-    const nilaiRataRata = findNextLine('Nilai Rata-rata')
-    if (nilaiRataRata) {
-      // Could be "74.571" or ": 74.571"
-      const match = nilaiRataRata.match(/([\d]+[\.,]?[\d]*)/)
-      result['nilaiRataRata'] = match ? match[1] : nilaiRataRata
-    }
-
-    // Skor Jarak (from Ringkasan section)
-    const skorJarak = findNextLine('Skor Jarak')
-    if (skorJarak) result['skorJarak'] = skorJarak
-
-    // Skor (from Ringkasan section) - need to find the LAST "Skor" line
-    for (let i = lines.length - 1; i >= 0; i--) {
-      if (lines[i] === 'Skor' || lines[i] === 'Skor') {
-        if (i + 1 < lines.length) {
-          const match = lines[i + 1].match(/([\d]+[\.,]?[\d]*)/)
-          if (match) {
-            result['skor'] = match[1]
-            break
-          }
-        }
-      }
-    }
-
-    // Skor Nilai Raport - from "Skor Nilai Raport" or derive from nilaiRataRata
-    const skorNilaiRaport = findNextLine('Skor Nilai Raport')
-    if (skorNilaiRaport) {
-      const match = skorNilaiRaport.match(/([\d]+[\.,]?[\d]*)/)
-      result['skorNilaiRaport'] = match ? match[1] : skorNilaiRaport
-    } else if (result['nilaiRataRata']) {
-      // If no explicit Skor Nilai Raport, use nilaiRataRata as fallback
-      result['skorNilaiRaport'] = result['nilaiRataRata']
-    }
-
-    // Dokumen - parse from "Dokumen" section
-    const dokumenSection = findNextLine('Dokumen')
-    if (dokumenSection) {
-      result['dokumen'] = dokumenSection
-    }
-
-    // NPSN - we don't have this from portal, use empty
-    result['npsnSekolahPilihan'] = ''
-    result['npsnSekolahAsal'] = ''
-    result['jurusan'] = ''
-    result['status'] = 'ON PROGRESS'
-
-    return result
-  }
-
+  // ==================== HANDLER FUNCTIONS ====================
   const handlePortalPaste = () => {
     if (!portalRawText.trim()) return
     setPortalParsing(true)
     try {
-      const parsed = parsePortalText(portalRawText)
+      const parsed = parsePortalText(portalRawText, jalurConfigs)
       setPortalParsedData(parsed)
-      // Initialize selected jalur from detected jalur or first active jalur
       const detectedJalur = parsed['_detectedJalurNama'] || ''
       if (detectedJalur) {
         setPortalSelectedJalur(detectedJalur)
       } else {
-        // Default to first active jalur
         const firstActive = jalurConfigs.find(j => j.aktif)
         setPortalSelectedJalur(firstActive?.nama || '')
+      }
+      // Auto-set verification status based on portal-detected status
+      const detectedStatus = parsed['status'] || ''
+      if (detectedStatus === 'DITOLAK') {
+        setPortalVerifStatus('REJECTED')
+      } else {
+        setPortalVerifStatus('VERIFIED')
       }
     } catch {
       toast({ title: 'Gagal', description: 'Tidak dapat memparse teks portal', variant: 'destructive' })
@@ -3367,15 +959,45 @@ export default function Home() {
 
   const handlePortalSave = async () => {
     if (!portalParsedData) return
+
+    // Validation: if REJECTED, must have kekurangan verifikasi selected (same rule as Kekurangan Verifikasi column)
+    if (portalVerifStatus === 'REJECTED' && !portalKekurangan.trim()) {
+      toast({ title: 'Gagal', description: 'Kekurangan verifikasi wajib dipilih! Pilih minimal 1 alasan penolakan.', variant: 'destructive' })
+      return
+    }
+
     setImporting(true)
     try {
-      // Use the selected jalur from dropdown (overrides auto-detected subJalur)
       const saveData = { ...portalParsedData }
       if (portalSelectedJalur) {
         saveData['subJalur'] = getJalurSubFilter(portalSelectedJalur)
       }
-      // Remove internal temp fields before sending
       delete saveData['_detectedJalurNama']
+      delete saveData['_jalurAutoDetected']
+
+      // Set verification status from the dialog selector
+      if (portalVerifStatus === 'REJECTED') {
+        saveData['status'] = 'DITOLAK'
+        saveData['verificationStatus'] = 'REJECTED'
+      } else {
+        saveData['verificationStatus'] = 'VERIFIED'
+        // Keep original status from portal if DITERIMA, otherwise default
+        if (saveData['status'] === 'DITOLAK') {
+          saveData['status'] = 'DITERIMA'
+        } else if (!saveData['status'] || saveData['status'] === 'ON PROGRESS') {
+          saveData['status'] = 'DITERIMA'
+        }
+      }
+
+      // Include verification fields
+      if (portalKekurangan) saveData['kekuranganVerifikasi'] = portalKekurangan
+      if (portalVerifNote) saveData['verificationNote'] = portalVerifNote
+      if (portalTanggalVerif) saveData['tanggalVerif'] = portalTanggalVerif
+      if (portalJamVerif) saveData['jamVerif'] = portalJamVerif
+      if (portalTerbitKK) saveData['terbitKK'] = portalTerbitKK
+
+      // Include tahap
+      saveData['tahap'] = tahap
 
       const res = await fetch('/api/registrations/portal-paste', {
         method: 'POST',
@@ -3385,28 +1007,44 @@ export default function Home() {
       const data = await res.json()
       if (data.success) {
         const nisnLabel = portalParsedData.nisn ? ` (NISN: ${portalParsedData.nisn})` : ''
+        const savedRegId = data.data?.id || null
         if (data.action === 'created') {
-          toast({
-            title: '✅ Data Baru Disimpan',
-            description: data.message || `Data ${portalParsedData.nama || 'pendaftar'}${nisnLabel} berhasil ditambahkan sebagai data baru`,
-          })
+          toast({ title: '✅ Data Baru Disimpan', description: data.message || `Data ${portalParsedData.nama || 'pendaftar'}${nisnLabel} berhasil ditambahkan sebagai data baru` })
         } else if (data.action === 'updated') {
-          toast({
-            title: '🔄 Data Diperbarui',
-            description: data.message || `Data ${portalParsedData.nama || 'pendaftar'}${nisnLabel} berhasil diperbarui — field kosong telah diisi`,
-          })
+          toast({ title: '🔄 Data Diperbarui', description: data.message || `Data ${portalParsedData.nama || 'pendaftar'}${nisnLabel} berhasil diperbarui — field kosong telah diisi` })
         } else {
-          toast({
-            title: 'ℹ️ Data Sudah Lengkap',
-            description: data.message || `Data ${portalParsedData.nama || 'pendaftar'}${nisnLabel} sudah lengkap, tidak ada perubahan`,
-          })
+          toast({ title: 'ℹ️ Data Sudah Lengkap', description: data.message || `Data ${portalParsedData.nama || 'pendaftar'}${nisnLabel} sudah lengkap, tidak ada perubahan` })
         }
         setPortalPasteOpen(false)
         setPortalRawText('')
         setPortalParsedData(null)
         setPortalSelectedJalur('')
+        // Reset verification fields
+        setPortalVerifStatus('VERIFIED')
+        setPortalKekurangan('')
+        setPortalVerifNote('')
+        setPortalTanggalVerif('')
+        setPortalJamVerif('')
+        setPortalTerbitKK('')
         fetchRegistrations()
         fetchStats()
+
+        // Navigate to correct Lembar Verifikasi tab and highlight the student
+        if (savedRegId && portalSelectedJalur) {
+          const subJalurValue = getJalurSubFilter(portalSelectedJalur)
+          // Find the matching lembar tab key
+          const matchingLembar = lembarVerifikasi.find(lv => {
+            const jalurNames = lv.subJalurFilter.split(',').map(s => s.trim())
+            return jalurNames.includes(subJalurValue)
+          })
+          if (matchingLembar) {
+            setLembarTab(matchingLembar.key)
+          }
+          setActiveTab('lembar-verifikasi')
+          setHighlightRegId(savedRegId)
+          // Clear highlight after 5 seconds
+          setTimeout(() => setHighlightRegId(null), 5000)
+        }
       } else {
         toast({ title: 'Gagal', description: data.error || 'Terjadi kesalahan', variant: 'destructive' })
       }
@@ -3417,19 +1055,37 @@ export default function Home() {
     }
   }
 
-  // Save kuota
-  const saveKuota = async () => {
-    setSettingsSaving(true)
+  const handleSumutBerkahSave = async () => {
+    if (!sumutBerkahPreview || sumutBerkahPreview.length === 0) return
+    setSumutBerkahParsing(true)
     try {
-      const res = await fetch('/api/settings', {
-        method: 'PUT',
+      const res = await fetch('/api/registrations/sumut-berkah', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kuota }),
+        body: JSON.stringify({ updates: sumutBerkahPreview }),
       })
       const data = await res.json()
       if (data.success) {
-        toast({ title: 'Tersimpan', description: `Kuota siswa: ${kuota}` })
+        setSumutBerkahResult({ matched: data.matched, updated: data.updated, notFound: data.notFound })
+        toast({ title: '✅ Data Sumut Berkah Diperbarui', description: `${data.matched} nama cocok, ${data.updated} data diperbarui${data.notFound?.length > 0 ? `, ${data.notFound.length} tidak ditemukan` : ''}` })
+        fetchRegistrations()
+        fetchStats()
+      } else {
+        toast({ title: 'Gagal', description: data.error || 'Terjadi kesalahan', variant: 'destructive' })
       }
+    } catch {
+      toast({ title: 'Gagal', description: 'Terjadi kesalahan saat menyimpan data', variant: 'destructive' })
+    } finally {
+      setSumutBerkahParsing(false)
+    }
+  }
+
+  const saveKuota = async () => {
+    setSettingsSaving(true)
+    try {
+      const res = await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kuota }) })
+      const data = await res.json()
+      if (data.success) toast({ title: 'Tersimpan', description: `Kuota siswa: ${kuota}` })
     } catch {
       toast({ title: 'Gagal', description: 'Gagal menyimpan kuota', variant: 'destructive' })
     } finally {
@@ -3437,55 +1093,33 @@ export default function Home() {
     }
   }
 
-  // Save app name & school name
   const saveAppName = async () => {
     setSettingsSaving(true)
     try {
-      const res = await fetch('/api/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ appName, schoolName }),
-      })
+      const res = await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ appName, schoolName, appIcon, appSubtitle }) })
       const data = await res.json()
-      if (data.success) {
-        toast({ title: 'Tersimpan', description: `Nama aplikasi: ${appName}${schoolName ? ' — ' + schoolName : ''}` })
-      }
+      if (data.success) toast({ title: 'Tersimpan', description: `Pengaturan aplikasi berhasil disimpan` })
     } catch {
-      toast({ title: 'Gagal', description: 'Gagal menyimpan nama aplikasi', variant: 'destructive' })
+      toast({ title: 'Gagal', description: 'Gagal menyimpan pengaturan aplikasi', variant: 'destructive' })
     } finally {
       setSettingsSaving(false)
     }
   }
 
-  // Update jalur persentase
   const updateJalurPersentase = async (id: string, persentase: number) => {
     try {
-      const res = await fetch('/api/settings/jalur', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, persentase }),
-      })
+      const res = await fetch('/api/settings/jalur', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, persentase }) })
       const data = await res.json()
-      if (data.success) {
-        setJalurConfigs(prev => prev.map(j => j.id === id ? { ...j, persentase } : j))
-      }
+      if (data.success) setJalurConfigs(prev => prev.map(j => j.id === id ? { ...j, persentase } : j))
     } catch {
       toast({ title: 'Gagal', description: 'Gagal memperbarui persentase', variant: 'destructive' })
     }
   }
 
-  // Add new jalur
   const addJalur = async () => {
-    if (!newJalurNama.trim()) {
-      toast({ title: 'Gagal', description: 'Nama jalur wajib diisi', variant: 'destructive' })
-      return
-    }
+    if (!newJalurNama.trim()) { toast({ title: 'Gagal', description: 'Nama jalur wajib diisi', variant: 'destructive' }); return }
     try {
-      const res = await fetch('/api/settings/jalur', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nama: newJalurNama.trim(), persentase: newJalurPersentase }),
-      })
+      const res = await fetch('/api/settings/jalur', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nama: newJalurNama.trim(), persentase: newJalurPersentase }) })
       const data = await res.json()
       if (data.success) {
         setJalurConfigs(prev => [...prev, data.data])
@@ -3501,7 +1135,6 @@ export default function Home() {
     }
   }
 
-  // Delete jalur
   const deleteJalur = async (id: string, nama: string) => {
     if (!confirm(`Hapus jalur "${nama}"?`)) return
     try {
@@ -3518,59 +1151,49 @@ export default function Home() {
     }
   }
 
-  // Toggle jalur aktif
   const toggleJalurAktif = async (id: string, aktif: boolean) => {
     try {
-      const res = await fetch('/api/settings/jalur', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, aktif }),
-      })
+      const res = await fetch('/api/settings/jalur', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, aktif }) })
       const data = await res.json()
       if (data.success) {
         setJalurConfigs(prev => prev.map(j => j.id === id ? { ...j, aktif } : j))
+        // Also save per-tahap jalur activation so switching tahap remembers the toggle
+        setJalurAktifPerTahap(prev => {
+          const mapping: Record<string, string[]> = prev ? JSON.parse(prev) : {}
+          // Get the NEW active list (including this toggle)
+          const newActiveIds = jalurConfigs
+            .map(j => j.id === id ? { ...j, aktif } : j)
+            .filter(j => j.aktif)
+            .map(j => j.id)
+          mapping[tahap.toString()] = newActiveIds
+          const newMapping = JSON.stringify(mapping)
+          // Persist to backend
+          fetch('/api/settings', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jalurAktifPerTahap: newMapping }),
+          })
+          return newMapping
+        })
       }
     } catch {
       toast({ title: 'Gagal', description: 'Gagal mengubah status jalur', variant: 'destructive' })
     }
   }
 
-  // Portal Sync function
   const handlePortalSync = async () => {
-    if (!portalSyncEmail.trim() || !portalSyncPassword.trim()) {
-      toast({ title: 'Gagal', description: 'Email dan password portal wajib diisi', variant: 'destructive' })
-      return
-    }
+    if (!portalSyncEmail.trim() || !portalSyncPassword.trim()) { toast({ title: 'Gagal', description: 'Email dan password portal wajib diisi', variant: 'destructive' }); return }
     setPortalSyncing(true)
     setPortalSyncResult(null)
     try {
-      const res = await fetch('/api/portal-sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: portalSyncEmail.trim(),
-          password: portalSyncPassword,
-          pages: portalSyncPages,
-          status: portalSyncStatus,
-        }),
-      })
+      const res = await fetch('/api/portal-sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: portalSyncEmail.trim(), password: portalSyncPassword, pages: portalSyncPages, status: portalSyncStatus }) })
       const data = await res.json()
       if (data.error) {
         setPortalSyncResult({ success: false, message: data.error })
         toast({ title: 'Gagal', description: data.error, variant: 'destructive' })
       } else {
-        setPortalSyncResult({
-          success: true,
-          message: data.message,
-          created: data.created,
-          updated: data.updated,
-          unchanged: data.unchanged,
-          total: data.total,
-        })
-        toast({
-          title: '✅ Sinkronisasi Berhasil',
-          description: data.message,
-        })
+        setPortalSyncResult({ success: true, message: data.message, created: data.created, updated: data.updated, unchanged: data.unchanged, total: data.total })
+        toast({ title: '✅ Sinkronisasi Berhasil', description: data.message })
         fetchRegistrations()
         fetchStats()
       }
@@ -3586,98 +1209,62 @@ export default function Home() {
   const parseCSVClientSide = (text: string) => {
     const lines = text.trim().split('\n')
     if (lines.length < 2) return []
-
     const headers = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim())
     const rows: Record<string, string>[] = []
-
+    let skippedRows = 0
     for (let i = 1; i < lines.length; i++) {
+      if (!lines[i].trim()) continue // skip empty lines
       const values: string[] = []
       let current = ''
       let inQuotes = false
-
       for (const char of lines[i]) {
-        if (char === '"') {
-          inQuotes = !inQuotes
-        } else if (char === ',' && !inQuotes) {
-          values.push(current.trim())
-          current = ''
-        } else {
-          current += char
-        }
+        if (char === '"') { inQuotes = !inQuotes } else if (char === ',' && !inQuotes) { values.push(current.trim()); current = '' } else { current += char }
       }
       values.push(current.trim())
-
-      if (values.length === headers.length) {
+      // Accept rows with close column counts (allow slight mismatches by padding)
+      if (values.length >= headers.length - 2 && values.length <= headers.length + 2) {
         const row: Record<string, string> = {}
-        headers.forEach((header, index) => {
-          row[header] = values[index] || ''
-        })
+        headers.forEach((header, index) => { row[header] = values[index] || '' })
         rows.push(row)
+      } else {
+        skippedRows++
       }
     }
-
+    if (skippedRows > 0) {
+      toast({ title: 'Perhatian', description: `${skippedRows} baris CSV dilewati karena format tidak valid`, variant: 'destructive' })
+    }
     return rows
   }
 
   const handleImport = async () => {
     if (!csvFile) return
-
     setImporting(true)
     try {
       const text = await csvFile.text()
       const csvRows = parseCSVClientSide(text)
-
-      if (csvRows.length === 0) {
-        throw new Error('File CSV kosong atau format tidak valid')
-      }
-
+      if (csvRows.length === 0) throw new Error('File CSV kosong atau format tidak valid')
+      const finalStatus = useCsvStatus ? undefined : importStatus
       const mappedRows = csvRows.map(row => ({
-        noRegistrasi: row['No.Registrasi'] || '',
-        nama: row['Nama'] || '',
-        nisn: row['NISN'] || '',
-        subJalur: row['Sub Jalur'] || '',
-        npsnSekolahPilihan: row['NPSN Sekolah Pilihan'] || '',
-        namaSekolahPilihan: row['Nama Sekolah Pilihan'] || '',
-        jurusan: row['Jurusan'] || '',
-        npsnSekolahAsal: row['NPSN Sekolah Asal'] || '',
-        namaSekolahAsal: row['Nama Sekolah Asal'] || '',
-        status: row['Status'] || importStatus,
-        waktuDaftar: row['Waktu Daftar'] || '',
+        noRegistrasi: row['No.Registrasi'] || '', nama: row['Nama'] || '', nisn: row['NISN'] || '', subJalur: row['Sub Jalur'] || '',
+        npsnSekolahPilihan: row['NPSN Sekolah Pilihan'] || '', namaSekolahPilihan: row['Nama Sekolah Pilihan'] || '', jurusan: row['Jurusan'] || '',
+        npsnSekolahAsal: row['NPSN Sekolah Asal'] || '', namaSekolahAsal: row['Nama Sekolah Asal'] || '', status: finalStatus || row['Status'] || importStatus, waktuDaftar: row['Waktu Daftar'] || '',
       }))
-
-      const importRes = await fetch('/api/registrations/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rows: mappedRows }),
-      })
-
+      const importRes = await fetch('/api/registrations/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows: mappedRows, overrideStatus: !useCsvStatus, tahap }) })
       const importData = await importRes.json()
-
       if (importData.success) {
-        const createdCount = importData.created || 0
-        const updatedCount = importData.updated || 0
-        const skippedCount = importData.skipped || 0
-        toast({
-          title: 'Import Berhasil',
-          description: `${createdCount} data baru, ${updatedCount} data diperbarui, ${skippedCount} dilewati`,
-        })
+        const skippedInfo = importData.skipped > 0 ? `, ${importData.skipped} dilewati` : ''
+        const errorInfo = importData.errors?.length > 0 ? `\n\nDetail: ${importData.errors.join('; ')}` : ''
+        toast({ title: 'Import Berhasil', description: `${importData.created || 0} data baru, ${importData.updated || 0} data diperbarui${skippedInfo} (Total: ${importData.imported || 0} dari ${csvRows.length} baris CSV)${errorInfo}` })
         setImportDialogOpen(false)
         setCsvFile(null)
+        setCsvRowCount(0)
         fetchRegistrations()
         fetchStats()
       } else {
-        toast({
-          title: 'Import Gagal',
-          description: importData.error || 'Terjadi kesalahan',
-          variant: 'destructive',
-        })
+        toast({ title: 'Import Gagal', description: importData.error || 'Terjadi kesalahan', variant: 'destructive' })
       }
     } catch (err) {
-      toast({
-        title: 'Import Gagal',
-        description: err instanceof Error ? err.message : 'Terjadi kesalahan',
-        variant: 'destructive',
-      })
+      toast({ title: 'Import Gagal', description: err instanceof Error ? err.message : 'Terjadi kesalahan', variant: 'destructive' })
     } finally {
       setImporting(false)
     }
@@ -3685,125 +1272,39 @@ export default function Home() {
 
   const handleVerify = async () => {
     if (!verifyTargetId) return
-
     setVerifying(true)
     try {
-      const res = await fetch('/api/registrations/verify', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: verifyTargetId,
-          verificationStatus: verifyAction,
-          verificationNote: verifyNote || undefined,
-        }),
-      })
-
+      const res = await fetch('/api/registrations/verify', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: verifyTargetId, verificationStatus: verifyAction, verificationNote: verifyNote || undefined }) })
       const data = await res.json()
-
       if (data.success) {
-        toast({
-          title: verifyAction === 'VERIFIED' ? 'Pendaftar Diterima' : 'Pendaftar Ditolak',
-          description: verifyAction === 'VERIFIED'
-            ? 'Data pendaftar telah diverifikasi dan diterima'
-            : 'Data pendaftar telah ditolak',
-        })
-        setVerifyDialogOpen(false)
-        setVerifyNote('')
-        setVerifyTargetId(null)
-        fetchRegistrations()
-        fetchStats()
+        toast({ title: verifyAction === 'VERIFIED' ? 'Pendaftar Diterima' : 'Pendaftar Ditolak', description: verifyAction === 'VERIFIED' ? 'Data pendaftar telah diverifikasi dan diterima' : 'Data pendaftar telah ditolak' })
+        setVerifyDialogOpen(false); setVerifyNote(''); setVerifyTargetId(null)
+        fetchRegistrations(); fetchStats()
       } else {
-        toast({
-          title: 'Verifikasi Gagal',
-          description: data.error || 'Terjadi kesalahan',
-          variant: 'destructive',
-        })
+        toast({ title: 'Verifikasi Gagal', description: data.error || 'Terjadi kesalahan', variant: 'destructive' })
       }
-    } catch {
-      toast({
-        title: 'Verifikasi Gagal',
-        description: 'Terjadi kesalahan',
-        variant: 'destructive',
-      })
-    } finally {
-      setVerifying(false)
-    }
+    } catch { toast({ title: 'Verifikasi Gagal', description: 'Terjadi kesalahan', variant: 'destructive' }) } finally { setVerifying(false) }
   }
 
   const handleBulkVerify = async () => {
     if (selectedIds.size === 0) return
-
     setVerifying(true)
     try {
-      const res = await fetch('/api/registrations/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ids: Array.from(selectedIds),
-          verificationStatus: verifyAction,
-          verificationNote: verifyNote || undefined,
-        }),
-      })
-
+      const res = await fetch('/api/registrations/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: Array.from(selectedIds), verificationStatus: verifyAction, verificationNote: verifyNote || undefined }) })
       const data = await res.json()
-
       if (data.success) {
-        toast({
-          title: verifyAction === 'VERIFIED' ? 'Pendaftar Diterima' : 'Pendaftar Ditolak',
-          description: `${data.updated} pendaftar ${verifyAction === 'VERIFIED' ? 'diterima' : 'ditolak'}`,
-        })
-        setBulkVerifyDialogOpen(false)
-        setVerifyNote('')
-        setSelectedIds(new Set())
-        fetchRegistrations()
-        fetchStats()
-      } else {
-        toast({
-          title: 'Verifikasi Gagal',
-          description: data.error || 'Terjadi kesalahan',
-          variant: 'destructive',
-        })
-      }
-    } catch {
-      toast({
-        title: 'Verifikasi Gagal',
-        description: 'Terjadi kesalahan',
-        variant: 'destructive',
-      })
-    } finally {
-      setVerifying(false)
-    }
+        toast({ title: verifyAction === 'VERIFIED' ? 'Pendaftar Diterima' : 'Pendaftar Ditolak', description: `${data.updated} pendaftar ${verifyAction === 'VERIFIED' ? 'diterima' : 'ditolak'}` })
+        setBulkVerifyDialogOpen(false); setVerifyNote(''); setSelectedIds(new Set())
+        fetchRegistrations(); fetchStats()
+      } else { toast({ title: 'Verifikasi Gagal', description: data.error || 'Terjadi kesalahan', variant: 'destructive' }) }
+    } catch { toast({ title: 'Verifikasi Gagal', description: 'Terjadi kesalahan', variant: 'destructive' }) } finally { setVerifying(false) }
   }
 
-  const toggleSelectAll = () => {
-    if (selectedIds.size === registrations.length) {
-      setSelectedIds(new Set())
-    } else {
-      setSelectedIds(new Set(registrations.map(r => r.id)))
-    }
-  }
-
-  const toggleSelect = (id: string) => {
-    const next = new Set(selectedIds)
-    if (next.has(id)) {
-      next.delete(id)
-    } else {
-      next.add(id)
-    }
-    setSelectedIds(next)
-  }
-
-  const verificationPercent = stats
-    ? stats.total > 0
-      ? Math.round(((stats.verified + stats.rejected) / stats.total) * 100)
-      : 0
-    : 0
-
+  const verificationPercent = stats ? stats.total > 0 ? Math.round(((stats.verified + stats.rejected) / stats.total) * 100) : 0 : 0
   const verifiedPercent = stats && stats.total > 0 ? Math.round((stats.verified / stats.total) * 100) : 0
   const rejectedPercent = stats && stats.total > 0 ? Math.round((stats.rejected / stats.total) * 100) : 0
   const pendingPercent = stats && stats.total > 0 ? Math.round((stats.pending / stats.total) * 100) : 0
 
-  // Get pending count per lembar verifikasi for badges
   const getPendingForLembar = (subJalurFilter: string) => {
     if (!stats) return 0
     const jalurNames = subJalurFilter.split(',').map(s => s.trim())
@@ -3822,37 +1323,18 @@ export default function Home() {
     setDetailDialogOpen(true)
   }
 
-  // Edit dialog functions (Home component)
   const openEditDialog = (reg: Registration) => {
     setEditTarget(reg)
     setEditForm({
-      noRegistrasi: reg.noRegistrasi || '',
-      nama: reg.nama || '',
-      nisn: reg.nisn || '',
-      subJalur: reg.subJalur || '',
-      nik: reg.nik || '',
-      tanggalLahir: reg.tanggalLahir || '',
-      alamat: reg.alamat || '',
-      alamatLengkap: reg.alamatLengkap || '',
-      noTelpSiswa: reg.noTelpSiswa || '',
-      noTelpOrangtua: reg.noTelpOrangtua || '',
-      npsnSekolahPilihan: reg.npsnSekolahPilihan || '',
-      namaSekolahPilihan: reg.namaSekolahPilihan || '',
-      jurusan: reg.jurusan || '',
-      npsnSekolahAsal: reg.npsnSekolahAsal || '',
-      namaSekolahAsal: reg.namaSekolahAsal || '',
-      skorJarak: reg.skorJarak || '',
-      skorNilaiRaport: reg.skorNilaiRaport || '',
-      kekuranganVerifikasi: reg.kekuranganVerifikasi || '',
-      tanggalVerif: reg.tanggalVerif || '',
-      jamVerif: reg.jamVerif || '',
-      terbitKK: reg.terbitKK || '',
-      latitude: reg.latitude || '',
-      longitude: reg.longitude || '',
-      lokasiJarak: reg.lokasiJarak || '',
-      nilaiRataRata: reg.nilaiRataRata || '',
-      statusLulus: reg.statusLulus || 'BELUM',
-      statusDaftarUlang: reg.statusDaftarUlang || 'BELUM',
+      noRegistrasi: reg.noRegistrasi || '', nama: reg.nama || '', nisn: reg.nisn || '', subJalur: reg.subJalur || '',
+      nik: reg.nik || '', tanggalLahir: reg.tanggalLahir || '', alamat: reg.alamat || '', alamatLengkap: reg.alamatLengkap || '',
+      noTelpSiswa: reg.noTelpSiswa || '', noTelpOrangtua: reg.noTelpOrangtua || '', npsnSekolahPilihan: reg.npsnSekolahPilihan || '',
+      namaSekolahPilihan: reg.namaSekolahPilihan || '', jurusan: reg.jurusan || '', npsnSekolahAsal: reg.npsnSekolahAsal || '',
+      namaSekolahAsal: reg.namaSekolahAsal || '', skorJarak: reg.skorJarak || '', skorNilaiRaport: reg.skorNilaiRaport || '',
+      kekuranganVerifikasi: reg.kekuranganVerifikasi || '', tanggalVerif: reg.tanggalVerif || '', jamVerif: reg.jamVerif || '',
+      terbitKK: reg.terbitKK || '', latitude: reg.latitude || '', longitude: reg.longitude || '', lokasiJarak: reg.lokasiJarak || '',
+      nilaiRataRata: reg.nilaiRataRata || '', totalNilai: reg.totalNilai || '',
+      statusLulus: reg.statusLulus || 'BELUM', statusDaftarUlang: reg.statusDaftarUlang || 'BELUM',
     })
     setEditDialogOpen(true)
   }
@@ -3866,29 +1348,16 @@ export default function Home() {
         const calculatedLama = hitungLamaKK(updateData.terbitKK)
         if (calculatedLama) updateData['lamaKK'] = calculatedLama
       }
-      const res = await fetch(`/api/registrations/${editTarget.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updateData),
-      })
+      const res = await fetch(`/api/registrations/${editTarget.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updateData) })
       const result = await res.json()
       if (result.success) {
         toast({ title: 'Berhasil', description: `Data ${editTarget.nama} berhasil diperbarui` })
-        setEditDialogOpen(false)
-        setEditTarget(null)
-        fetchRegistrations()
-        fetchStats()
-      } else {
-        toast({ title: 'Gagal', description: result.error || 'Gagal menyimpan', variant: 'destructive' })
-      }
-    } catch {
-      toast({ title: 'Gagal', description: 'Terjadi kesalahan', variant: 'destructive' })
-    } finally {
-      setSaving(false)
-    }
+        setEditDialogOpen(false); setEditTarget(null)
+        fetchRegistrations(); fetchStats()
+      } else { toast({ title: 'Gagal', description: result.error || 'Gagal menyimpan', variant: 'destructive' }) }
+    } catch { toast({ title: 'Gagal', description: 'Terjadi kesalahan', variant: 'destructive' }) } finally { setSaving(false) }
   }
 
-  // Delete dialog functions (Home component)
   const openDeleteDialog = (reg: Registration) => {
     setDeleteTarget(reg)
     setDeleteDialogOpen(true)
@@ -3898,27 +1367,16 @@ export default function Home() {
     if (!deleteTarget) return
     setDeleting(true)
     try {
-      const res = await fetch(`/api/registrations/${deleteTarget.id}`, {
-        method: 'DELETE',
-      })
+      const res = await fetch(`/api/registrations/${deleteTarget.id}`, { method: 'DELETE' })
       const result = await res.json()
       if (result.success) {
         toast({ title: 'Berhasil', description: `Data ${deleteTarget.nama} berhasil dihapus` })
-        setDeleteDialogOpen(false)
-        setDeleteTarget(null)
-        fetchRegistrations()
-        fetchStats()
-      } else {
-        toast({ title: 'Gagal', description: result.error || 'Gagal menghapus', variant: 'destructive' })
-      }
-    } catch {
-      toast({ title: 'Gagal', description: 'Terjadi kesalahan', variant: 'destructive' })
-    } finally {
-      setDeleting(false)
-    }
+        setDeleteDialogOpen(false); setDeleteTarget(null)
+        fetchRegistrations(); fetchStats()
+      } else { toast({ title: 'Gagal', description: result.error || 'Gagal menghapus', variant: 'destructive' }) }
+    } catch { toast({ title: 'Gagal', description: 'Terjadi kesalahan', variant: 'destructive' }) } finally { setDeleting(false) }
   }
 
-  // Print report function
   const handlePrintReport = (type: 'diterima' | 'ditolak') => {
     const list = type === 'diterima' ? stats?.verifiedList || [] : stats?.rejectedList || []
     const title = type === 'diterima' ? 'LAPORAN PESERTA DITERIMA' : 'LAPORAN PESERTA DITOLAK'
@@ -3945,139 +1403,17 @@ export default function Home() {
     printWindow.print()
   }
 
-  // Ranking: generate print HTML content
-  const getRankingPrintHTML = (selectedJalur: string = 'all') => {
-    const sortLabel = rankingTampilan === 'jarak' ? 'Jarak Terdekat' : rankingTampilan === 'nilai' ? 'Nilai Tertinggi' : 'Skor Komposit'
-    const jalurLabel = selectedJalur !== 'all' ? selectedJalur : 'Semua Jalur'
-    const sekolahLabel = rankingSekolah !== 'all' ? rankingSekolah : 'Semua Sekolah'
-    const jurusanLabel = rankingJurusan !== 'all' ? rankingJurusan : 'Semua Jurusan'
-    const statusLabel = rankingStatus !== 'all' ? (rankingStatus === 'VERIFIED' ? 'Diterima' : rankingStatus === 'REJECTED' ? 'Ditolak' : 'Menunggu') : 'Semua Status'
-
-    // Filter data by selected jalur
-    const filteredData = selectedJalur === 'all'
-      ? rankingData
-      : rankingData.filter((r: Record<string, unknown>) => (r.subJalur as string) === selectedJalur)
-
-    // Re-rank within selected jalur
-    const jalurRankCounters: Record<string, number> = {}
-    const reRanked = filteredData.map((r: Record<string, unknown>, idx: number) => {
-      const jalur = r.subJalur as string
-      if (!jalurRankCounters[jalur]) jalurRankCounters[jalur] = 0
-      jalurRankCounters[jalur]++
-      return { ...r, _newRank: idx + 1, _newJalurRank: jalurRankCounters[jalur] }
-    })
-
-    const rows = reRanked.map((r: Record<string, unknown> & { _newRank: number; _newJalurRank: number }, idx: number) => {
-      const rankNum = r._newRank
-      const jalurRank = r._newJalurRank
-      const jarakNum = r._jarakNum as number
-      const nilaiNum = r._nilaiNum as number
-      const skorNum = r._skorNum as number
-
-      // Determine kuota cutoff
-      const currentKuota = rankingKuotaPerJalur.find(k => {
-        const jalurName = (r.subJalur as string || '').toLowerCase()
-        return k.nama.toLowerCase().includes(jalurName) || jalurName.includes(k.nama.toLowerCase())
-          || (k.nama.toLowerCase().includes('prestasi') && jalurName.includes('prestasi'))
-          || (k.nama.toLowerCase().includes('domisili') && jalurName.includes('domisili'))
-          || (k.nama.toLowerCase().includes('mutasi') && jalurName.includes('mutasi'))
-          || (k.nama.toLowerCase().includes('afirmasi') && (jalurName.includes('keluarga') || jalurName.includes('ktm')))
-      })?.kuota || 0
-
-      const sameJalurAbove = reRanked
-        .filter((other: Record<string, unknown> & { _newRank: number; _newJalurRank: number }) =>
-          (other.subJalur as string) === (r.subJalur as string) &&
-          other._newJalurRank < jalurRank
-        ).length
-
-      const withinKuota = currentKuota > 0 && sameJalurAbove < currentKuota
-      const isVerified = r.verificationStatus === 'VERIFIED'
-
-      const rowBg = withinKuota && !isVerified ? '#f0fdf4' : isVerified ? '#f0fdf4' : ''
-      const rankBg = rankNum === 1 ? '#fbbf24' : rankNum === 2 ? '#d1d5db' : rankNum === 3 ? '#b45309' : withinKuota ? '#d1fae5' : '#f3f4f6'
-      const rankColor = rankNum <= 3 ? '#fff' : withinKuota ? '#047857' : '#6b7280'
-
-      return `<tr style="background:${rowBg}">
-        <td style="padding:6px 8px;border:1px solid #ddd;text-align:center"><span style="display:inline-block;width:26px;height:26px;line-height:26px;border-radius:50%;background:${rankBg};color:${rankColor};font-size:11px;font-weight:bold">${rankNum}</span></td>
-        <td style="padding:6px 8px;border:1px solid #ddd;text-align:center;font-size:11px">${r.subJalur as string}${jalurRank > 0 ? `<br><span style="font-size:9px;color:#0369a1">#${jalurRank}</span>` : ''}</td>
-        <td style="padding:6px 8px;border:1px solid #ddd;font-size:12px"><strong>${r.nama as string}</strong><br><span style="font-size:9px;color:#999">NISN: ${r.nisn as string}</span></td>
-        <td style="padding:6px 8px;border:1px solid #ddd;font-size:11px">${r.namaSekolahAsal as string}</td>
-        <td style="padding:6px 8px;border:1px solid #ddd;font-size:11px">${r.jurusan as string}</td>
-        <td style="padding:6px 8px;border:1px solid #ddd;text-align:right;font-size:11px;font-weight:${rankingTampilan === 'jarak' ? 'bold' : 'normal'};color:${jarakNum > 0 ? '#0369a1' : '#ccc'}">${r.lokasiJarak as string || '-'}</td>
-        <td style="padding:6px 8px;border:1px solid #ddd;text-align:right;font-size:11px;font-weight:${rankingTampilan === 'nilai' ? 'bold' : 'normal'};color:${nilaiNum > 0 ? '#047857' : '#ccc'}">${r.nilaiRataRata as string || r.skorNilaiRaport as string || '-'}</td>
-        <td style="padding:6px 8px;border:1px solid #ddd;text-align:right;font-size:11px;font-weight:${rankingTampilan === 'komposit' ? 'bold' : 'normal'};color:${skorNum > 0 ? '#b45309' : '#ccc'}">${r.skor as string || '-'}</td>
-        <td style="padding:6px 8px;border:1px solid #ddd;text-align:center;font-size:10px">${r.verificationStatus === 'VERIFIED' ? '<span style="background:#d1fae5;color:#047857;padding:2px 8px;border-radius:10px">Diterima</span>' : r.verificationStatus === 'REJECTED' ? '<span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:10px">Ditolak</span>' : '<span style="background:#fef3c7;color:#b45309;padding:2px 8px;border-radius:10px">Menunggu</span>'}</td>
-      </tr>`
-    }).join('')
-
-    return `<!DOCTYPE html><html><head><title>Perangkingan ${appName} - ${sortLabel}</title>
-      <style>
-        @page { size: A4 landscape; margin: 15mm; }
-        body { font-family: Arial, sans-serif; margin: 0; padding: 15px; font-size: 12px; }
-        .header { text-align: center; margin-bottom: 15px; border-bottom: 3px double #333; padding-bottom: 10px; }
-        .header h1 { font-size: 18px; margin: 0 0 4px 0; letter-spacing: 2px; }
-        .header h2 { font-size: 14px; margin: 0 0 4px 0; color: #555; }
-        .header h3 { font-size: 12px; margin: 0 0 4px 0; color: #777; }
-        .header p { font-size: 10px; color: #888; margin: 2px 0; }
-        .filters { display: flex; gap: 15px; justify-content: center; margin-bottom: 10px; font-size: 10px; color: #666; }
-        .filters span { background: #f5f5f5; padding: 2px 8px; border-radius: 4px; border: 1px solid #ddd; }
-        .kuota-info { text-align: center; margin-bottom: 10px; font-size: 11px; }
-        .kuota-info span { background: #dbeafe; color: #1e40af; padding: 3px 10px; border-radius: 4px; margin: 0 4px; }
-        table { width: 100%; border-collapse: collapse; font-size: 11px; }
-        th { background: #f5f5f5; padding: 8px; border: 1px solid #ddd; text-align: center; font-size: 11px; font-weight: 600; }
-        th.active { background: #fef3c7; }
-        .legend { margin-top: 10px; font-size: 10px; color: #888; text-align: center; }
-        .legend span { margin: 0 8px; }
-        @media print { body { padding: 0; } }
-      </style>
-    </head>
-    <body>
-      <div class="header">
-        <h1>LAPORAN PERANGKINGAN</h1>
-        <h2>${appName}</h2>
-        ${schoolName ? `<h3>${schoolName}</h3>` : ''}
-        <p>Sistem Penerimaan Peserta Didik Baru · Diurutkan berdasarkan: <strong>${sortLabel}</strong> · Dicetak pada: ${new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
-      </div>
-      <div class="filters">
-        <span>Jalur: ${jalurLabel}</span>
-        <span>Sekolah: ${sekolahLabel}</span>
-        <span>Jurusan: ${jurusanLabel}</span>
-        <span>Status: ${statusLabel}</span>
-      </div>
-      ${rankingKuota > 0 ? `<div class="kuota-info">Total Kuota: <span>${rankingKuota}</span> ${rankingKuotaPerJalur.map(kj => `<span>${kj.nama}: ${kj.kuota} (${kj.persentase}%)</span>`).join('')}</div>` : ''}
-      <table>
-        <thead>
-          <tr>
-            <th style="width:40px">No</th>
-            <th style="width:90px">Jalur</th>
-            <th>Nama Pendaftar</th>
-            <th>Sekolah Asal</th>
-            <th>Jurusan</th>
-            <th class="${rankingTampilan === 'jarak' ? 'active' : ''}" style="width:80px">Jarak</th>
-            <th class="${rankingTampilan === 'nilai' ? 'active' : ''}" style="width:70px">Nilai</th>
-            <th class="${rankingTampilan === 'komposit' ? 'active' : ''}" style="width:60px">Skor</th>
-            <th style="width:75px">Status</th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>
-      <div class="legend">
-        <span>🟡 Rangking 1</span> <span>⚪ Rangking 2</span> <span>🟤 Rangking 3</span> <span>🟢 Masuk Kuota</span>
-        <span>Total: ${reRanked.length} pendaftar</span>
-      </div>
-    </body></html>`
-  }
-
-  // Ranking: open preview dialog
   const handleRankingPreview = (type: 'pdf' | 'excel') => {
     setRankingPreviewType(type)
-    setRankingPreviewJalur('all') // reset to all jalur
+    setRankingPreviewJalur('all')
     setRankingPreviewOpen(true)
   }
 
-  // Ranking: print to PDF via print dialog
   const handleRankingPrintPDF = () => {
-    const html = getRankingPrintHTML(rankingPreviewJalur)
+    const html = getRankingPrintHTML({
+      selectedJalur: rankingPreviewJalur, rankingTampilan, rankingSekolah, rankingJurusan, rankingStatus,
+      rankingData, rankingKuota, rankingKuotaPerJalur, appName, schoolName,
+    })
     const printWindow = window.open('', '_blank')
     if (!printWindow) return
     printWindow.document.write(html)
@@ -4085,709 +1421,291 @@ export default function Home() {
     setTimeout(() => { printWindow.print() }, 500)
   }
 
-  // Ranking: export to Excel
-  const handleRankingExportExcel = () => {
-    const sortLabel = rankingTampilan === 'jarak' ? 'Jarak Terdekat' : rankingTampilan === 'nilai' ? 'Nilai Tertinggi' : 'Skor Komposit'
-    const selectedJalur = rankingPreviewJalur
-    const jalurLabel = selectedJalur !== 'all' ? selectedJalur : 'Semua Jalur'
-
-    // Filter data by selected jalur
-    const filteredData = selectedJalur === 'all'
-      ? rankingData
-      : rankingData.filter((r: Record<string, unknown>) => (r.subJalur as string) === selectedJalur)
-
-    // Re-rank
-    const jalurRankCounters: Record<string, number> = {}
-    const reRanked = filteredData.map((r: Record<string, unknown>, idx: number) => {
-      const jalur = r.subJalur as string
-      if (!jalurRankCounters[jalur]) jalurRankCounters[jalur] = 0
-      jalurRankCounters[jalur]++
-      return { ...r, _newRank: idx + 1, _newJalurRank: jalurRankCounters[jalur] }
+  const _handleRankingExportExcel = () => {
+    handleRankingExportExcel({
+      rankingPreviewJalur, rankingTampilan, rankingSekolah, rankingJurusan, rankingStatus,
+      rankingData, rankingKuota, rankingKuotaPerJalur, appName, schoolName,
     })
-
-    const excelData = reRanked.map((r: Record<string, unknown> & { _newRank: number; _newJalurRank: number }) => {
-      const rankNum = r._newRank
-      const jalurRank = r._newJalurRank
-
-      const currentKuota = rankingKuotaPerJalur.find(k => {
-        const jalurName = (r.subJalur as string || '').toLowerCase()
-        return k.nama.toLowerCase().includes(jalurName) || jalurName.includes(k.nama.toLowerCase())
-          || (k.nama.toLowerCase().includes('prestasi') && jalurName.includes('prestasi'))
-          || (k.nama.toLowerCase().includes('domisili') && jalurName.includes('domisili'))
-          || (k.nama.toLowerCase().includes('mutasi') && jalurName.includes('mutasi'))
-          || (k.nama.toLowerCase().includes('afirmasi') && (jalurName.includes('keluarga') || jalurName.includes('ktm')))
-      })?.kuota || 0
-
-      const sameJalurAbove = reRanked
-        .filter((other: Record<string, unknown> & { _newRank: number; _newJalurRank: number }) =>
-          (other.subJalur as string) === (r.subJalur as string) &&
-          other._newJalurRank < jalurRank
-        ).length
-
-      const withinKuota = currentKuota > 0 && sameJalurAbove < currentKuota
-
-      return {
-        'Rangking': rankNum,
-        'Rangking Jalur': jalurRank > 0 ? jalurRank : '-',
-        'Jalur': r.subJalur as string,
-        'No. Registrasi': r.noRegistrasi as string,
-        'Nama': r.nama as string,
-        'NISN': r.nisn as string,
-        'Sekolah Asal': r.namaSekolahAsal as string,
-        'Jurusan': r.jurusan as string,
-        'Jarak': r.lokasiJarak as string || '-',
-        'Skor Jarak': r.skorJarak as string || '-',
-        'Nilai Rata-Rata': r.nilaiRataRata as string || '-',
-        'Skor Nilai Raport': r.skorNilaiRaport as string || '-',
-        'Skor Komposit': r.skor as string || '-',
-        'Status Verifikasi': r.verificationStatus === 'VERIFIED' ? 'Diterima' : r.verificationStatus === 'REJECTED' ? 'Ditolak' : 'Menunggu',
-        'Masuk Kuota': withinKuota ? 'Ya' : 'Tidak',
-      }
-    })
-
-    const ws = XLSX.utils.json_to_sheet(excelData)
-
-    // Set column widths
-    ws['!cols'] = [
-      { wch: 10 }, { wch: 14 }, { wch: 20 }, { wch: 18 }, { wch: 25 },
-      { wch: 16 }, { wch: 22 }, { wch: 14 }, { wch: 22 }, { wch: 14 },
-      { wch: 12 }, { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 16 },
-      { wch: 16 }, { wch: 12 },
-    ]
-
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'Perangkingan')
-
-    // Add a summary sheet
-    const summaryData = [
-      { 'Keterangan': `LAPORAN PERANGKINGAN ${appName}${schoolName ? ' — ' + schoolName : ''}`, 'Nilai': '' },
-      { 'Keterangan': 'Diurutkan Berdasarkan', 'Nilai': sortLabel },
-      { 'Keterangan': 'Jalur', 'Nilai': jalurLabel },
-      { 'Keterangan': 'Sekolah Asal', 'Nilai': rankingSekolah !== 'all' ? rankingSekolah : 'Semua Sekolah' },
-      { 'Keterangan': 'Jurusan', 'Nilai': rankingJurusan !== 'all' ? rankingJurusan : 'Semua Jurusan' },
-      { 'Keterangan': 'Status Verifikasi', 'Nilai': rankingStatus !== 'all' ? (rankingStatus === 'VERIFIED' ? 'Diterima' : rankingStatus === 'REJECTED' ? 'Ditolak' : 'Menunggu') : 'Semua Status' },
-      { 'Keterangan': 'Total Pendaftar', 'Nilai': reRanked.length.toString() },
-      { 'Keterangan': 'Total Kuota', 'Nilai': rankingKuota.toString() },
-      { 'Keterangan': '', 'Nilai': '' },
-      { 'Keterangan': 'Kuota Per Jalur', 'Nilai': '' },
-      ...rankingKuotaPerJalur.map(kj => ({ 'Keterangan': `  ${kj.nama}`, 'Nilai': `${kj.kuota} (${kj.persentase}%)` })),
-      { 'Keterangan': '', 'Nilai': '' },
-      { 'Keterangan': 'Dicetak pada', 'Nilai': new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) },
-    ]
-    const ws2 = XLSX.utils.json_to_sheet(summaryData)
-    ws2['!cols'] = [{ wch: 30 }, { wch: 25 }]
-    XLSX.utils.book_append_sheet(wb, ws2, 'Ringkasan')
-
-    const jalurSuffix = selectedJalur !== 'all' ? `_${selectedJalur.replace(/\s+/g, '_')}` : '_Semua_Jalur'
-    const fileName = `Perangkingan_SPMB2026${jalurSuffix}_${sortLabel.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`
-    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
-    const blob = new Blob([wbout], { type: 'application/octet-stream' })
-    saveAs(blob, fileName)
-
-    toast({ title: 'Berhasil', description: `File Excel berhasil diunduh: ${fileName}` })
+    toast({ title: 'Berhasil', description: 'File Excel berhasil diunduh' })
   }
 
+  // ==================== MAIN RENDER ====================
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-gray-50 to-emerald-50/30">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-gradient-to-r from-slate-900 via-emerald-900 to-slate-900 border-b border-emerald-400/20 shadow-lg">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-14 sm:h-18">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-emerald-600 text-white ring-2 ring-emerald-400/30 shadow-lg shadow-emerald-500/20">
-                <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6" />
-              </div>
-              <div>
-                <h1 className="text-base sm:text-xl font-bold text-white tracking-tight">{appName}</h1>
-                {schoolName && <p className="text-[10px] sm:text-xs text-emerald-200 font-medium">{schoolName}</p>}
-                <p className="text-[10px] sm:text-xs text-emerald-200/60 hidden xs:block">Sistem Verifikasi Pendaftaran</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <Button
-                onClick={() => setPortalPasteOpen(true)}
-                variant="outline"
-                size="sm"
-                className="bg-white/10 hover:bg-white/20 text-white border-white/20 h-8 sm:h-9 px-2 sm:px-3"
-              >
-                <ClipboardPaste className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">Paste Portal</span>
-              </Button>
-              {authUser?.role === 'admin' && (
-                <Button
-                  onClick={() => setImportDialogOpen(true)}
-                  size="sm"
-                  className="bg-white/10 hover:bg-white/20 text-white border border-white/20 h-8 sm:h-9 px-2 sm:px-3"
-                >
-                  <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  <span className="hidden sm:inline">Import CSV</span>
-                </Button>
-              )}
-              {/* User info & Logout */}
-              <div className="hidden sm:flex items-center gap-2 ml-1 pl-2 border-l border-white/20">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-7 h-7 rounded-full bg-emerald-600/40 flex items-center justify-center">
-                    <span className="text-xs font-bold text-white">{authUser?.namaLengkap?.charAt(0) || 'U'}</span>
-                  </div>
-                  <div className="hidden md:block">
-                    <p className="text-xs font-medium text-white leading-tight">{authUser?.namaLengkap}</p>
-                    <p className="text-[10px] text-emerald-200/60 leading-tight">{authUser?.role === 'admin' ? 'Administrator' : 'Verifikator'}</p>
-                  </div>
-                </div>
-              </div>
-              <Button
-                onClick={() => setChangePasswordOpen(true)}
-                variant="outline"
-                size="sm"
-                className="bg-white/5 hover:bg-white/20 text-white/70 hover:text-white border-white/10 h-8 sm:h-9 px-2"
-                title="Ganti Password"
-              >
-                <Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline ml-1">Ganti Password</span>
-              </Button>
-              <Button
-                onClick={handleLogout}
-                variant="outline"
-                size="sm"
-                className="bg-white/5 hover:bg-red-500/20 text-white/70 hover:text-red-300 border-white/10 hover:border-red-400/30 h-8 sm:h-9 px-2"
-                title="Keluar"
-              >
-                <Lock className="w-3.5 h-3.5" />
-                <span className="hidden lg:inline ml-1">Keluar</span>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+    <AppLayout
+      appName={appName}
+      schoolName={schoolName}
+      appIcon={appIcon}
+      appSubtitle={appSubtitle}
+      authUser={authUser}
+      activeTab={activeTab}
+      setActiveTab={setActiveTab}
+      setLembarTab={setLembarTab}
+      stats={stats}
+      setPortalPasteOpen={setPortalPasteOpen}
+      setImportDialogOpen={setImportDialogOpen}
+      setChangePasswordOpen={setChangePasswordOpen}
+      handleLogout={handleLogout}
+      lembarVerifikasi={lembarVerifikasi}
+      getPendingForLembar={getPendingForLembar}
+      tahap={tahap}
+      dialogs={
+        <>
+          {/* ==================== IMPORT DIALOG ==================== */}
+          <ImportDialog
+            open={importDialogOpen}
+            onOpenChange={setImportDialogOpen}
+            importStatus={importStatus}
+            setImportStatus={setImportStatus}
+            useCsvStatus={useCsvStatus}
+            setUseCsvStatus={setUseCsvStatus}
+            csvFile={csvFile}
+            setCsvFile={handleSetCsvFile}
+            importing={importing}
+            onImport={handleImport}
+            csvRowCount={csvRowCount}
+          />
 
-      {/* Main Content */}
-      <main className="flex-1 flex">
-        {/* Desktop Sidebar - hidden on mobile */}
-        <aside className="hidden lg:flex w-64 flex-col border-r border-gray-200/60 bg-gradient-to-b from-white via-gray-50/30 to-white shrink-0 sticky top-[4.5rem] h-[calc(100vh-4.5rem)]">
-          {/* Sidebar Header */}
-          <div className="p-4 border-b border-gray-100/80">
-            <div className="flex items-center gap-2.5">
-              <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-200/50">
-                <ShieldCheck className="w-5 h-5" />
-              </div>
-              <div>
-                <h2 className="text-sm font-bold text-gray-900 tracking-tight">{appName}</h2>
-                {schoolName && <p className="text-[10px] text-gray-500 font-medium leading-tight">{schoolName}</p>}
-                <p className="text-[10px] text-gray-400 font-medium">Menu Navigasi</p>
-              </div>
-            </div>
-          </div>
+          {/* ==================== CHANGE PASSWORD DIALOG ==================== */}
+          <ChangePasswordDialog
+            open={changePasswordOpen}
+            onOpenChange={setChangePasswordOpen}
+            changePasswordCurrent={changePasswordCurrent}
+            setChangePasswordCurrent={setChangePasswordCurrent}
+            changePasswordNew={changePasswordNew}
+            setChangePasswordNew={setChangePasswordNew}
+            changePasswordConfirm={changePasswordConfirm}
+            setChangePasswordConfirm={setChangePasswordConfirm}
+            changePasswordError={changePasswordError}
+            changePasswordLoading={changePasswordLoading}
+            showCurrentPassword={showCurrentPassword}
+            setShowCurrentPassword={setShowCurrentPassword}
+            showNewPassword={showNewPassword}
+            setShowNewPassword={setShowNewPassword}
+            onSubmit={handleChangePassword}
+          />
 
-          {/* Navigation */}
-          <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
-            {/* UMUM Section */}
-            <div className="pt-1 pb-2 px-3">
-              <span className="text-[10px] font-semibold tracking-widest text-gray-400 uppercase">Umum</span>
-            </div>
-            <button
-              onClick={() => setActiveTab('dashboard')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 relative group ${
-                activeTab === 'dashboard'
-                  ? 'bg-emerald-50 text-emerald-700 font-medium shadow-sm shadow-emerald-100/50 before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-[3px] before:h-5 before:bg-emerald-500 before:rounded-full before:-ml-3'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              }`}
-            >
-              <Eye className={`w-4 h-4 shrink-0 ${activeTab === 'dashboard' ? 'text-emerald-600' : 'text-gray-400 group-hover:text-gray-600'}`} />
-              <span>Dashboard</span>
-            </button>
+          {/* ==================== RANKING PREVIEW DIALOG ==================== */}
+          <RankingPreviewDialog
+            open={rankingPreviewOpen}
+            onOpenChange={setRankingPreviewOpen}
+            rankingPreviewType={rankingPreviewType}
+            rankingPreviewJalur={rankingPreviewJalur}
+            setRankingPreviewJalur={setRankingPreviewJalur}
+            rankingData={rankingData}
+            rankingFilters={rankingFilters}
+            rankingTampilan={rankingTampilan}
+            rankingSekolah={rankingSekolah}
+            rankingJurusan={rankingJurusan}
+            rankingStatus={rankingStatus}
+            rankingKuota={rankingKuota}
+            rankingKuotaPerJalur={rankingKuotaPerJalur}
+            appName={appName}
+            schoolName={schoolName}
+            appSubtitle={appSubtitle}
+            onPrintPDF={handleRankingPrintPDF}
+            onExportExcel={_handleRankingExportExcel}
+          />
 
-            {/* VERIFIKASI Section */}
-            <div className="pt-5 pb-2 px-3 flex items-center gap-2">
-              <div className="h-px bg-gray-200/80 flex-1" />
-              <span className="text-[10px] font-semibold tracking-widest text-gray-400 uppercase shrink-0">Verifikasi</span>
-              <div className="h-px bg-gray-200/80 flex-1" />
-            </div>
-            <button
-              onClick={() => setActiveTab('lembar-verifikasi')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 relative group ${
-                activeTab === 'lembar-verifikasi'
-                  ? 'bg-amber-50 text-amber-700 font-medium shadow-sm shadow-amber-100/50 before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-[3px] before:h-5 before:bg-amber-500 before:rounded-full before:-ml-3'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              }`}
-            >
-              <ClipboardCheck className={`w-4 h-4 shrink-0 ${activeTab === 'lembar-verifikasi' ? 'text-amber-600' : 'text-gray-400 group-hover:text-gray-600'}`} />
-              <span className="flex-1 text-left">Lembar Verifikasi</span>
-              {stats && stats.pending > 0 && (
-                <Badge className="bg-amber-500 text-white text-[10px] px-1.5 py-0 min-w-[20px] h-5 flex items-center justify-center rounded-full shadow-sm">
-                  {stats.pending}
-                </Badge>
-              )}
-            </button>
-            <button
-              onClick={() => setActiveTab('data')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 relative group ${
-                activeTab === 'data'
-                  ? 'bg-emerald-50 text-emerald-700 font-medium shadow-sm shadow-emerald-100/50 before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-[3px] before:h-5 before:bg-emerald-500 before:rounded-full before:-ml-3'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              }`}
-            >
-              <FileSpreadsheet className={`w-4 h-4 shrink-0 ${activeTab === 'data' ? 'text-emerald-600' : 'text-gray-400 group-hover:text-gray-600'}`} />
-              <span>Data Pendaftar</span>
-            </button>
+          {/* ==================== PORTAL PASTE DIALOG ==================== */}
+          <PortalPasteDialog
+            open={portalPasteOpen}
+            onOpenChange={setPortalPasteOpen}
+            portalRawText={portalRawText}
+            setPortalRawText={setPortalRawText}
+            portalParsedData={portalParsedData}
+            setPortalParsedData={setPortalParsedData}
+            portalParsing={portalParsing}
+            portalSelectedJalur={portalSelectedJalur}
+            setPortalSelectedJalur={setPortalSelectedJalur}
+            jalurConfigs={jalurConfigs}
+            importing={importing}
+            onPaste={handlePortalPaste}
+            onSave={handlePortalSave}
+            portalKekurangan={portalKekurangan}
+            setPortalKekurangan={setPortalKekurangan}
+            portalVerifStatus={portalVerifStatus}
+            setPortalVerifStatus={setPortalVerifStatus}
+            portalVerifNote={portalVerifNote}
+            setPortalVerifNote={setPortalVerifNote}
+            portalTanggalVerif={portalTanggalVerif}
+            setPortalTanggalVerif={setPortalTanggalVerif}
+            portalJamVerif={portalJamVerif}
+            setPortalJamVerif={setPortalJamVerif}
+            portalTerbitKK={portalTerbitKK}
+            setPortalTerbitKK={setPortalTerbitKK}
+          />
 
-            {/* HASIL Section */}
-            <div className="pt-5 pb-2 px-3 flex items-center gap-2">
-              <div className="h-px bg-gray-200/80 flex-1" />
-              <span className="text-[10px] font-semibold tracking-widest text-gray-400 uppercase shrink-0">Hasil</span>
-              <div className="h-px bg-gray-200/80 flex-1" />
-            </div>
-            {authUser?.role === 'admin' && (
-              <button
-                onClick={() => setActiveTab('ranking')}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 relative group ${
-                  activeTab === 'ranking'
-                    ? 'bg-amber-50 text-amber-700 font-medium shadow-sm shadow-amber-100/50 before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-[3px] before:h-5 before:bg-amber-500 before:rounded-full before:-ml-3'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                }`}
-              >
-                <Trophy className={`w-4 h-4 shrink-0 ${activeTab === 'ranking' ? 'text-amber-600' : 'text-gray-400 group-hover:text-gray-600'}`} />
-                <span>Perangkingan</span>
-              </button>
-            )}
-            <button
-              onClick={() => setActiveTab('diterima')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 relative group ${
-                activeTab === 'diterima'
-                  ? 'bg-emerald-50 text-emerald-700 font-medium shadow-sm shadow-emerald-100/50 before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-[3px] before:h-5 before:bg-emerald-500 before:rounded-full before:-ml-3'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              }`}
-            >
-              <ThumbsUp className={`w-4 h-4 shrink-0 ${activeTab === 'diterima' ? 'text-emerald-600' : 'text-gray-400 group-hover:text-gray-600'}`} />
-              <span className="flex-1 text-left">Diterima</span>
-              {stats && stats.verified > 0 && (
-                <Badge className="bg-emerald-600 text-white text-[10px] px-1.5 py-0 min-w-[20px] h-5 flex items-center justify-center rounded-full shadow-sm">
-                  {stats.verified}
-                </Badge>
-              )}
-            </button>
-            <button
-              onClick={() => setActiveTab('ditolak')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 relative group ${
-                activeTab === 'ditolak'
-                  ? 'bg-red-50 text-red-700 font-medium shadow-sm shadow-red-100/50 before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-[3px] before:h-5 before:bg-red-500 before:rounded-full before:-ml-3'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              }`}
-            >
-              <ThumbsDown className={`w-4 h-4 shrink-0 ${activeTab === 'ditolak' ? 'text-red-600' : 'text-gray-400 group-hover:text-gray-600'}`} />
-              <span className="flex-1 text-left">Ditolak</span>
-              {stats && stats.rejected > 0 && (
-                <Badge className="bg-red-600 text-white text-[10px] px-1.5 py-0 min-w-[20px] h-5 flex items-center justify-center rounded-full shadow-sm">
-                  {stats.rejected}
-                </Badge>
-              )}
-            </button>
+          {/* ==================== SUMUT BERKAH PASTE DIALOG ==================== */}
+          <SumutBerkahDialog
+            open={sumutBerkahOpen}
+            onOpenChange={setSumutBerkahOpen}
+            sumutBerkahText={sumutBerkahText}
+            setSumutBerkahText={setSumutBerkahText}
+            sumutBerkahParsing={sumutBerkahParsing}
+            setSumutBerkahParsing={setSumutBerkahParsing}
+            onSave={handleSumutBerkahSave}
+            sumutBerkahPreview={sumutBerkahPreview}
+            setSumutBerkahPreview={setSumutBerkahPreview}
+            sumutBerkahResult={sumutBerkahResult}
+            setSumutBerkahResult={setSumutBerkahResult}
+            toast={toast}
+          />
 
-            {/* KEPUTUSAN Section */}
-            <div className="pt-5 pb-2 px-3 flex items-center gap-2">
-              <div className="h-px bg-gray-200/80 flex-1" />
-              <span className="text-[10px] font-semibold tracking-widest text-gray-400 uppercase shrink-0">Keputusan</span>
-              <div className="h-px bg-gray-200/80 flex-1" />
-            </div>
-            <button
-              onClick={() => setActiveTab('kelulusan')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 relative group ${
-                activeTab === 'kelulusan'
-                  ? 'bg-emerald-50 text-emerald-700 font-medium shadow-sm shadow-emerald-100/50 before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-[3px] before:h-5 before:bg-emerald-500 before:rounded-full before:-ml-3'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              }`}
-            >
-              <GraduationCap className={`w-4 h-4 shrink-0 ${activeTab === 'kelulusan' ? 'text-emerald-600' : 'text-gray-400 group-hover:text-gray-600'}`} />
-              <span className="flex-1 text-left">Kelulusan</span>
-              {stats && stats.lulus > 0 && (
-                <Badge className="bg-emerald-600 text-white text-[10px] px-1.5 py-0 min-w-[20px] h-5 flex items-center justify-center rounded-full shadow-sm">
-                  {stats.lulus}
-                </Badge>
-              )}
-            </button>
-            <button
-              onClick={() => setActiveTab('daftar-ulang')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 relative group ${
-                activeTab === 'daftar-ulang'
-                  ? 'bg-sky-50 text-sky-700 font-medium shadow-sm shadow-sky-100/50 before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-[3px] before:h-5 before:bg-sky-500 before:rounded-full before:-ml-3'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              }`}
-            >
-              <ClipboardCheck className={`w-4 h-4 shrink-0 ${activeTab === 'daftar-ulang' ? 'text-sky-600' : 'text-gray-400 group-hover:text-gray-600'}`} />
-              <span className="flex-1 text-left">Daftar Ulang</span>
-              {stats && stats.daftarUlang > 0 && (
-                <Badge className="bg-sky-600 text-white text-[10px] px-1.5 py-0 min-w-[20px] h-5 flex items-center justify-center rounded-full shadow-sm">
-                  {stats.daftarUlang}
-                </Badge>
-              )}
-            </button>
+          {/* ==================== SINGLE VERIFY DIALOG ==================== */}
+          <SingleVerifyDialog
+            open={verifyDialogOpen}
+            onOpenChange={setVerifyDialogOpen}
+            verifyAction={verifyAction}
+            verifyNote={verifyNote}
+            setVerifyNote={setVerifyNote}
+            verifying={verifying}
+            onVerify={handleVerify}
+          />
 
-            {/* SISTEM Section */}
-            <div className="pt-5 pb-2 px-3 flex items-center gap-2">
-              <div className="h-px bg-gray-200/80 flex-1" />
-              <span className="text-[10px] font-semibold tracking-widest text-gray-400 uppercase shrink-0">Sistem</span>
-              <div className="h-px bg-gray-200/80 flex-1" />
-            </div>
-            {authUser?.role === 'admin' && (
-              <button
-                onClick={() => setActiveTab('pengaturan')}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 relative group ${
-                  activeTab === 'pengaturan'
-                    ? 'bg-gray-100 text-gray-700 font-medium shadow-sm before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-[3px] before:h-5 before:bg-gray-500 before:rounded-full before:-ml-3'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                }`}
-              >
-                <Settings className={`w-4 h-4 shrink-0 ${activeTab === 'pengaturan' ? 'text-gray-600' : 'text-gray-400 group-hover:text-gray-600'}`} />
-                <span>Pengaturan</span>
-              </button>
-            )}
-          </nav>
+          {/* ==================== BULK VERIFY DIALOG ==================== */}
+          <BulkVerifyDialog
+            open={bulkVerifyDialogOpen}
+            onOpenChange={setBulkVerifyDialogOpen}
+            verifyAction={verifyAction}
+            verifyNote={verifyNote}
+            setVerifyNote={setVerifyNote}
+            verifying={verifying}
+            onVerify={handleBulkVerify}
+          />
 
-          {/* Sidebar Footer - User Info */}
-          <div className="p-3 border-t border-gray-100/80">
-            <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg bg-gray-50/80">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-sm">
-                <span className="text-xs font-bold text-white">{authUser?.namaLengkap?.charAt(0) || 'U'}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-gray-900 truncate">{authUser?.namaLengkap}</p>
-                <p className="text-[10px] text-gray-400">{authUser?.role === 'admin' ? 'Administrator' : 'Verifikator'}</p>
-              </div>
-            </div>
-          </div>
-        </aside>
+          {/* ==================== DETAIL DIALOG ==================== */}
+          <DetailDialog
+            open={detailDialogOpen}
+            onOpenChange={setDetailDialogOpen}
+            detailTarget={detailTarget}
+          />
 
-        {/* Content Area */}
-        <div className="flex-1 min-w-0 px-3 sm:px-6 lg:px-8 py-4 sm:py-6 max-w-7xl mx-auto w-full">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          {/* Mobile: scrollable horizontal pill tabs - hidden on desktop */}
-          <div className="lg:hidden overflow-x-auto -mx-3 px-3 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 scrollbar-hide">
-            <TabsList className="flex-nowrap bg-white/90 backdrop-blur-md border border-gray-200/50 rounded-2xl p-1.5 shadow-sm shadow-gray-200/50 w-max sm:w-auto gap-0.5">
-              <TabsTrigger value="dashboard" className="gap-1.5 rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm transition-all duration-300 data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-emerald-200/50 whitespace-nowrap">
-                <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                Dashboard
-              </TabsTrigger>
-              <TabsTrigger value="lembar-verifikasi" className="gap-1.5 rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm transition-all duration-300 data-[state=active]:bg-amber-500 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-amber-200/50 whitespace-nowrap">
-                <ClipboardCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">Lembar Verifikasi</span>
-                <span className="sm:hidden">Verifikasi</span>
-                {stats && stats.pending > 0 && (
-                  <Badge className="ml-0.5 sm:ml-1 bg-amber-500 text-white text-[10px] sm:text-xs px-1 sm:px-1.5 py-0 min-w-[16px] sm:min-w-[20px] h-4 sm:h-5 flex items-center justify-center rounded-full">
-                    {stats.pending}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="data" className="gap-1.5 rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm transition-all duration-300 data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-emerald-200/50 whitespace-nowrap">
-                <FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">Data Pendaftar</span>
-                <span className="sm:hidden">Pendaftar</span>
-              </TabsTrigger>
-              {authUser?.role === 'admin' && (
-                <TabsTrigger value="ranking" className="gap-1.5 rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm transition-all duration-300 data-[state=active]:bg-amber-500 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-amber-200/50 whitespace-nowrap">
-                  <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  <span className="hidden sm:inline">Perangkingan</span>
-                  <span className="sm:hidden">Rangking</span>
-                </TabsTrigger>
-              )}
-              <TabsTrigger value="diterima" className="gap-1.5 rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm transition-all duration-300 data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-emerald-200/50 whitespace-nowrap">
-                <ThumbsUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                Diterima
-                {stats && stats.verified > 0 && (
-                  <Badge className="ml-0.5 sm:ml-1 bg-emerald-600 text-white text-[10px] sm:text-xs px-1 sm:px-1.5 py-0 min-w-[16px] sm:min-w-[20px] h-4 sm:h-5 flex items-center justify-center rounded-full">
-                    {stats.verified}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="ditolak" className="gap-1.5 rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm transition-all duration-300 data-[state=active]:bg-red-500 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-red-200/50 whitespace-nowrap">
-                <ThumbsDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                Ditolak
-                {stats && stats.rejected > 0 && (
-                  <Badge className="ml-0.5 sm:ml-1 bg-red-600 text-white text-[10px] sm:text-xs px-1 sm:px-1.5 py-0 min-w-[16px] sm:min-w-[20px] h-4 sm:h-5 flex items-center justify-center rounded-full">
-                    {stats.rejected}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="kelulusan" className="gap-1.5 rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm transition-all duration-300 data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-emerald-200/50 whitespace-nowrap">
-                <GraduationCap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">Kelulusan</span>
-                <span className="sm:hidden">Lulus</span>
-                {stats && stats.lulus > 0 && (
-                  <Badge className="ml-0.5 sm:ml-1 bg-emerald-600 text-white text-[10px] sm:text-xs px-1 sm:px-1.5 py-0 min-w-[16px] sm:min-w-[20px] h-4 sm:h-5 flex items-center justify-center rounded-full">
-                    {stats.lulus}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="daftar-ulang" className="gap-1.5 rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm transition-all duration-300 data-[state=active]:bg-sky-500 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-sky-200/50 whitespace-nowrap">
-                <ClipboardCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">Daftar Ulang</span>
-                <span className="sm:hidden">Dft.Ulang</span>
-                {stats && stats.daftarUlang > 0 && (
-                  <Badge className="ml-0.5 sm:ml-1 bg-sky-600 text-white text-[10px] sm:text-xs px-1 sm:px-1.5 py-0 min-w-[16px] sm:min-w-[20px] h-4 sm:h-5 flex items-center justify-center rounded-full">
-                    {stats.daftarUlang}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              {authUser?.role === 'admin' && (
-                <TabsTrigger value="pengaturan" className="gap-1.5 rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm transition-all duration-300 data-[state=active]:bg-gray-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-gray-200/50 whitespace-nowrap">
-                  <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  <span className="hidden sm:inline">Pengaturan</span>
-                  <span className="sm:hidden">Setting</span>
-                </TabsTrigger>
-              )}
+          {/* ==================== EDIT DIALOG ==================== */}
+          <EditDialog
+            open={editDialogOpen}
+            onOpenChange={setEditDialogOpen}
+            editTarget={editTarget}
+            editForm={editForm}
+            setEditForm={setEditForm}
+            saving={saving}
+            onSave={handleSaveEdit}
+          />
+
+          {/* ==================== DELETE DIALOG ==================== */}
+          <DeleteDialog
+            open={deleteDialogOpen}
+            onOpenChange={setDeleteDialogOpen}
+            deleteTarget={deleteTarget}
+            deleting={deleting}
+            onDelete={handleDelete}
+          />
+
+          {/* ==================== DUPLICATE CHECK DIALOG ==================== */}
+          <DuplicateCheckDialog
+            open={duplicateDialogOpen}
+            onOpenChange={setDuplicateDialogOpen}
+            duplicateLoading={duplicateLoading}
+            duplicateData={duplicateData}
+          />
+        </>
+      }
+    >
+      {/* ==================== DASHBOARD TAB ==================== */}
+      <TabsContent value="dashboard" className="space-y-6">
+        <DashboardTab
+          stats={stats}
+          appName={appName}
+          schoolName={schoolName}
+          appSubtitle={appSubtitle}
+          lembarVerifikasi={lembarVerifikasi}
+          setActiveTab={setActiveTab}
+          setLembarTab={setLembarTab}
+          verificationPercent={verificationPercent}
+          verifiedPercent={verifiedPercent}
+          rejectedPercent={rejectedPercent}
+          pendingPercent={pendingPercent}
+          getPendingForLembar={getPendingForLembar}
+          authUser={authUser}
+        />
+      </TabsContent>
+
+      {/* ==================== LEMBAR VERIFIKASI TAB ==================== */}
+      <TabsContent value="lembar-verifikasi" className="space-y-6">
+        <Tabs value={lembarTab} onValueChange={setLembarTab}>
+          <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0 scrollbar-hide">
+            <TabsList className="flex-nowrap sm:flex-wrap h-auto gap-1 bg-white/60 backdrop-blur-sm border rounded-xl p-1 shadow-sm w-max sm:w-auto">
+              {lembarVerifikasi.map((lv) => {
+                const LvIcon = lv.icon
+                const pendingCount = getPendingForLembar(lv.subJalurFilter)
+                const hasChildren = lv.children && lv.children.length > 0
+                return (
+                  <TabsTrigger key={lv.key} value={lv.key} className="gap-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 rounded-lg transition-all duration-200 whitespace-nowrap">
+                    <LvIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <span className="hidden md:inline">{lv.label}</span>
+                    <span className="md:hidden">{lv.label.length > 10 ? lv.label.substring(0, 8) + '..' : lv.label}</span>
+                    {pendingCount > 0 && <Badge className="ml-0.5 bg-amber-500 text-white text-[10px] sm:text-xs px-1 py-0 min-w-[14px] sm:min-w-[16px] h-3.5 sm:h-4 flex items-center justify-center">{pendingCount}</Badge>}
+                    {hasChildren && <span className="text-[10px] text-gray-400">▼</span>}
+                  </TabsTrigger>
+                )
+              })}
             </TabsList>
           </div>
-
-          {/* ==================== DASHBOARD TAB ==================== */}
-          <TabsContent value="dashboard" className="space-y-6">
-            {/* Hero Welcome Section */}
-            <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-white shadow-lg shadow-emerald-200/50">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-                <div>
-                  <h2 className="text-lg sm:text-2xl font-bold tracking-tight">Selamat Datang di {appName}</h2>
-                  {schoolName && <p className="text-emerald-100 text-sm font-semibold">{schoolName}</p>}
-                  <p className="text-emerald-100 mt-0.5 text-xs sm:text-sm">Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
-                </div>
-                <div className="flex gap-2 sm:gap-3">
-                  <div className="bg-white/15 backdrop-blur-sm rounded-lg sm:rounded-xl px-3 sm:px-4 py-1.5 sm:py-2 text-center">
-                    <p className="text-xl sm:text-2xl font-bold">{stats?.total || 0}</p>
-                    <p className="text-[10px] sm:text-xs text-emerald-100">Pendaftar</p>
-                  </div>
-                  <div className="bg-white/15 backdrop-blur-sm rounded-lg sm:rounded-xl px-3 sm:px-4 py-1.5 sm:py-2 text-center">
-                    <p className="text-xl sm:text-2xl font-bold">{verificationPercent}%</p>
-                    <p className="text-[10px] sm:text-xs text-emerald-100">Terverifikasi</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Stats Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-              <Card className="bg-gradient-to-br from-slate-50 to-slate-100/50 shadow-sm hover:shadow-md transition-shadow">
-                <CardContent className="p-3 sm:p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs sm:text-sm text-gray-500">Total Pendaftar</p>
-                      <p className="text-xl sm:text-2xl font-bold">{stats?.total || 0}</p>
-                    </div>
-                    <div className="p-2 sm:p-2.5 bg-gray-100 rounded-lg sm:rounded-xl shadow-sm">
-                      <Users className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-to-br from-amber-50 to-yellow-50/50 shadow-sm hover:shadow-md transition-shadow">
-                <CardContent className="p-3 sm:p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs sm:text-sm text-gray-500">Menunggu</p>
-                      <p className="text-xl sm:text-2xl font-bold text-yellow-600">{stats?.pending || 0}</p>
-                    </div>
-                    <div className="p-2 sm:p-2.5 bg-amber-100 rounded-lg sm:rounded-xl shadow-sm">
-                      <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-to-br from-emerald-50 to-teal-50/50 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => setActiveTab('diterima')}>
-                <CardContent className="p-3 sm:p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs sm:text-sm text-gray-500">Diterima</p>
-                      <p className="text-xl sm:text-2xl font-bold text-emerald-600">{stats?.verified || 0}</p>
-                    </div>
-                    <div className="p-2 sm:p-2.5 bg-emerald-100 rounded-lg sm:rounded-xl shadow-sm">
-                      <UserCheck className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-to-br from-red-50 to-rose-50/50 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => setActiveTab('ditolak')}>
-                <CardContent className="p-3 sm:p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs sm:text-sm text-gray-500">Ditolak</p>
-                      <p className="text-xl sm:text-2xl font-bold text-red-600">{stats?.rejected || 0}</p>
-                    </div>
-                    <div className="p-2 sm:p-2.5 bg-red-100 rounded-lg sm:rounded-xl shadow-sm">
-                      <UserX className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Progress */}
-            <Card className="shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Progres Verifikasi</CardTitle>
-                <CardDescription>
-                  {verificationPercent}% pendaftar telah diproses
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Progress value={verificationPercent} className="h-4" />
-                <div className="flex justify-between mt-3 text-xs">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-3 h-3 rounded-full bg-emerald-500" />
-                    <span className="text-gray-600">Diterima: {stats?.verified || 0} ({verifiedPercent}%)</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-3 h-3 rounded-full bg-red-500" />
-                    <span className="text-gray-600">Ditolak: {stats?.rejected || 0} ({rejectedPercent}%)</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                    <span className="text-gray-600">Menunggu: {stats?.pending || 0} ({pendingPercent}%)</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Charts Grid */}
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* By Sub Jalur */}
-              <Card className="shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Filter className="w-4 h-4" />
-                    Berdasarkan Sub Jalur
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {(stats?.bySubJalur || []).map((item) => (
-                      <StatBar key={item.name} label={item.name} count={item.count} total={stats?.total || 0} color="bg-emerald-500" />
-                    ))}
-                    {(stats?.bySubJalur || []).length === 0 && (
-                      <p className="text-sm text-gray-400 text-center py-4">Belum ada data</p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* By Sekolah Asal */}
-              <Card className="shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <School className="w-4 h-4" />
-                    Berdasarkan Sekolah Asal
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3 max-h-64 overflow-y-auto">
-                    {(stats?.bySekolahAsal || []).map((item) => (
-                      <StatBar key={item.name} label={item.name} count={item.count} total={stats?.total || 0} color="bg-sky-500" />
-                    ))}
-                    {(stats?.bySekolahAsal || []).length === 0 && (
-                      <p className="text-sm text-gray-400 text-center py-4">Belum ada data</p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* By Jurusan */}
-              <Card className="shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <GraduationCap className="w-4 h-4" />
-                    Berdasarkan Jurusan
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {(stats?.byJurusan || []).map((item) => (
-                      <StatBar key={item.name} label={item.name} count={item.count} total={stats?.total || 0} color="bg-violet-500" />
-                    ))}
-                    {(stats?.byJurusan || []).length === 0 && (
-                      <p className="text-sm text-gray-400 text-center py-4">Belum ada data</p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Verification Status */}
-              <Card className="shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4" />
-                    Ringkasan Status
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
+          {lembarVerifikasi.map((lv) => {
+            const hasChildren = lv.children && lv.children.length > 0
+            return (
+              <TabsContent key={lv.key} value={lv.key} className="mt-4">
+                {hasChildren ? (
                   <div className="space-y-4">
-                    <StatBar label="Diterima (Terverifikasi)" count={stats?.verified || 0} total={stats?.total || 0} color="bg-emerald-500" />
-                    <StatBar label="Ditolak" count={stats?.rejected || 0} total={stats?.total || 0} color="bg-red-500" />
-                    <StatBar label="Menunggu Verifikasi" count={stats?.pending || 0} total={stats?.total || 0} color="bg-yellow-500" />
+                    {/* Sub-tabs for parent jalur */}
+                    <Tabs value={lembarSubTab || '__all__'} onValueChange={setLembarSubTab}>
+                      <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0 scrollbar-hide">
+                        <TabsList className="flex-nowrap sm:flex-wrap h-auto gap-1 bg-gray-50/80 border rounded-lg p-1 w-max sm:w-auto">
+                          <TabsTrigger value="__all__" className="gap-1 text-xs sm:text-sm px-2 sm:px-3 py-1 rounded-md whitespace-nowrap font-semibold">
+                            <lv.icon className={`w-3.5 h-3.5 ${lv.iconColor}`} />
+                            Semua {lv.label}
+                          </TabsTrigger>
+                          {lv.children!.map((child) => {
+                            const ChildIcon = child.icon
+                            return (
+                              <TabsTrigger key={child.key} value={child.key} className="gap-1 text-xs sm:text-sm px-2 sm:px-3 py-1 rounded-md whitespace-nowrap">
+                                <ChildIcon className={`w-3.5 h-3.5 ${child.iconColor}`} />
+                                {child.label}
+                              </TabsTrigger>
+                            )
+                          })}
+                        </TabsList>
+                      </div>
+
+                      {/* All children combined */}
+                      <TabsContent value="__all__" className="mt-4">
+                        <LembarVerifikasiSheet
+                          config={lv}
+                          subJalurOptions={subJalurOptions}
+                          onVerify={() => {}}
+                          onBulkVerify={() => {}}
+                          onViewDetail={handleViewDetail}
+                          toast={toast}
+                          highlightRegId={highlightRegId}
+                        />
+                      </TabsContent>
+
+                      {/* Individual child */}
+                      {lv.children!.map((child) => (
+                        <TabsContent key={child.key} value={child.key} className="mt-4">
+                          <LembarVerifikasiSheet
+                            config={child}
+                            subJalurOptions={subJalurOptions}
+                            onVerify={() => {}}
+                            onBulkVerify={() => {}}
+                            onViewDetail={handleViewDetail}
+                            toast={toast}
+                            highlightRegId={highlightRegId}
+                          />
+                        </TabsContent>
+                      ))}
+                    </Tabs>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Lembar Verifikasi Quick Links */}
-            <Card className="shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <ClipboardCheck className="w-4 h-4" />
-                  Lembar Verifikasi per Jalur
-                </CardTitle>
-                <CardDescription>Klik untuk membuka lembar verifikasi masing-masing jalur</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {lembarVerifikasi.map((lv) => {
-                    const LvIcon = lv.icon
-                    const pendingCount = getPendingForLembar(lv.subJalurFilter)
-                    return (
-                      <Card
-                        key={lv.key}
-                        className={`border-2 cursor-pointer hover:scale-[1.02] hover:shadow-xl transition-all duration-300 ${lv.borderColor} ${lv.bgColor}`}
-                        onClick={() => { setActiveTab('lembar-verifikasi'); setLembarTab(lv.key) }}
-                      >
-                        <CardContent className="p-3 sm:p-4 text-center">
-                          <LvIcon className={`w-7 h-7 sm:w-8 sm:h-8 mx-auto mb-1.5 ${lv.iconColor}`} />
-                          <p className="font-semibold text-gray-900 text-sm sm:text-base">{lv.label}</p>
-                          <p className="text-xs text-gray-500 mt-0.5">{pendingCount} menunggu verifikasi</p>
-                        </CardContent>
-                      </Card>
-                    )
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* ==================== LEMBAR VERIFIKASI TAB ==================== */}
-          <TabsContent value="lembar-verifikasi" className="space-y-6">
-            <Tabs value={lembarTab} onValueChange={setLembarTab}>
-              <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0 scrollbar-hide">
-                <TabsList className="flex-nowrap sm:flex-wrap h-auto gap-1 bg-white/60 backdrop-blur-sm border rounded-xl p-1 shadow-sm w-max sm:w-auto">
-                  {lembarVerifikasi.map((lv) => {
-                    const LvIcon = lv.icon
-                    const pendingCount = getPendingForLembar(lv.subJalurFilter)
-                    return (
-                      <TabsTrigger
-                        key={lv.key}
-                        value={lv.key}
-                        className="gap-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 rounded-lg transition-all duration-200 whitespace-nowrap"
-                      >
-                        <LvIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                        <span className="hidden md:inline">{lv.label}</span>
-                        <span className="md:hidden">{lv.label.length > 10 ? lv.label.substring(0, 8) + '..' : lv.label}</span>
-                        {pendingCount > 0 && (
-                          <Badge className="ml-0.5 bg-amber-500 text-white text-[10px] sm:text-xs px-1 py-0 min-w-[14px] sm:min-w-[16px] h-3.5 sm:h-4 flex items-center justify-center">
-                            {pendingCount}
-                          </Badge>
-                        )}
-                      </TabsTrigger>
-                    )
-                  })}
-                </TabsList>
-              </div>
-
-              {lembarVerifikasi.map((lv) => (
-                <TabsContent key={lv.key} value={lv.key} className="mt-6">
+                ) : (
                   <LembarVerifikasiSheet
                     config={lv}
                     subJalurOptions={subJalurOptions}
@@ -4795,4278 +1713,172 @@ export default function Home() {
                     onBulkVerify={() => {}}
                     onViewDetail={handleViewDetail}
                     toast={toast}
+                    highlightRegId={highlightRegId}
                   />
-                </TabsContent>
-              ))}
-            </Tabs>
-          </TabsContent>
-
-          {/* ==================== DATA PENDAFTAR TAB ==================== */}
-          <TabsContent value="data" className="space-y-4">
-            {/* Filters */}
-            <Card className="shadow-sm">
-              <CardContent className="p-3 sm:p-4">
-                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <Input
-                      placeholder="Cari nama, NISN..."
-                      className="pl-9 h-9 sm:h-10 text-sm"
-                      value={search}
-                      onChange={(e) => {
-                        setSearch(e.target.value)
-                        setPagination(prev => ({ ...prev, page: 1 }))
-                      }}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 sm:flex gap-2">
-                    <Select
-                      value={subJalurFilter}
-                      onValueChange={(v) => {
-                        setSubJalurFilter(v)
-                        setPagination(prev => ({ ...prev, page: 1 }))
-                      }}
-                    >
-                      <SelectTrigger className="w-full sm:w-[180px] h-9 sm:h-10 text-xs sm:text-sm">
-                        <SelectValue placeholder="Sub Jalur" />
-                      </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Semua Jalur</SelectItem>
-                      {subJalurOptions.map(opt => (
-                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                  <Select
-                    value={verificationFilter}
-                    onValueChange={(v) => {
-                      setVerificationFilter(v)
-                      setPagination(prev => ({ ...prev, page: 1 }))
-                    }}
-                  >
-                    <SelectTrigger className="w-full sm:w-[180px] h-9 sm:h-10 text-xs sm:text-sm">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Semua Status</SelectItem>
-                      <SelectItem value="PENDING">Menunggu</SelectItem>
-                      <SelectItem value="VERIFIED">Diterima</SelectItem>
-                      <SelectItem value="REJECTED">Ditolak</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-500">Tampilkan:</span>
-                    <Select value={dataLimit.toString()} onValueChange={(val) => {
-                      const newLimit = val === 'all' ? 9999 : parseInt(val)
-                      setDataLimit(newLimit)
-                      setPagination(prev => ({ ...prev, page: 1, limit: newLimit }))
-                    }}>
-                      <SelectTrigger className="w-24 h-8 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="50">50</SelectItem>
-                        <SelectItem value="100">100</SelectItem>
-                        <SelectItem value="all">Semua</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={checkDuplicates}
-                    className="border-amber-300 text-amber-700 hover:bg-amber-50"
-                  >
-                    <AlertTriangle className="w-4 h-4" />
-                    <span className="hidden sm:inline">Cek Duplikat</span>
-                  </Button>
-                  {selectedIds.size > 0 && (
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        className="bg-emerald-600 hover:bg-emerald-700"
-                        onClick={() => {
-                          setVerifyAction('VERIFIED')
-                          setBulkVerifyDialogOpen(true)
-                        }}
-                      >
-                        <ThumbsUp className="w-4 h-4" />
-                        Terima ({selectedIds.size})
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => {
-                          setVerifyAction('REJECTED')
-                          setBulkVerifyDialogOpen(true)
-                        }}
-                      >
-                        <ThumbsDown className="w-4 h-4" />
-                        Tolak ({selectedIds.size})
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setSelectedIds(new Set())}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Table */}
-            <Card>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto max-h-[60vh] overflow-y-auto">
-                  <Table>
-                    <TableHeader className="sticky top-0 z-10 bg-white">
-                      <TableRow className="bg-gray-50/80">
-                        <TableHead className="w-10 text-center">No</TableHead>
-                        <TableHead className="w-10">
-                          <Checkbox
-                            checked={registrations.length > 0 && selectedIds.size === registrations.length}
-                            onCheckedChange={toggleSelectAll}
-                          />
-                        </TableHead>
-                        <TableHead>No. Reg</TableHead>
-                        <TableHead>Nama
-                          <span className="ml-1 cursor-pointer inline-flex align-middle" onClick={() => setNamaSortData(namaSortData === 'none' ? 'asc' : namaSortData === 'asc' ? 'desc' : 'none')}>
-                            {namaSortData === 'none' ? <ArrowUpDown className="w-3 h-3 text-gray-400" /> : namaSortData === 'asc' ? <ArrowUpAZ className="w-3 h-3 text-emerald-600" /> : <ArrowDownAZ className="w-3 h-3 text-emerald-600" />}
-                          </span>
-                        </TableHead>
-                        <TableHead className="hidden md:table-cell">NISN</TableHead>
-                        <TableHead>Sub Jalur</TableHead>
-                        <TableHead className="hidden lg:table-cell">Sekolah Asal
-                          <span className="ml-1 cursor-pointer inline-flex align-middle" onClick={() => setGroupBySekolah(!groupBySekolah)} title={groupBySekolah ? 'Kembali ke tampilan normal' : 'Kelompokkan per sekolah'}>
-                            {groupBySekolah ? <ChevronDown className="w-3 h-3 text-emerald-600" /> : <ChevronUp className="w-3 h-3 text-gray-400" />}
-                          </span>
-                        </TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Aksi</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {loading ? (
-                        <TableRow>
-                          <TableCell colSpan={10} className="text-center py-12">
-                            <Loader2 className="w-6 h-6 animate-spin mx-auto text-gray-400" />
-                            <p className="text-sm text-gray-400 mt-2">Memuat data...</p>
-                          </TableCell>
-                        </TableRow>
-                      ) : registrations.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={10} className="text-center py-12">
-                            <FileSpreadsheet className="w-10 h-10 mx-auto text-gray-300 mb-2" />
-                            <p className="text-gray-500 font-medium">Belum ada data pendaftar</p>
-                            <p className="text-sm text-gray-400">Import CSV untuk memulai verifikasi</p>
-                            <Button className="mt-3 bg-emerald-600 hover:bg-emerald-700" onClick={() => setImportDialogOpen(true)}>
-                              <Upload className="w-4 h-4" />
-                              Import CSV
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        (() => {
-                          const sorted = [...registrations].sort((a, b) => {
-                            if (namaSortData === 'asc') return (a.nama || '').localeCompare(b.nama || '')
-                            if (namaSortData === 'desc') return (b.nama || '').localeCompare(a.nama || '')
-                            return 0
-                          })
-
-                          if (!groupBySekolah) {
-                            return sorted.map((reg, idx) => (
-                              <TableRow key={reg.id} className={
-                                reg.verificationStatus === 'VERIFIED' ? 'bg-emerald-50/40' :
-                                reg.verificationStatus === 'REJECTED' ? 'bg-red-50/40' : ''
-                              }>
-                                <TableCell className="text-center text-sm text-gray-500">
-                                  {(pagination.page - 1) * pagination.limit + idx + 1}
-                                </TableCell>
-                                <TableCell>
-                                  <Checkbox checked={selectedIds.has(reg.id)} onCheckedChange={() => toggleSelect(reg.id)} />
-                                </TableCell>
-                                <TableCell className="font-mono text-sm">{reg.noRegistrasi}</TableCell>
-                                <TableCell className="font-medium">{reg.nama}</TableCell>
-                                <TableCell className="hidden md:table-cell text-sm text-gray-500">{reg.nisn}</TableCell>
-                                <TableCell>
-                                  <Badge variant="outline" className={SUB_JALUR_COLORS[reg.subJalur] || 'bg-gray-100 text-gray-800 border-gray-200'}>
-                                    {reg.subJalur}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell className="hidden lg:table-cell text-sm">{reg.namaSekolahAsal}</TableCell>
-                                <TableCell>
-                                  <Badge variant="outline" className={STATUS_COLORS[reg.verificationStatus]}>
-                                    {reg.verificationStatus === 'PENDING' && <Clock className="w-3 h-3" />}
-                                    {reg.verificationStatus === 'VERIFIED' && <CheckCircle2 className="w-3 h-3" />}
-                                    {reg.verificationStatus === 'REJECTED' && <XCircle className="w-3 h-3" />}
-                                    {reg.verificationStatus === 'PENDING' ? 'Menunggu' :
-                                     reg.verificationStatus === 'VERIFIED' ? 'Diterima' : 'Ditolak'}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  <div className="flex items-center justify-end gap-1">
-                                    <Button variant="ghost" size="sm" onClick={() => { setDetailTarget(reg); setDetailDialogOpen(true) }} title="Lihat Detail">
-                                      <Eye className="w-4 h-4" />
-                                    </Button>
-                                    <Button variant="ghost" size="sm" className="text-blue-600 hover:text-white hover:bg-blue-600" title="Edit Data" onClick={() => openEditDialog(reg)}>
-                                      <Pencil className="w-4 h-4" />
-                                    </Button>
-                                    <Button variant="ghost" size="sm" className="text-red-600 hover:text-white hover:bg-red-600" title="Hapus Data" onClick={() => openDeleteDialog(reg)}>
-                                      <Trash2 className="w-4 h-4" />
-                                    </Button>
-                                    {reg.verificationStatus !== 'VERIFIED' && (
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="text-emerald-600 hover:text-white hover:bg-emerald-600"
-                                        title="Terima Pendaftar"
-                                        onClick={() => {
-                                          setVerifyTargetId(reg.id)
-                                          setVerifyAction('VERIFIED')
-                                          setVerifyNote('')
-                                          setVerifyDialogOpen(true)
-                                        }}
-                                      >
-                                        <ThumbsUp className="w-4 h-4" />
-                                      </Button>
-                                    )}
-                                    {reg.verificationStatus !== 'REJECTED' && (
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="text-red-600 hover:text-white hover:bg-red-600"
-                                        title="Tolak Pendaftar"
-                                        onClick={() => {
-                                          setVerifyTargetId(reg.id)
-                                          setVerifyAction('REJECTED')
-                                          setVerifyNote('')
-                                          setVerifyDialogOpen(true)
-                                        }}
-                                      >
-                                        <ThumbsDown className="w-4 h-4" />
-                                      </Button>
-                                    )}
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            ))
-                          }
-
-                          // Grouped by Sekolah Asal
-                          const groups: Record<string, typeof sorted> = {}
-                          sorted.forEach(reg => {
-                            const key = reg.namaSekolahAsal || 'Tidak diketahui'
-                            if (!groups[key]) groups[key] = []
-                            groups[key].push(reg)
-                          })
-                          const sortedKeys = Object.keys(groups).sort()
-                          let globalIdx = 0
-                          return sortedKeys.flatMap(schoolName => {
-                            const regs = groups[schoolName]
-                            const headerRow = (
-                              <TableRow key={`group-${schoolName}`} className="bg-emerald-50/80 hover:bg-emerald-50/80">
-                                <TableCell colSpan={9} className="py-2.5">
-                                  <div className="flex items-center gap-2">
-                                    <School className="w-4 h-4 text-emerald-600 shrink-0" />
-                                    <span className="font-semibold text-sm text-emerald-800">{schoolName}</span>
-                                    <Badge className="bg-emerald-600 text-white text-[10px] px-1.5 py-0 h-4.5 min-w-[20px] flex items-center justify-center rounded-full">{regs.length}</Badge>
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            )
-                            const dataRows = regs.map(reg => {
-                              globalIdx++
-                              return (
-                                <TableRow key={reg.id} className={
-                                  reg.verificationStatus === 'VERIFIED' ? 'bg-emerald-50/40' :
-                                  reg.verificationStatus === 'REJECTED' ? 'bg-red-50/40' : ''
-                                }>
-                                  <TableCell className="text-center text-sm text-gray-500">
-                                    {(pagination.page - 1) * pagination.limit + globalIdx}
-                                  </TableCell>
-                                  <TableCell>
-                                    <Checkbox checked={selectedIds.has(reg.id)} onCheckedChange={() => toggleSelect(reg.id)} />
-                                  </TableCell>
-                                  <TableCell className="font-mono text-sm">{reg.noRegistrasi}</TableCell>
-                                  <TableCell className="font-medium">{reg.nama}</TableCell>
-                                  <TableCell className="hidden md:table-cell text-sm text-gray-500">{reg.nisn}</TableCell>
-                                  <TableCell>
-                                    <Badge variant="outline" className={SUB_JALUR_COLORS[reg.subJalur] || 'bg-gray-100 text-gray-800 border-gray-200'}>
-                                      {reg.subJalur}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell className="hidden lg:table-cell text-sm">{reg.namaSekolahAsal}</TableCell>
-                                  <TableCell>
-                                    <Badge variant="outline" className={STATUS_COLORS[reg.verificationStatus]}>
-                                      {reg.verificationStatus === 'PENDING' && <Clock className="w-3 h-3" />}
-                                      {reg.verificationStatus === 'VERIFIED' && <CheckCircle2 className="w-3 h-3" />}
-                                      {reg.verificationStatus === 'REJECTED' && <XCircle className="w-3 h-3" />}
-                                      {reg.verificationStatus === 'PENDING' ? 'Menunggu' :
-                                       reg.verificationStatus === 'VERIFIED' ? 'Diterima' : 'Ditolak'}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell className="text-right">
-                                    <div className="flex items-center justify-end gap-1">
-                                      <Button variant="ghost" size="sm" onClick={() => { setDetailTarget(reg); setDetailDialogOpen(true) }} title="Lihat Detail">
-                                        <Eye className="w-4 h-4" />
-                                      </Button>
-                                      <Button variant="ghost" size="sm" className="text-blue-600 hover:text-white hover:bg-blue-600" title="Edit Data" onClick={() => openEditDialog(reg)}>
-                                        <Pencil className="w-4 h-4" />
-                                      </Button>
-                                      <Button variant="ghost" size="sm" className="text-red-600 hover:text-white hover:bg-red-600" title="Hapus Data" onClick={() => openDeleteDialog(reg)}>
-                                        <Trash2 className="w-4 h-4" />
-                                      </Button>
-                                      {reg.verificationStatus !== 'VERIFIED' && (
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="text-emerald-600 hover:text-white hover:bg-emerald-600"
-                                          title="Terima Pendaftar"
-                                          onClick={() => {
-                                            setVerifyTargetId(reg.id)
-                                            setVerifyAction('VERIFIED')
-                                            setVerifyNote('')
-                                            setVerifyDialogOpen(true)
-                                          }}
-                                        >
-                                          <ThumbsUp className="w-4 h-4" />
-                                        </Button>
-                                      )}
-                                      {reg.verificationStatus !== 'REJECTED' && (
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="text-red-600 hover:text-white hover:bg-red-600"
-                                          title="Tolak Pendaftar"
-                                          onClick={() => {
-                                            setVerifyTargetId(reg.id)
-                                            setVerifyAction('REJECTED')
-                                            setVerifyNote('')
-                                            setVerifyDialogOpen(true)
-                                          }}
-                                        >
-                                          <ThumbsDown className="w-4 h-4" />
-                                        </Button>
-                                      )}
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
-                              )
-                            })
-                            return [headerRow, ...dataRows]
-                          })
-                        })()
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-
-                {/* Pagination */}
-                {pagination.totalPages > 1 && (
-                  <div className="flex items-center justify-between px-4 py-3 border-t">
-                    <p className="text-sm text-gray-500">
-                      Menampilkan {(pagination.page - 1) * pagination.limit + 1}-
-                      {Math.min(pagination.page * pagination.limit, pagination.total)} dari {pagination.total} pendaftar
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm" disabled={pagination.page <= 1} onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}>
-                        <ChevronLeft className="w-4 h-4" />
-                      </Button>
-                      <span className="text-sm text-gray-600">Hal {pagination.page} / {pagination.totalPages}</span>
-                      <Button variant="outline" size="sm" disabled={pagination.page >= pagination.totalPages} onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}>
-                        <ChevronRight className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
                 )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* ==================== RANKING TAB ==================== */}
-          <TabsContent value="ranking" className="space-y-6">
-            {/* Header */}
-            <Card className="overflow-hidden border-0 shadow-lg">
-              <div className="bg-gradient-to-r from-amber-600 via-orange-600 to-yellow-600 p-4 sm:p-6 text-white">
-                <div className="flex items-center gap-3 sm:gap-4">
-                  <div className="p-2 sm:p-3 bg-white/20 rounded-xl">
-                    <Trophy className="w-6 h-6 sm:w-8 sm:h-8" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl sm:text-2xl font-bold">Perangkingan</h2>
-                    <p className="text-amber-100 text-xs sm:text-sm mt-1">Rangking pendaftar berdasarkan jarak, nilai, dan skor komposit</p>
-                  </div>
-                </div>
-              </div>
-            </Card>
-
-            {/* Kuota Info */}
-            {rankingKuota > 0 && (
-              <Card className="bg-gradient-to-r from-sky-50 to-cyan-50 border-sky-200">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Award className="w-5 h-5 text-sky-600" />
-                    <h3 className="font-semibold text-sky-900">Kuota Per Jalur</h3>
-                    <span className="text-sm text-sky-600 ml-auto">Total Kuota: <strong>{rankingKuota}</strong></span>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {rankingKuotaPerJalur.map((kj) => (
-                      <div key={kj.nama} className="bg-white rounded-lg p-2.5 border border-sky-100 shadow-sm">
-                        <p className="text-[10px] sm:text-xs text-gray-500 truncate">{kj.nama}</p>
-                        <p className="text-lg sm:text-xl font-bold text-sky-700">{kj.kuota}</p>
-                        <p className="text-[10px] text-gray-400">{kj.persentase}%</p>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Filters */}
-            <Card className="shadow-sm">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Filter className="w-4 h-4 text-gray-500" />
-                  <h3 className="font-semibold text-sm text-gray-700">Filter & Urutan</h3>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                  {/* Tampilan / Sort */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-gray-500">Urutkan Berdasarkan</label>
-                    <Select value={rankingTampilan} onValueChange={setRankingTampilan}>
-                      <SelectTrigger className="h-9 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="jarak">📏 Jarak (Terdekat → Terjauh)</SelectItem>
-                        <SelectItem value="nilai">📝 Nilai (Tertinggi → Terendah)</SelectItem>
-                        <SelectItem value="komposit">🏆 Skor Komposit (Tertinggi → Terendah)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {/* Jalur Filter */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-gray-500">Jalur</label>
-                    <Select value={rankingJalur} onValueChange={setRankingJalur}>
-                      <SelectTrigger className="h-9 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Semua Jalur</SelectItem>
-                        {rankingFilters.jalurOptions.filter((j: string) => j && j.trim() !== '').map((j: string) => (
-                          <SelectItem key={j} value={j}>{j}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {/* Sekolah Filter */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-gray-500">Sekolah Asal</label>
-                    <Select value={rankingSekolah} onValueChange={setRankingSekolah}>
-                      <SelectTrigger className="h-9 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Semua Sekolah</SelectItem>
-                        {rankingFilters.sekolahOptions.map((s: string) => (
-                          <SelectItem key={s} value={s}>{s}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {/* Jurusan Filter */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-gray-500">Jurusan</label>
-                    <Select value={rankingJurusan} onValueChange={setRankingJurusan}>
-                      <SelectTrigger className="h-9 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Semua Jurusan</SelectItem>
-                        {rankingFilters.jurusanOptions.filter((j: string) => j && j.trim() !== '').map((j: string) => (
-                          <SelectItem key={j} value={j}>{j}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {/* Status Filter */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-gray-500">Status Verifikasi</label>
-                    <Select value={rankingStatus} onValueChange={setRankingStatus}>
-                      <SelectTrigger className="h-9 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Semua Status</SelectItem>
-                        <SelectItem value="PENDING">Menunggu</SelectItem>
-                        <SelectItem value="VERIFIED">Diterima</SelectItem>
-                        <SelectItem value="REJECTED">Ditolak</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Quick View Cards: Domisili & Prestasi Ranking Summary */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Domisili: Jarak Terdekat */}
-              <Card className="border-sky-200 shadow-sm">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="p-1.5 bg-sky-100 rounded-lg">
-                      <MapPinned className="w-4 h-4 text-sky-600" />
-                    </div>
-                    <h4 className="font-semibold text-sm text-sky-900">Domisili — Jarak Terdekat</h4>
-                  </div>
-                  {(() => {
-                    const domisiliData = rankingData
-                      .filter((r: Record<string, unknown>) => (r.subJalur as string) === 'Domisili' && r._jarakNum as number > 0)
-                      .sort((a: Record<string, unknown>, b: Record<string, unknown>) => (a._jarakNum as number) - (b._jarakNum as number))
-                      .slice(0, 5)
-                    if (domisiliData.length === 0) return <p className="text-xs text-gray-400 text-center py-3">Belum ada data jarak untuk Domisili</p>
-                    const domKuota = rankingKuotaPerJalur.find(k => k.nama === 'Domisili')?.kuota || 0
-                    return (
-                      <div className="space-y-1.5">
-                        {domisiliData.map((r: Record<string, unknown>, idx: number) => (
-                          <div key={r.id as string} className={`flex items-center gap-2 p-2 rounded-lg ${idx < domKuota && domKuota > 0 ? 'bg-emerald-50 border border-emerald-200' : 'bg-gray-50 border border-gray-100'}`}>
-                            <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${idx < domKuota && domKuota > 0 ? 'bg-emerald-500 text-white' : 'bg-gray-300 text-white'}`}>
-                              {idx + 1}
-                            </span>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-medium text-gray-900 truncate">{r.nama as string}</p>
-                              <p className="text-[10px] text-gray-500">{r.namaSekolahAsal as string} — {r.jurusan as string}</p>
-                            </div>
-                            <div className="text-right shrink-0">
-                              <p className="text-xs font-bold text-sky-700">{r.lokasiJarak as string || '-'}</p>
-                              <p className="text-[10px] text-gray-400">jarak</p>
-                            </div>
-                          </div>
-                        ))}
-                        {domKuota > 0 && <p className="text-[10px] text-emerald-600 text-center mt-1">🟢 Hijau = masuk kuota ({domKuota})</p>}
-                      </div>
-                    )
-                  })()}
-                </CardContent>
-              </Card>
-
-              {/* Prestasi: Nilai Tertinggi */}
-              <Card className="border-emerald-200 shadow-sm">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="p-1.5 bg-emerald-100 rounded-lg">
-                      <Award className="w-4 h-4 text-emerald-600" />
-                    </div>
-                    <h4 className="font-semibold text-sm text-emerald-900">Prestasi — Nilai Tertinggi</h4>
-                  </div>
-                  {(() => {
-                    const prestasiData = rankingData
-                      .filter((r: Record<string, unknown>) => {
-                        const sj = (r.subJalur as string || '').toLowerCase()
-                        return (sj.includes('prestasi') || sj.includes('akademik') || sj.includes('non')) && (r._nilaiNum as number) > 0
-                      })
-                      .sort((a: Record<string, unknown>, b: Record<string, unknown>) => (b._nilaiNum as number) - (a._nilaiNum as number))
-                      .slice(0, 5)
-                    if (prestasiData.length === 0) return <p className="text-xs text-gray-400 text-center py-3">Belum ada data nilai untuk Prestasi</p>
-                    const presKuota = rankingKuotaPerJalur.find(k => k.nama.toLowerCase().includes('prestasi'))?.kuota || 0
-                    return (
-                      <div className="space-y-1.5">
-                        {prestasiData.map((r: Record<string, unknown>, idx: number) => (
-                          <div key={r.id as string} className={`flex items-center gap-2 p-2 rounded-lg ${idx < presKuota && presKuota > 0 ? 'bg-emerald-50 border border-emerald-200' : 'bg-gray-50 border border-gray-100'}`}>
-                            <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${idx < presKuota && presKuota > 0 ? 'bg-emerald-500 text-white' : 'bg-gray-300 text-white'}`}>
-                              {idx + 1}
-                            </span>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-medium text-gray-900 truncate">{r.nama as string}</p>
-                              <p className="text-[10px] text-gray-500">{r.namaSekolahAsal as string} — {r.jurusan as string}</p>
-                            </div>
-                            <div className="text-right shrink-0">
-                              <p className="text-xs font-bold text-emerald-700">{r.nilaiRataRata as string || r.skorNilaiRaport as string || '-'}</p>
-                              <p className="text-[10px] text-gray-400">nilai</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )
-                  })()}
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Full Ranking Table */}
-            <Card className="shadow-sm">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-base sm:text-lg flex items-center gap-2">
-                      <Trophy className="w-5 h-5 text-amber-500" />
-                      Tabel Perangkingan
-                      {rankingTampilan === 'jarak' && <Badge className="bg-sky-100 text-sky-700 border-sky-200">Jarak Terdekat</Badge>}
-                      {rankingTampilan === 'nilai' && <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">Nilai Tertinggi</Badge>}
-                      {rankingTampilan === 'komposit' && <Badge className="bg-amber-100 text-amber-700 border-amber-200">Skor Komposit</Badge>}
-                    </CardTitle>
-                    <CardDescription className="text-xs mt-1">
-                      {rankingData.length} pendaftar
-                      {rankingKuota > 0 && ` · Kuota: ${rankingKuota}`}
-                      {rankingJalur !== 'all' && ` · Jalur: ${rankingJalur}`}
-                    </CardDescription>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-xs gap-1 border-red-200 text-red-700 hover:bg-red-50"
-                      onClick={() => handleRankingPreview('pdf')}
-                      disabled={rankingData.length === 0}
-                    >
-                      <Printer className="w-3 h-3" />
-                      <span className="hidden sm:inline">Cetak PDF</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-xs gap-1 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-                      onClick={() => handleRankingPreview('excel')}
-                      disabled={rankingData.length === 0}
-                    >
-                      <FileSpreadsheet className="w-3 h-3" />
-                      <span className="hidden sm:inline">Cetak Excel</span>
-                    </Button>
-                    <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => fetchRanking()}>
-                      <RefreshCw className="w-3 h-3" />
-                      <span className="hidden sm:inline">Refresh</span>
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                {rankingLoading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="w-6 h-6 animate-spin text-amber-500" />
-                    <span className="ml-2 text-sm text-gray-500">Memuat data perangkingan...</span>
-                  </div>
-                ) : rankingData.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Trophy className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                    <p className="text-gray-500 text-sm">Belum ada data perangkingan</p>
-                    <p className="text-gray-400 text-xs mt-1">Import data pendaftar terlebih dahulu</p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-gray-50/80">
-                          <TableHead className="w-10 text-center font-semibold text-xs">No</TableHead>
-                          <TableHead className="w-10 text-center font-semibold text-xs">Jalur</TableHead>
-                          <TableHead className="font-semibold text-xs">Nama Pendaftar
-                            <span className="ml-1 cursor-pointer inline-flex align-middle" onClick={() => setNamaSortRanking(namaSortRanking === 'none' ? 'asc' : namaSortRanking === 'asc' ? 'desc' : 'none')}>
-                              {namaSortRanking === 'none' ? <ArrowUpDown className="w-3 h-3 text-gray-400" /> : namaSortRanking === 'asc' ? <ArrowUpAZ className="w-3 h-3 text-amber-600" /> : <ArrowDownAZ className="w-3 h-3 text-amber-600" />}
-                            </span>
-                          </TableHead>
-                          <TableHead className="font-semibold text-xs">Sekolah Asal</TableHead>
-                          <TableHead className="font-semibold text-xs">Jurusan</TableHead>
-                          <TableHead className="text-right font-semibold text-xs cursor-pointer select-none group" onClick={() => setRankingTampilan('jarak')}>
-                            <span className="inline-flex items-center gap-1">
-                              Jarak
-                              {rankingTampilan === 'jarak' ? (
-                                <span className="text-sky-600" title="Diurutkan berdasarkan jarak">📍</span>
-                              ) : (
-                                <ArrowUpDown className="w-3 h-3 text-gray-300 group-hover:text-sky-500 transition-colors" />
-                              )}
-                            </span>
-                          </TableHead>
-                          <TableHead className="text-right font-semibold text-xs cursor-pointer select-none group" onClick={() => setRankingTampilan('nilai')}>
-                            <span className="inline-flex items-center gap-1">
-                              Nilai
-                              {rankingTampilan === 'nilai' ? (
-                                <span className="text-emerald-600" title="Diurutkan berdasarkan nilai">📍</span>
-                              ) : (
-                                <ArrowUpDown className="w-3 h-3 text-gray-300 group-hover:text-emerald-500 transition-colors" />
-                              )}
-                            </span>
-                          </TableHead>
-                          <TableHead className="text-right font-semibold text-xs cursor-pointer select-none group" onClick={() => setRankingTampilan('komposit')}>
-                            <span className="inline-flex items-center gap-1">
-                              Skor
-                              {rankingTampilan === 'komposit' ? (
-                                <span className="text-amber-600" title="Diurutkan berdasarkan skor komposit">📍</span>
-                              ) : (
-                                <ArrowUpDown className="w-3 h-3 text-gray-300 group-hover:text-amber-500 transition-colors" />
-                              )}
-                            </span>
-                          </TableHead>
-                          <TableHead className="text-center font-semibold text-xs">Status</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {[...rankingData].sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
-                          if (namaSortRanking === 'asc') return String(a.nama || '').localeCompare(String(b.nama || ''))
-                          if (namaSortRanking === 'desc') return String(b.nama || '').localeCompare(String(a.nama || ''))
-                          return 0
-                        }).map((r: Record<string, unknown>, idx: number) => {
-                          const rankNum = (r._ranking as number) || (idx + 1)
-                          const jalurRank = (r._jalurRank as number) || -1
-                          const jarakNum = r._jarakNum as number
-                          const nilaiNum = r._nilaiNum as number
-                          const skorNum = r._skorNum as number
-                          const isVerified = r.verificationStatus === 'VERIFIED'
-
-                          // Determine kuota cutoff for current jalur
-                          const currentKuota = rankingKuotaPerJalur.find(k => {
-                            const jalurName = (r.subJalur as string || '').toLowerCase()
-                            return k.nama.toLowerCase().includes(jalurName) || jalurName.includes(k.nama.toLowerCase())
-                              || (k.nama.toLowerCase().includes('prestasi') && jalurName.includes('prestasi'))
-                              || (k.nama.toLowerCase().includes('domisili') && jalurName.includes('domisili'))
-                              || (k.nama.toLowerCase().includes('mutasi') && jalurName.includes('mutasi'))
-                              || (k.nama.toLowerCase().includes('afirmasi') && (jalurName.includes('keluarga') || jalurName.includes('ktm')))
-                          })?.kuota || 0
-
-                          // Count how many of the same jalur are above this rank
-                          const sameJalurAbove = rankingData
-                            .filter((other: Record<string, unknown>) =>
-                              (other.subJalur as string) === (r.subJalur as string) &&
-                              ((other._ranking as number) || 0) < rankNum
-                            ).length
-
-                          const withinKuota = currentKuota > 0 && sameJalurAbove < currentKuota
-
-                          return (
-                            <TableRow key={r.id as string} className={`${withinKuota && !isVerified ? 'bg-emerald-50/50' : ''} ${isVerified ? 'bg-emerald-50' : ''} hover:bg-gray-50/80 transition-colors`}>
-                              <TableCell className="text-center">
-                                <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${
-                                  rankNum === 1 ? 'bg-amber-400 text-white' :
-                                  rankNum === 2 ? 'bg-gray-300 text-gray-700' :
-                                  rankNum === 3 ? 'bg-amber-700 text-white' :
-                                  withinKuota ? 'bg-emerald-100 text-emerald-700' :
-                                  'bg-gray-100 text-gray-500'
-                                }`}>
-                                  {rankNum}
-                                </span>
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <div className="flex flex-col items-center gap-0.5">
-                                  <Badge variant="outline" className={`text-[10px] ${SUB_JALUR_COLORS[r.subJalur as string] || 'bg-gray-100 text-gray-700 border-gray-200'}`}>
-                                    {r.subJalur as string}
-                                  </Badge>
-                                  {jalurRank > 0 && (
-                                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-[9px] font-bold bg-sky-100 text-sky-700">
-                                      #{jalurRank}
-                                    </span>
-                                  )}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div>
-                                  <p className="text-xs font-medium text-gray-900">{r.nama as string}</p>
-                                  <p className="text-[10px] text-gray-400">NISN: {r.nisn as string}</p>
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-xs text-gray-700">{r.namaSekolahAsal as string}</TableCell>
-                              <TableCell className="text-xs text-gray-600">{r.jurusan as string}</TableCell>
-                              <TableCell className="text-right" style={rankingTampilan === 'jarak' ? { backgroundColor: 'rgba(186, 230, 253, 0.3)' } : undefined}>
-                                <span className={`text-xs font-semibold ${jarakNum > 0 ? 'text-sky-700' : 'text-gray-300'}`}>
-                                  {r.lokasiJarak as string || '-'}
-                                </span>
-                              </TableCell>
-                              <TableCell className="text-right" style={rankingTampilan === 'nilai' ? { backgroundColor: 'rgba(209, 250, 229, 0.3)' } : undefined}>
-                                <span className={`text-xs font-semibold ${nilaiNum > 0 ? 'text-emerald-700' : 'text-gray-300'}`}>
-                                  {r.nilaiRataRata as string || r.skorNilaiRaport as string || '-'}
-                                </span>
-                              </TableCell>
-                              <TableCell className="text-right" style={rankingTampilan === 'komposit' ? { backgroundColor: 'rgba(254, 243, 199, 0.4)' } : undefined}>
-                                <span className={`text-xs font-semibold ${skorNum > 0 ? 'text-amber-700' : 'text-gray-300'}`}>
-                                  {r.skor as string || '-'}
-                                </span>
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <Badge className={`text-[10px] ${STATUS_COLORS[r.verificationStatus as string] || 'bg-gray-100 text-gray-700'}`}>
-                                  {r.verificationStatus === 'VERIFIED' ? 'Diterima' : r.verificationStatus === 'REJECTED' ? 'Ditolak' : 'Menunggu'}
-                                </Badge>
-                              </TableCell>
-                            </TableRow>
-                          )
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* ==================== DITERIMA TAB ==================== */}
-          <TabsContent value="diterima" className="space-y-6">
-            {/* Elegant Header */}
-            <Card className="overflow-hidden border-0 shadow-lg">
-              <div className="bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-600 p-4 sm:p-6 text-white">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
-                  <div>
-                    <h2 className="text-lg sm:text-2xl font-bold tracking-wide">LAPORAN PESERTA DITERIMA</h2>
-                    <p className="text-emerald-100 mt-0.5 sm:mt-1 text-xs sm:text-sm">{appName}{schoolName ? ` — ${schoolName}` : ''} — Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
-                  </div>
-                  <Button variant="secondary" size="sm" className="bg-white/20 hover:bg-white/30 text-white border-white/30" onClick={() => handlePrintReport('diterima')}>
-                    <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2" /> <span className="text-xs sm:text-sm">Cetak</span>
-                  </Button>
-                </div>
-              </div>
-              <CardContent className="p-3 sm:p-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
-                  <div className="bg-emerald-50 rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-emerald-100">
-                    <p className="text-xl sm:text-3xl font-bold text-emerald-700">{stats?.verified || 0}</p>
-                    <p className="text-[10px] sm:text-xs text-emerald-600 font-medium mt-0.5 sm:mt-1">Total Diterima</p>
-                  </div>
-                  <div className="bg-emerald-50 rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-emerald-100">
-                    <p className="text-xl sm:text-3xl font-bold text-emerald-700">{stats?.total || 0}</p>
-                    <p className="text-[10px] sm:text-xs text-emerald-600 font-medium mt-0.5 sm:mt-1">Total Pendaftar</p>
-                  </div>
-                  <div className="bg-emerald-50 rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-emerald-100">
-                    <p className="text-xl sm:text-3xl font-bold text-emerald-700">{verifiedPercent}%</p>
-                    <p className="text-[10px] sm:text-xs text-emerald-600 font-medium mt-0.5 sm:mt-1">Persentase Diterima</p>
-                  </div>
-                  <div className="bg-emerald-50 rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-emerald-100">
-                    <p className="text-xl sm:text-3xl font-bold text-emerald-700">{stats?.verifiedBySubJalur?.length || 0}</p>
-                    <p className="text-[10px] sm:text-xs text-emerald-600 font-medium mt-0.5 sm:mt-1">Jalur Aktif</p>
-                  </div>
-                </div>
-
-                {/* Per Jalur Breakdown with Progress Bars */}
-                <div className="mt-6">
-                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Distribusi Per Sub Jalur</h3>
-                  <div className="space-y-2.5">
-                    {(stats?.verifiedBySubJalur || []).map((item) => (
-                      <div key={item.name} className="flex items-center gap-3">
-                        <Badge variant="outline" className={`${SUB_JALUR_COLORS[item.name] || 'bg-gray-100 text-gray-800'} min-w-[130px] justify-center text-xs`}>
-                          {item.name}
-                        </Badge>
-                        <div className="flex-1 bg-gray-100 rounded-full h-5 relative overflow-hidden">
-                          <div
-                            className="h-full bg-emerald-500 rounded-full transition-all duration-500"
-                            style={{ width: stats?.verified ? `${(item.count / stats.verified) * 100}%` : '0%' }}
-                          />
-                        </div>
-                        <span className="text-sm font-semibold text-gray-700 min-w-[40px] text-right">{item.count}</span>
-                      </div>
-                    ))}
-                    {(stats?.verifiedBySubJalur || []).length === 0 && (
-                      <p className="text-xs text-gray-400 text-center py-2">Belum ada data</p>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Filter Bar */}
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex flex-col sm:flex-row gap-3 items-center">
-                  <div className="flex items-center gap-2 text-sm text-gray-500">
-                    <Filter className="w-4 h-4" /> Filter:
-                  </div>
-                  <Select value={diterimaFilterJalur} onValueChange={setDiterimaFilterJalur}>
-                    <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Sub Jalur" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Semua Jalur</SelectItem>
-                      {subJalurOptions.map(opt => (
-                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                  <Select value={diterimaFilterSekolah} onValueChange={setDiterimaFilterSekolah}>
-                    <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Sekolah Asal" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Semua Sekolah</SelectItem>
-                      {(stats?.verifiedBySekolah || []).map((item) => (
-                        <SelectItem key={item.name} value={item.name}>{item.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <div className="sm:ml-auto text-sm text-gray-500">
-                    Menampilkan {(() => {
-                      const list = stats?.verifiedList || []
-                      const filtered = list.filter(r =>
-                        (diterimaFilterJalur === 'all' || r.subJalur === diterimaFilterJalur) &&
-                        (diterimaFilterSekolah === 'all' || r.namaSekolahAsal === diterimaFilterSekolah)
-                      )
-                      return filtered.length
-                    })()} dari {stats?.verified || 0} peserta
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Table */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <ListChecks className="w-5 h-5 text-emerald-600" />
-                  Daftar Peserta Diterima
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto max-h-[60vh] overflow-y-auto">
-                  <Table>
-                    <TableHeader className="sticky top-0 z-10 bg-white">
-                      <TableRow className="bg-emerald-50/80">
-                        <TableHead className="w-12 text-center">No</TableHead>
-                        <TableHead>No. Registrasi</TableHead>
-                        <TableHead>Nama
-                          <span className="ml-1 cursor-pointer inline-flex align-middle" onClick={() => setNamaSortDiterima(namaSortDiterima === 'none' ? 'asc' : namaSortDiterima === 'asc' ? 'desc' : 'none')}>
-                            {namaSortDiterima === 'none' ? <ArrowUpDown className="w-3 h-3 text-gray-400" /> : namaSortDiterima === 'asc' ? <ArrowUpAZ className="w-3 h-3 text-emerald-600" /> : <ArrowDownAZ className="w-3 h-3 text-emerald-600" />}
-                          </span>
-                        </TableHead>
-                        <TableHead className="hidden md:table-cell">NISN</TableHead>
-                        <TableHead>Sub Jalur</TableHead>
-                        <TableHead className="hidden lg:table-cell">Sekolah Asal</TableHead>
-                        <TableHead className="hidden lg:table-cell">Jurusan</TableHead>
-                        <TableHead className="hidden sm:table-cell">Tanggal Verif</TableHead>
-                        <TableHead className="text-right">Aksi</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {(() => {
-                        const list = stats?.verifiedList || []
-                        const filtered = list.filter(r =>
-                          (diterimaFilterJalur === 'all' || r.subJalur === diterimaFilterJalur) &&
-                          (diterimaFilterSekolah === 'all' || r.namaSekolahAsal === diterimaFilterSekolah)
-                        )
-                        const sorted = [...filtered].sort((a, b) => {
-                          if (namaSortDiterima === 'asc') return (a.nama || '').localeCompare(b.nama || '')
-                          if (namaSortDiterima === 'desc') return (b.nama || '').localeCompare(a.nama || '')
-                          return 0
-                        })
-                        return sorted.length > 0 ? sorted.map((reg, idx) => (
-                          <TableRow key={reg.id} className="hover:bg-emerald-50/30">
-                            <TableCell className="text-center text-sm text-gray-500">{idx + 1}</TableCell>
-                            <TableCell className="font-mono text-sm">{reg.noRegistrasi}</TableCell>
-                            <TableCell className="font-medium">{reg.nama}</TableCell>
-                            <TableCell className="hidden md:table-cell text-sm text-gray-500">{reg.nisn}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className={SUB_JALUR_COLORS[reg.subJalur] || 'bg-gray-100 text-gray-800'}>
-                                {reg.subJalur}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="hidden lg:table-cell text-sm">{reg.namaSekolahAsal}</TableCell>
-                            <TableCell className="hidden lg:table-cell">
-                              <Badge variant="secondary">{reg.jurusan}</Badge>
-                            </TableCell>
-                            <TableCell className="hidden sm:table-cell text-xs text-gray-500">
-                              {reg.tanggalVerif || (reg.updatedAt ? new Date(reg.updatedAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-')}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex items-center justify-end gap-1">
-                                <Button variant="ghost" size="sm" onClick={() => { setDetailTarget(reg); setDetailDialogOpen(true) }} title="Lihat Detail">
-                                  <Eye className="w-4 h-4" />
-                                </Button>
-                                <Button variant="ghost" size="sm" className="text-blue-600 hover:text-white hover:bg-blue-600" title="Edit Data" onClick={() => openEditDialog(reg)}>
-                                  <Pencil className="w-4 h-4" />
-                                </Button>
-                                <Button variant="ghost" size="sm" className="text-red-600 hover:text-white hover:bg-red-600" title="Hapus Data" onClick={() => openDeleteDialog(reg)}>
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        )) : (
-                          <TableRow>
-                            <TableCell colSpan={10} className="text-center py-12">
-                              <UserCheck className="w-10 h-10 mx-auto text-gray-300 mb-2" />
-                              <p className="text-gray-500 font-medium">Belum ada pendaftar yang diterima</p>
-                              <p className="text-sm text-gray-400">Verifikasi pendaftar untuk menerimanya</p>
-                            </TableCell>
-                          </TableRow>
-                        )
-                      })()}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* ==================== DITOLAK TAB ==================== */}
-          <TabsContent value="ditolak" className="space-y-6">
-            {/* Elegant Header - Red Theme */}
-            <Card className="overflow-hidden border-0 shadow-lg">
-              <div className="bg-gradient-to-r from-red-700 via-red-600 to-rose-600 p-4 sm:p-6 text-white">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
-                  <div>
-                    <h2 className="text-lg sm:text-2xl font-bold tracking-wide">LAPORAN PESERTA DITOLAK</h2>
-                    <p className="text-red-100 mt-0.5 sm:mt-1 text-xs sm:text-sm">{appName}{schoolName ? ` — ${schoolName}` : ''} — Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
-                  </div>
-                  <Button variant="secondary" size="sm" className="bg-white/20 hover:bg-white/30 text-white border-white/30" onClick={() => handlePrintReport('ditolak')}>
-                    <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2" /> <span className="text-xs sm:text-sm">Cetak</span>
-                  </Button>
-                </div>
-              </div>
-              <CardContent className="p-3 sm:p-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
-                  <div className="bg-red-50 rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-red-100">
-                    <p className="text-xl sm:text-3xl font-bold text-red-700">{stats?.rejected || 0}</p>
-                    <p className="text-[10px] sm:text-xs text-red-600 font-medium mt-0.5 sm:mt-1">Total Ditolak</p>
-                  </div>
-                  <div className="bg-red-50 rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-red-100">
-                    <p className="text-xl sm:text-3xl font-bold text-red-700">{stats?.total || 0}</p>
-                    <p className="text-[10px] sm:text-xs text-red-600 font-medium mt-0.5 sm:mt-1">Total Pendaftar</p>
-                  </div>
-                  <div className="bg-red-50 rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-red-100">
-                    <p className="text-xl sm:text-3xl font-bold text-red-700">{rejectedPercent}%</p>
-                    <p className="text-[10px] sm:text-xs text-red-600 font-medium mt-0.5 sm:mt-1">Persentase Ditolak</p>
-                  </div>
-                  <div className="bg-red-50 rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-red-100">
-                    <p className="text-xl sm:text-3xl font-bold text-red-700">{stats?.rejectedBySubJalur?.length || 0}</p>
-                    <p className="text-[10px] sm:text-xs text-red-600 font-medium mt-0.5 sm:mt-1">Jalur Aktif</p>
-                  </div>
-                </div>
-
-                {/* Per Jalur Breakdown with Progress Bars */}
-                <div className="mt-6">
-                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Distribusi Per Sub Jalur</h3>
-                  <div className="space-y-2.5">
-                    {(stats?.rejectedBySubJalur || []).map((item) => (
-                      <div key={item.name} className="flex items-center gap-3">
-                        <Badge variant="outline" className={`${SUB_JALUR_COLORS[item.name] || 'bg-gray-100 text-gray-800'} min-w-[130px] justify-center text-xs`}>
-                          {item.name}
-                        </Badge>
-                        <div className="flex-1 bg-gray-100 rounded-full h-5 relative overflow-hidden">
-                          <div
-                            className="h-full bg-red-500 rounded-full transition-all duration-500"
-                            style={{ width: stats?.rejected ? `${(item.count / stats.rejected) * 100}%` : '0%' }}
-                          />
-                        </div>
-                        <span className="text-sm font-semibold text-gray-700 min-w-[40px] text-right">{item.count}</span>
-                      </div>
-                    ))}
-                    {(stats?.rejectedBySubJalur || []).length === 0 && (
-                      <p className="text-xs text-gray-400 text-center py-2">Belum ada data</p>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Filter Bar */}
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex flex-col sm:flex-row gap-3 items-center">
-                  <div className="flex items-center gap-2 text-sm text-gray-500">
-                    <Filter className="w-4 h-4" /> Filter:
-                  </div>
-                  <Select value={ditolakFilterJalur} onValueChange={setDitolakFilterJalur}>
-                    <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Sub Jalur" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Semua Jalur</SelectItem>
-                      {subJalurOptions.map(opt => (
-                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                  <div className="sm:ml-auto text-sm text-gray-500">
-                    Menampilkan {(() => {
-                      const list = stats?.rejectedList || []
-                      const filtered = list.filter(r => ditolakFilterJalur === 'all' || r.subJalur === ditolakFilterJalur)
-                      return filtered.length
-                    })()} dari {stats?.rejected || 0} peserta
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Table */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <FileText className="w-5 h-5 text-red-600" />
-                  Daftar Peserta Ditolak
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto max-h-[60vh] overflow-y-auto">
-                  <Table>
-                    <TableHeader className="sticky top-0 z-10 bg-white">
-                      <TableRow className="bg-red-50/80">
-                        <TableHead className="w-12 text-center">No</TableHead>
-                        <TableHead>No. Registrasi</TableHead>
-                        <TableHead>Nama
-                          <span className="ml-1 cursor-pointer inline-flex align-middle" onClick={() => setNamaSortDitolak(namaSortDitolak === 'none' ? 'asc' : namaSortDitolak === 'asc' ? 'desc' : 'none')}>
-                            {namaSortDitolak === 'none' ? <ArrowUpDown className="w-3 h-3 text-gray-400" /> : namaSortDitolak === 'asc' ? <ArrowUpAZ className="w-3 h-3 text-red-600" /> : <ArrowDownAZ className="w-3 h-3 text-red-600" />}
-                          </span>
-                        </TableHead>
-                        <TableHead className="hidden md:table-cell">NISN</TableHead>
-                        <TableHead>Sub Jalur</TableHead>
-                        <TableHead className="hidden lg:table-cell">Sekolah Asal</TableHead>
-                        <TableHead className="hidden lg:table-cell">Jurusan</TableHead>
-                        <TableHead className="hidden sm:table-cell">Alasan Penolakan</TableHead>
-                        <TableHead className="text-right">Aksi</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {(() => {
-                        const list = stats?.rejectedList || []
-                        const filtered = list.filter(r => ditolakFilterJalur === 'all' || r.subJalur === ditolakFilterJalur)
-                        const sorted = [...filtered].sort((a, b) => {
-                          if (namaSortDitolak === 'asc') return (a.nama || '').localeCompare(b.nama || '')
-                          if (namaSortDitolak === 'desc') return (b.nama || '').localeCompare(a.nama || '')
-                          return 0
-                        })
-                        return sorted.length > 0 ? sorted.map((reg, idx) => (
-                          <TableRow key={reg.id} className="hover:bg-red-50/30">
-                            <TableCell className="text-center text-sm text-gray-500">{idx + 1}</TableCell>
-                            <TableCell className="font-mono text-sm">{reg.noRegistrasi}</TableCell>
-                            <TableCell className="font-medium">{reg.nama}</TableCell>
-                            <TableCell className="hidden md:table-cell text-sm text-gray-500">{reg.nisn}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className={SUB_JALUR_COLORS[reg.subJalur] || 'bg-gray-100 text-gray-800'}>
-                                {reg.subJalur}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="hidden lg:table-cell text-sm">{reg.namaSekolahAsal}</TableCell>
-                            <TableCell className="hidden lg:table-cell">
-                              <Badge variant="secondary">{reg.jurusan}</Badge>
-                            </TableCell>
-                            <TableCell className="hidden sm:table-cell text-sm text-gray-500 max-w-[200px] truncate">
-                              {reg.verificationNote || <span className="text-gray-400 italic">Tidak ada alasan</span>}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex items-center justify-end gap-1">
-                                <Button variant="ghost" size="sm" onClick={() => { setDetailTarget(reg); setDetailDialogOpen(true) }} title="Lihat Detail">
-                                  <Eye className="w-4 h-4" />
-                                </Button>
-                                <Button variant="ghost" size="sm" className="text-blue-600 hover:text-white hover:bg-blue-600" title="Edit Data" onClick={() => openEditDialog(reg)}>
-                                  <Pencil className="w-4 h-4" />
-                                </Button>
-                                <Button variant="ghost" size="sm" className="text-red-600 hover:text-white hover:bg-red-600" title="Hapus Data" onClick={() => openDeleteDialog(reg)}>
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        )) : (
-                          <TableRow>
-                            <TableCell colSpan={10} className="text-center py-12">
-                              <UserX className="w-10 h-10 mx-auto text-gray-300 mb-2" />
-                              <p className="text-gray-500 font-medium">Belum ada pendaftar yang ditolak</p>
-                              <p className="text-sm text-gray-400">Semua pendaftar dalam proses verifikasi</p>
-                            </TableCell>
-                          </TableRow>
-                        )
-                      })()}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* ==================== KELULUSAN TAB ==================== */}
-          <TabsContent value="kelulusan" className="space-y-6">
-            {/* Elegant Header - Emerald Theme */}
-            <Card className="overflow-hidden border-0 shadow-lg">
-              <div className="bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-600 p-4 sm:p-6 text-white">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
-                  <div>
-                    <h2 className="text-lg sm:text-2xl font-bold tracking-wide">KELULUSAN</h2>
-                    <p className="text-emerald-100 mt-0.5 sm:mt-1 text-xs sm:text-sm">{appName}{schoolName ? ` — ${schoolName}` : ''} — Status Kelulusan Peserta Didik Baru</p>
-                  </div>
-                  <Button variant="secondary" size="sm" className="bg-white/20 hover:bg-white/30 text-white border-white/30" onClick={() => handlePrintReport('kelulusan')}>
-                    <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2" /> <span className="text-xs sm:text-sm">Cetak</span>
-                  </Button>
-                </div>
-              </div>
-              <CardContent className="p-3 sm:p-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
-                  <div className="bg-emerald-50 rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-emerald-100">
-                    <p className="text-xl sm:text-3xl font-bold text-emerald-700">{stats?.lulus || 0}</p>
-                    <p className="text-[10px] sm:text-xs text-emerald-600 font-medium mt-0.5 sm:mt-1">Lulus</p>
-                  </div>
-                  <div className="bg-red-50 rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-red-100">
-                    <p className="text-xl sm:text-3xl font-bold text-red-700">{stats?.tidakLulus || 0}</p>
-                    <p className="text-[10px] sm:text-xs text-red-600 font-medium mt-0.5 sm:mt-1">Tidak Lulus</p>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-gray-200">
-                    <p className="text-xl sm:text-3xl font-bold text-gray-600">{stats?.belumLulus || 0}</p>
-                    <p className="text-[10px] sm:text-xs text-gray-500 font-medium mt-0.5 sm:mt-1">Belum Ditentukan</p>
-                  </div>
-                  <div className="bg-emerald-50 rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-emerald-100">
-                    <p className="text-xl sm:text-3xl font-bold text-emerald-700">{stats?.total ? Math.round(((stats.lulus || 0) / stats.total) * 100) : 0}%</p>
-                    <p className="text-[10px] sm:text-xs text-emerald-600 font-medium mt-0.5 sm:mt-1">Persentase Lulus</p>
-                  </div>
-                </div>
-
-                {/* Per Jalur Breakdown */}
-                <div className="mt-6">
-                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Distribusi Lulus Per Sub Jalur</h3>
-                  <div className="space-y-2.5">
-                    {(stats?.lulusBySubJalur || []).map((item) => (
-                      <div key={item.name} className="flex items-center gap-3">
-                        <Badge variant="outline" className={`${SUB_JALUR_COLORS[item.name] || 'bg-gray-100 text-gray-800'} min-w-[130px] justify-center text-xs`}>
-                          {item.name}
-                        </Badge>
-                        <div className="flex-1 bg-gray-100 rounded-full h-5 relative overflow-hidden">
-                          <div
-                            className="h-full bg-emerald-500 rounded-full transition-all duration-500"
-                            style={{ width: stats?.lulus ? `${(item.count / stats.lulus) * 100}%` : '0%' }}
-                          />
-                        </div>
-                        <span className="text-sm font-semibold text-gray-700 min-w-[40px] text-right">{item.count}</span>
-                      </div>
-                    ))}
-                    {(stats?.lulusBySubJalur || []).length === 0 && (
-                      <p className="text-xs text-gray-400 text-center py-2">Belum ada data</p>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Bulk Action Bar */}
-            <Card className="shadow-sm">
-              <CardContent className="p-4">
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="text-sm font-medium text-gray-700">Aksi Massal:</span>
-                  <Button
-                    size="sm"
-                    className="bg-emerald-600 hover:bg-emerald-700"
-                    onClick={async () => {
-                      const selectedLulus = Array.from(selectedIds)
-                      if (selectedLulus.length === 0) {
-                        toast({ title: 'Perhatian', description: 'Pilih pendaftar terlebih dahulu', variant: 'destructive' })
-                        return
-                      }
-                      try {
-                        const res = await fetch('/api/registrations/status-lulus', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ ids: selectedLulus, statusLulus: 'LULUS' }),
-                        })
-                        const data = await res.json()
-                        if (data.success) {
-                          toast({ title: 'Berhasil', description: `${data.updated} pendaftar ditetapkan LULUS` })
-                          setSelectedIds(new Set())
-                          fetchStats()
-                          fetchRegistrations()
-                        }
-                      } catch {
-                        toast({ title: 'Gagal', description: 'Gagal mengubah status', variant: 'destructive' })
-                      }
-                    }}
-                  >
-                    <GraduationCap className="w-4 h-4 mr-1" /> Lulus ({selectedIds.size})
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={async () => {
-                      const selectedTl = Array.from(selectedIds)
-                      if (selectedTl.length === 0) {
-                        toast({ title: 'Perhatian', description: 'Pilih pendaftar terlebih dahulu', variant: 'destructive' })
-                        return
-                      }
-                      try {
-                        const res = await fetch('/api/registrations/status-lulus', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ ids: selectedTl, statusLulus: 'TIDAK_LULUS' }),
-                        })
-                        const data = await res.json()
-                        if (data.success) {
-                          toast({ title: 'Berhasil', description: `${data.updated} pendaftar ditetapkan TIDAK LULUS` })
-                          setSelectedIds(new Set())
-                          fetchStats()
-                          fetchRegistrations()
-                        }
-                      } catch {
-                        toast({ title: 'Gagal', description: 'Gagal mengubah status', variant: 'destructive' })
-                      }
-                    }}
-                  >
-                    <XCircle className="w-4 h-4 mr-1" /> Tidak Lulus ({selectedIds.size})
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={async () => {
-                      const selectedReset = Array.from(selectedIds)
-                      if (selectedReset.length === 0) {
-                        toast({ title: 'Perhatian', description: 'Pilih pendaftar terlebih dahulu', variant: 'destructive' })
-                        return
-                      }
-                      try {
-                        const res = await fetch('/api/registrations/status-lulus', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ ids: selectedReset, statusLulus: 'BELUM' }),
-                        })
-                        const data = await res.json()
-                        if (data.success) {
-                          toast({ title: 'Berhasil', description: `${data.updated} pendaftar direset ke BELUM` })
-                          setSelectedIds(new Set())
-                          fetchStats()
-                          fetchRegistrations()
-                        }
-                      } catch {
-                        toast({ title: 'Gagal', description: 'Gagal mengubah status', variant: 'destructive' })
-                      }
-                    }}
-                  >
-                    <RotateCcw className="w-4 h-4 mr-1" /> Reset
-                  </Button>
-                  {selectedIds.size > 0 && (
-                    <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
-                      <X className="w-4 h-4 mr-1" /> Batal Pilih
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Kelulusan Data Table */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Data Status Kelulusan</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto max-h-[60vh] overflow-y-auto">
-                  <Table>
-                    <TableHeader className="sticky top-0 z-10 bg-white">
-                      <TableRow className="bg-emerald-50/80">
-                        <TableHead className="w-10 text-center">No</TableHead>
-                        <TableHead className="w-10 text-center">
-                          <Checkbox
-                            checked={(() => {
-                              const allRegs = [...(stats?.lulusList || []), ...(stats?.tidakLulusList || []), ...(stats?.belumLulus !== undefined ? registrations.filter(r => r.statusLulus === 'BELUM' || !r.statusLulus) : [])]
-                              return allRegs.length > 0 && selectedIds.size === allRegs.length
-                            })()}
-                            onCheckedChange={() => {
-                              const allRegs = [...(stats?.lulusList || []), ...(stats?.tidakLulusList || []), ...(registrations.filter(r => r.statusLulus === 'BELUM' || !r.statusLulus))]
-                              if (selectedIds.size === allRegs.length) {
-                                setSelectedIds(new Set())
-                              } else {
-                                setSelectedIds(new Set(allRegs.map(r => r.id)))
-                              }
-                            }}
-                          />
-                        </TableHead>
-                        <TableHead>No. Registrasi</TableHead>
-                        <TableHead>Nama Peserta</TableHead>
-                        <TableHead>Sub Jalur</TableHead>
-                        <TableHead>Sekolah Asal</TableHead>
-                        <TableHead>Status Verifikasi</TableHead>
-                        <TableHead>Status Kelulusan</TableHead>
-                        <TableHead className="text-right">Aksi</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {(() => {
-                        const allKelulusanData = [
-                          ...(stats?.lulusList || []),
-                          ...(stats?.tidakLulusList || []),
-                          ...(registrations.filter(r => r.statusLulus === 'BELUM' || !r.statusLulus)),
-                        ]
-                        if (allKelulusanData.length === 0) {
-                          return (
-                            <TableRow>
-                              <TableCell colSpan={10} className="text-center py-12">
-                                <GraduationCap className="w-10 h-10 mx-auto text-gray-300 mb-2" />
-                                <p className="text-gray-500 font-medium">Belum ada data kelulusan</p>
-                                <p className="text-sm text-gray-400">Tentukan status kelulusan peserta dari menu aksi</p>
-                              </TableCell>
-                            </TableRow>
-                          )
-                        }
-                        return allKelulusanData.map((reg, idx) => (
-                          <TableRow key={reg.id} className={
-                            reg.statusLulus === 'LULUS' ? 'bg-emerald-50/40' :
-                            reg.statusLulus === 'TIDAK_LULUS' ? 'bg-red-50/40' : ''
-                          }>
-                            <TableCell className="text-center text-sm text-gray-500">{idx + 1}</TableCell>
-                            <TableCell className="text-center">
-                              <Checkbox checked={selectedIds.has(reg.id)} onCheckedChange={() => {
-                                const next = new Set(selectedIds)
-                                if (next.has(reg.id)) next.delete(reg.id)
-                                else next.add(reg.id)
-                                setSelectedIds(next)
-                              }} />
-                            </TableCell>
-                            <TableCell className="font-mono text-sm">{reg.noRegistrasi}</TableCell>
-                            <TableCell className="font-medium text-sm">{reg.nama}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className={SUB_JALUR_COLORS[reg.subJalur] || 'bg-gray-100 text-gray-800'}>
-                                {reg.subJalur}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-sm text-gray-600">{reg.namaSekolahAsal}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className={STATUS_COLORS[reg.verificationStatus]}>
-                                {reg.verificationStatus === 'PENDING' ? 'Menunggu' :
-                                 reg.verificationStatus === 'VERIFIED' ? 'Diterima' : 'Ditolak'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className={STATUS_LULUS_COLORS[reg.statusLulus || 'BELUM']}>
-                                {reg.statusLulus === 'LULUS' ? 'Lulus' :
-                                 reg.statusLulus === 'TIDAK_LULUS' ? 'Tidak Lulus' : 'Belum'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex items-center justify-end gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-emerald-600 hover:text-white hover:bg-emerald-600"
-                                  title="Tetapkan Lulus"
-                                  onClick={async () => {
-                                    try {
-                                      const res = await fetch('/api/registrations/status-lulus', {
-                                        method: 'PATCH',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ id: reg.id, statusLulus: 'LULUS' }),
-                                      })
-                                      const data = await res.json()
-                                      if (data.success) {
-                                        toast({ title: 'Berhasil', description: `${reg.nama} ditetapkan LULUS` })
-                                        fetchStats()
-                                        fetchRegistrations()
-                                      }
-                                    } catch {
-                                      toast({ title: 'Gagal', description: 'Gagal mengubah status', variant: 'destructive' })
-                                    }
-                                  }}
-                                >
-                                  <GraduationCap className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-red-600 hover:text-white hover:bg-red-600"
-                                  title="Tetapkan Tidak Lulus"
-                                  onClick={async () => {
-                                    try {
-                                      const res = await fetch('/api/registrations/status-lulus', {
-                                        method: 'PATCH',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ id: reg.id, statusLulus: 'TIDAK_LULUS' }),
-                                      })
-                                      const data = await res.json()
-                                      if (data.success) {
-                                        toast({ title: 'Berhasil', description: `${reg.nama} ditetapkan TIDAK LULUS` })
-                                        fetchStats()
-                                        fetchRegistrations()
-                                      }
-                                    } catch {
-                                      toast({ title: 'Gagal', description: 'Gagal mengubah status', variant: 'destructive' })
-                                    }
-                                  }}
-                                >
-                                  <XCircle className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-gray-500 hover:text-white hover:bg-gray-500"
-                                  title="Reset ke Belum"
-                                  onClick={async () => {
-                                    try {
-                                      const res = await fetch('/api/registrations/status-lulus', {
-                                        method: 'PATCH',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ id: reg.id, statusLulus: 'BELUM' }),
-                                      })
-                                      const data = await res.json()
-                                      if (data.success) {
-                                        toast({ title: 'Berhasil', description: `Status ${reg.nama} direset` })
-                                        fetchStats()
-                                        fetchRegistrations()
-                                      }
-                                    } catch {
-                                      toast({ title: 'Gagal', description: 'Gagal mengubah status', variant: 'destructive' })
-                                    }
-                                  }}
-                                >
-                                  <RotateCcw className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      })()}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* ==================== DAFTAR ULANG TAB ==================== */}
-          <TabsContent value="daftar-ulang" className="space-y-6">
-            {/* Elegant Header - Blue Theme */}
-            <Card className="overflow-hidden border-0 shadow-lg">
-              <div className="bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-600 p-4 sm:p-6 text-white">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
-                  <div>
-                    <h2 className="text-lg sm:text-2xl font-bold tracking-wide">DAFTAR ULANG</h2>
-                    <p className="text-blue-100 mt-0.5 sm:mt-1 text-xs sm:text-sm">{appName}{schoolName ? ` — ${schoolName}` : ''} — Status Daftar Ulang Peserta Didik Baru</p>
-                  </div>
-                  <Button variant="secondary" size="sm" className="bg-white/20 hover:bg-white/30 text-white border-white/30" onClick={() => handlePrintReport('daftar-ulang')}>
-                    <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2" /> <span className="text-xs sm:text-sm">Cetak</span>
-                  </Button>
-                </div>
-              </div>
-              <CardContent className="p-3 sm:p-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
-                  <div className="bg-blue-50 rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-blue-100">
-                    <p className="text-xl sm:text-3xl font-bold text-blue-700">{stats?.daftarUlang || 0}</p>
-                    <p className="text-[10px] sm:text-xs text-blue-600 font-medium mt-0.5 sm:mt-1">Daftar Ulang</p>
-                  </div>
-                  <div className="bg-orange-50 rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-orange-100">
-                    <p className="text-xl sm:text-3xl font-bold text-orange-700">{stats?.tidakDaftarUlang || 0}</p>
-                    <p className="text-[10px] sm:text-xs text-orange-600 font-medium mt-0.5 sm:mt-1">Tidak Daftar Ulang</p>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-gray-200">
-                    <p className="text-xl sm:text-3xl font-bold text-gray-600">{stats?.belumDaftarUlang || 0}</p>
-                    <p className="text-[10px] sm:text-xs text-gray-500 font-medium mt-0.5 sm:mt-1">Belum Ditentukan</p>
-                  </div>
-                  <div className="bg-blue-50 rounded-lg sm:rounded-xl p-3 sm:p-4 text-center border border-blue-100">
-                    <p className="text-xl sm:text-3xl font-bold text-blue-700">{stats?.lulus ? (stats.lulus > 0 ? Math.round(((stats.daftarUlang || 0) / stats.lulus) * 100) : 0) : 0}%</p>
-                    <p className="text-[10px] sm:text-xs text-blue-600 font-medium mt-0.5 sm:mt-1">Persentase Daftar Ulang</p>
-                  </div>
-                </div>
-
-                {/* Per Jalur Breakdown */}
-                <div className="mt-6">
-                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Distribusi Daftar Ulang Per Sub Jalur</h3>
-                  <div className="space-y-2.5">
-                    {(stats?.daftarUlangBySubJalur || []).map((item) => (
-                      <div key={item.name} className="flex items-center gap-3">
-                        <Badge variant="outline" className={`${SUB_JALUR_COLORS[item.name] || 'bg-gray-100 text-gray-800'} min-w-[130px] justify-center text-xs`}>
-                          {item.name}
-                        </Badge>
-                        <div className="flex-1 bg-gray-100 rounded-full h-5 relative overflow-hidden">
-                          <div
-                            className="h-full bg-blue-500 rounded-full transition-all duration-500"
-                            style={{ width: stats?.daftarUlang ? `${(item.count / stats.daftarUlang) * 100}%` : '0%' }}
-                          />
-                        </div>
-                        <span className="text-sm font-semibold text-gray-700 min-w-[40px] text-right">{item.count}</span>
-                      </div>
-                    ))}
-                    {(stats?.daftarUlangBySubJalur || []).length === 0 && (
-                      <p className="text-xs text-gray-400 text-center py-2">Belum ada data</p>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Bulk Action Bar */}
-            <Card className="shadow-sm">
-              <CardContent className="p-4">
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="text-sm font-medium text-gray-700">Aksi Massal:</span>
-                  <Button
-                    size="sm"
-                    className="bg-blue-600 hover:bg-blue-700"
-                    onClick={async () => {
-                      const selectedDU = Array.from(selectedIds)
-                      if (selectedDU.length === 0) {
-                        toast({ title: 'Perhatian', description: 'Pilih pendaftar terlebih dahulu', variant: 'destructive' })
-                        return
-                      }
-                      try {
-                        const res = await fetch('/api/registrations/status-daftar-ulang', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ ids: selectedDU, statusDaftarUlang: 'DAFTAR_ULANG' }),
-                        })
-                        const data = await res.json()
-                        if (data.success) {
-                          toast({ title: 'Berhasil', description: `${data.updated} pendaftar ditetapkan DAFTAR ULANG` })
-                          setSelectedIds(new Set())
-                          fetchStats()
-                          fetchRegistrations()
-                        }
-                      } catch {
-                        toast({ title: 'Gagal', description: 'Gagal mengubah status', variant: 'destructive' })
-                      }
-                    }}
-                  >
-                    <ClipboardCheck className="w-4 h-4 mr-1" /> Daftar Ulang ({selectedIds.size})
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="bg-orange-600 hover:bg-orange-700"
-                    onClick={async () => {
-                      const selectedTDU = Array.from(selectedIds)
-                      if (selectedTDU.length === 0) {
-                        toast({ title: 'Perhatian', description: 'Pilih pendaftar terlebih dahulu', variant: 'destructive' })
-                        return
-                      }
-                      try {
-                        const res = await fetch('/api/registrations/status-daftar-ulang', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ ids: selectedTDU, statusDaftarUlang: 'TIDAK_DAFTAR_ULANG' }),
-                        })
-                        const data = await res.json()
-                        if (data.success) {
-                          toast({ title: 'Berhasil', description: `${data.updated} pendaftar ditetapkan TIDAK DAFTAR ULANG` })
-                          setSelectedIds(new Set())
-                          fetchStats()
-                          fetchRegistrations()
-                        }
-                      } catch {
-                        toast({ title: 'Gagal', description: 'Gagal mengubah status', variant: 'destructive' })
-                      }
-                    }}
-                  >
-                    <XCircle className="w-4 h-4 mr-1" /> Tidak Daftar Ulang ({selectedIds.size})
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={async () => {
-                      const selectedReset = Array.from(selectedIds)
-                      if (selectedReset.length === 0) {
-                        toast({ title: 'Perhatian', description: 'Pilih pendaftar terlebih dahulu', variant: 'destructive' })
-                        return
-                      }
-                      try {
-                        const res = await fetch('/api/registrations/status-daftar-ulang', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ ids: selectedReset, statusDaftarUlang: 'BELUM' }),
-                        })
-                        const data = await res.json()
-                        if (data.success) {
-                          toast({ title: 'Berhasil', description: `${data.updated} pendaftar direset ke BELUM` })
-                          setSelectedIds(new Set())
-                          fetchStats()
-                          fetchRegistrations()
-                        }
-                      } catch {
-                        toast({ title: 'Gagal', description: 'Gagal mengubah status', variant: 'destructive' })
-                      }
-                    }}
-                  >
-                    <RotateCcw className="w-4 h-4 mr-1" /> Reset
-                  </Button>
-                  {selectedIds.size > 0 && (
-                    <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
-                      <X className="w-4 h-4 mr-1" /> Batal Pilih
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Daftar Ulang Data Table */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Data Status Daftar Ulang</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto max-h-[60vh] overflow-y-auto">
-                  <Table>
-                    <TableHeader className="sticky top-0 z-10 bg-white">
-                      <TableRow className="bg-blue-50/80">
-                        <TableHead className="w-10 text-center">No</TableHead>
-                        <TableHead className="w-10 text-center">
-                          <Checkbox
-                            checked={(() => {
-                              const allDURegs = [...(stats?.daftarUlangList || []), ...(stats?.tidakDaftarUlangList || []), ...(registrations.filter(r => r.statusDaftarUlang === 'BELUM' || !r.statusDaftarUlang))]
-                              return allDURegs.length > 0 && selectedIds.size === allDURegs.length
-                            })()}
-                            onCheckedChange={() => {
-                              const allDURegs = [...(stats?.daftarUlangList || []), ...(stats?.tidakDaftarUlangList || []), ...(registrations.filter(r => r.statusDaftarUlang === 'BELUM' || !r.statusDaftarUlang))]
-                              if (selectedIds.size === allDURegs.length) {
-                                setSelectedIds(new Set())
-                              } else {
-                                setSelectedIds(new Set(allDURegs.map(r => r.id)))
-                              }
-                            }}
-                          />
-                        </TableHead>
-                        <TableHead>No. Registrasi</TableHead>
-                        <TableHead>Nama Peserta</TableHead>
-                        <TableHead>Sub Jalur</TableHead>
-                        <TableHead>Sekolah Asal</TableHead>
-                        <TableHead>Status Kelulusan</TableHead>
-                        <TableHead>Status Daftar Ulang</TableHead>
-                        <TableHead className="text-right">Aksi</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {(() => {
-                        const allDUData = [
-                          ...(stats?.daftarUlangList || []),
-                          ...(stats?.tidakDaftarUlangList || []),
-                          ...(registrations.filter(r => r.statusDaftarUlang === 'BELUM' || !r.statusDaftarUlang)),
-                        ]
-                        if (allDUData.length === 0) {
-                          return (
-                            <TableRow>
-                              <TableCell colSpan={10} className="text-center py-12">
-                                <ClipboardCheck className="w-10 h-10 mx-auto text-gray-300 mb-2" />
-                                <p className="text-gray-500 font-medium">Belum ada data daftar ulang</p>
-                                <p className="text-sm text-gray-400">Tentukan status daftar ulang peserta dari menu aksi</p>
-                              </TableCell>
-                            </TableRow>
-                          )
-                        }
-                        return allDUData.map((reg, idx) => (
-                          <TableRow key={reg.id} className={
-                            reg.statusDaftarUlang === 'DAFTAR_ULANG' ? 'bg-blue-50/40' :
-                            reg.statusDaftarUlang === 'TIDAK_DAFTAR_ULANG' ? 'bg-orange-50/40' : ''
-                          }>
-                            <TableCell className="text-center text-sm text-gray-500">{idx + 1}</TableCell>
-                            <TableCell className="text-center">
-                              <Checkbox checked={selectedIds.has(reg.id)} onCheckedChange={() => {
-                                const next = new Set(selectedIds)
-                                if (next.has(reg.id)) next.delete(reg.id)
-                                else next.add(reg.id)
-                                setSelectedIds(next)
-                              }} />
-                            </TableCell>
-                            <TableCell className="font-mono text-sm">{reg.noRegistrasi}</TableCell>
-                            <TableCell className="font-medium text-sm">{reg.nama}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className={SUB_JALUR_COLORS[reg.subJalur] || 'bg-gray-100 text-gray-800'}>
-                                {reg.subJalur}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-sm text-gray-600">{reg.namaSekolahAsal}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className={STATUS_LULUS_COLORS[reg.statusLulus || 'BELUM']}>
-                                {reg.statusLulus === 'LULUS' ? 'Lulus' :
-                                 reg.statusLulus === 'TIDAK_LULUS' ? 'Tidak Lulus' : 'Belum'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className={STATUS_DAFTAR_ULANG_COLORS[reg.statusDaftarUlang || 'BELUM']}>
-                                {reg.statusDaftarUlang === 'DAFTAR_ULANG' ? 'Daftar Ulang' :
-                                 reg.statusDaftarUlang === 'TIDAK_DAFTAR_ULANG' ? 'Tidak Daftar Ulang' : 'Belum'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex items-center justify-end gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-blue-600 hover:text-white hover:bg-blue-600"
-                                  title="Tetapkan Daftar Ulang"
-                                  onClick={async () => {
-                                    try {
-                                      const res = await fetch('/api/registrations/status-daftar-ulang', {
-                                        method: 'PATCH',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ id: reg.id, statusDaftarUlang: 'DAFTAR_ULANG' }),
-                                      })
-                                      const data = await res.json()
-                                      if (data.success) {
-                                        toast({ title: 'Berhasil', description: `${reg.nama} ditetapkan DAFTAR ULANG` })
-                                        fetchStats()
-                                        fetchRegistrations()
-                                      }
-                                    } catch {
-                                      toast({ title: 'Gagal', description: 'Gagal mengubah status', variant: 'destructive' })
-                                    }
-                                  }}
-                                >
-                                  <ClipboardCheck className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-orange-600 hover:text-white hover:bg-orange-600"
-                                  title="Tetapkan Tidak Daftar Ulang"
-                                  onClick={async () => {
-                                    try {
-                                      const res = await fetch('/api/registrations/status-daftar-ulang', {
-                                        method: 'PATCH',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ id: reg.id, statusDaftarUlang: 'TIDAK_DAFTAR_ULANG' }),
-                                      })
-                                      const data = await res.json()
-                                      if (data.success) {
-                                        toast({ title: 'Berhasil', description: `${reg.nama} ditetapkan TIDAK DAFTAR ULANG` })
-                                        fetchStats()
-                                        fetchRegistrations()
-                                      }
-                                    } catch {
-                                      toast({ title: 'Gagal', description: 'Gagal mengubah status', variant: 'destructive' })
-                                    }
-                                  }}
-                                >
-                                  <XCircle className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-gray-500 hover:text-white hover:bg-gray-500"
-                                  title="Reset ke Belum"
-                                  onClick={async () => {
-                                    try {
-                                      const res = await fetch('/api/registrations/status-daftar-ulang', {
-                                        method: 'PATCH',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ id: reg.id, statusDaftarUlang: 'BELUM' }),
-                                      })
-                                      const data = await res.json()
-                                      if (data.success) {
-                                        toast({ title: 'Berhasil', description: `Status ${reg.nama} direset` })
-                                        fetchStats()
-                                        fetchRegistrations()
-                                      }
-                                    } catch {
-                                      toast({ title: 'Gagal', description: 'Gagal mengubah status', variant: 'destructive' })
-                                    }
-                                  }}
-                                >
-                                  <RotateCcw className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      })()}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* ==================== PENGATURAN TAB ==================== */}
-          <TabsContent value="pengaturan" className="space-y-6">
-            {/* Header */}
-            <Card className="overflow-hidden border-0 shadow-lg">
-              <div className="bg-gradient-to-r from-sky-700 via-sky-600 to-cyan-600 p-4 sm:p-6 text-white">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <Settings className="w-6 h-6 sm:w-8 sm:h-8" />
-                  <div>
-                    <h2 className="text-lg sm:text-2xl font-bold tracking-wide">PENGATURAN SISTEM</h2>
-                    <p className="text-sky-100 mt-0.5 sm:mt-1 text-xs sm:text-sm">{appName}{schoolName ? ` — ${schoolName}` : ''} — Atur user, kuota siswa, dan persentase jalur pendaftaran</p>
-                  </div>
-                </div>
-              </div>
-            </Card>
-
-            {/* Manajemen User */}
-            <Card className="shadow-sm hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <UserCog className="w-5 h-5 text-violet-600" />
-                    Manajemen User
-                  </CardTitle>
-                  <Button
-                    onClick={() => {
-                      setAddUserForm({ username: '', password: '', namaLengkap: '', role: 'verifikator' })
-                      setAddUserOpen(true)
-                    }}
-                    size="sm"
-                    className="bg-emerald-600 hover:bg-emerald-700"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Tambah User
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {/* Admin Profile Card */}
-                {authUser && (
-                  <div className="mb-4 p-4 rounded-xl bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-md">
-                          <span className="text-lg font-bold text-white">{authUser.namaLengkap?.charAt(0) || 'A'}</span>
-                        </div>
-                        <div>
-                          <p className="font-semibold text-gray-900">{authUser.namaLengkap}</p>
-                          <p className="text-xs text-gray-500">@{authUser.username} · <span className="text-violet-600 font-medium">{authUser.role === 'admin' ? 'Administrator' : 'Verifikator'}</span></p>
-                        </div>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setEditProfileForm({ username: authUser.username, password: '', namaLengkap: authUser.namaLengkap })
-                          setEditProfileOpen(true)
-                        }}
-                        className="border-violet-200 text-violet-700 hover:bg-violet-50"
-                      >
-                        <Pencil className="w-3.5 h-3.5 mr-1" /> Edit Profil
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* User Table */}
-                {usersLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-                    <p className="text-sm text-gray-400 ml-2">Memuat data user...</p>
-                  </div>
-                ) : (
-                  <div className="border rounded-xl overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-violet-50/80">
-                          <TableHead className="w-10 text-center">No</TableHead>
-                          <TableHead>Username</TableHead>
-                          <TableHead>Nama Lengkap</TableHead>
-                          <TableHead className="w-28 text-center">Role</TableHead>
-                          <TableHead className="w-24 text-center">Status</TableHead>
-                          <TableHead className="w-36 text-center">Login Terakhir</TableHead>
-                          <TableHead className="w-28 text-right">Aksi</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {users.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={7} className="text-center py-8 text-gray-400">
-                              Belum ada user terdaftar
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          users.map((user, idx) => (
-                            <TableRow key={user.id} className={!user.aktif ? 'opacity-50' : ''}>
-                              <TableCell className="text-center text-sm text-gray-500">{idx + 1}</TableCell>
-                              <TableCell className="font-mono text-sm">@{user.username}</TableCell>
-                              <TableCell className="font-medium text-sm">{user.namaLengkap}</TableCell>
-                              <TableCell className="text-center">
-                                <Badge className={`text-[10px] px-2 py-0.5 ${
-                                  user.role === 'admin'
-                                    ? 'bg-violet-100 text-violet-700 border border-violet-200'
-                                    : 'bg-sky-100 text-sky-700 border border-sky-200'
-                                }`}>
-                                  {user.role === 'admin' ? 'Admin' : 'Verifikator'}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <span className={`inline-flex items-center gap-1 text-xs font-medium ${
-                                  user.aktif ? 'text-emerald-600' : 'text-gray-400'
-                                }`}>
-                                  {user.aktif ? <><CheckCircle2 className="w-3 h-3" /> Aktif</> : <><XCircle className="w-3 h-3" /> Nonaktif</>}
-                                </span>
-                              </TableCell>
-                              <TableCell className="text-center text-xs text-gray-400">
-                                {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex items-center justify-end gap-1">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="text-violet-600 hover:text-violet-800 hover:bg-violet-50 h-8 w-8 p-0"
-                                    onClick={() => {
-                                      setEditUserData({ id: user.id, username: user.username, namaLengkap: user.namaLengkap, role: user.role, aktif: user.aktif })
-                                      setEditUserForm({ username: user.username, password: '', namaLengkap: user.namaLengkap, role: user.role, aktif: user.aktif })
-                                      setEditUserOpen(true)
-                                    }}
-                                    title="Edit user"
-                                  >
-                                    <Pencil className="w-3.5 h-3.5" />
-                                  </Button>
-                                  {user.id !== authUser?.id && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
-                                      onClick={() => {
-                                        setDeleteUserTarget({ id: user.id, namaLengkap: user.namaLengkap })
-                                        setDeleteUserOpen(true)
-                                      }}
-                                      title="Hapus user"
-                                    >
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                    </Button>
-                                  )}
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Nama Aplikasi */}
-            <Card className="shadow-sm hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Pencil className="w-5 h-5 text-emerald-600" />
-                  Nama Aplikasi
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-4">
-                  <div className="flex-1 space-y-3">
-                    <div>
-                      <label className="text-sm text-gray-500 font-medium">Nama Aplikasi</label>
-                      <p className="text-[10px] text-gray-400">Ditampilkan di baris pertama (contoh: SPMB 2026)</p>
-                      <Input
-                        value={appName}
-                        onChange={(e) => setAppName(e.target.value)}
-                        className="text-lg font-bold mt-1"
-                        placeholder="Contoh: SPMB 2026"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-500 font-medium">Nama Sekolah</label>
-                      <p className="text-[10px] text-gray-400">Ditampilkan di baris kedua (contoh: SMA Negeri 1 Telukdalam)</p>
-                      <Input
-                        value={schoolName}
-                        onChange={(e) => setSchoolName(e.target.value)}
-                        className="text-base font-semibold mt-1"
-                        placeholder="Contoh: SMA Negeri 1 Telukdalam"
-                      />
-                    </div>
-                    <Button
-                      onClick={saveAppName}
-                      disabled={settingsSaving}
-                      className="bg-emerald-600 hover:bg-emerald-700"
-                    >
-                      {settingsSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                      Simpan
-                    </Button>
-                  </div>
-                  <div className="bg-emerald-50 rounded-xl p-5 text-center border border-emerald-100 min-w-[200px]">
-                    <p className="text-lg font-bold text-emerald-700 leading-tight">{appName}</p>
-                    {schoolName && <p className="text-sm font-semibold text-emerald-600 mt-0.5">{schoolName}</p>}
-                    <p className="text-xs text-emerald-500 font-medium mt-1">Nama Aplikasi</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Kuota Siswa */}
-            <Card className="shadow-sm hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Users className="w-5 h-5 text-sky-600" />
-                  Kuota Siswa
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-4">
-                  <div className="flex-1">
-                    <label className="text-sm text-gray-500 font-medium">Jumlah Total Kuota Siswa Baru</label>
-                    <div className="flex items-center gap-2 mt-2">
-                      <Input
-                        type="number"
-                        min={0}
-                        value={kuota}
-                        onChange={(e) => setKuota(parseInt(e.target.value) || 0)}
-                        className="max-w-[200px] text-lg font-bold"
-                        placeholder="Masukkan kuota..."
-                      />
-                      <Button
-                        onClick={saveKuota}
-                        disabled={settingsSaving}
-                        className="bg-sky-600 hover:bg-sky-700"
-                      >
-                        {settingsSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                        Simpan
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="bg-sky-50 rounded-xl p-5 text-center border border-sky-100 min-w-[160px]">
-                    <p className="text-4xl font-bold text-sky-700">{kuota}</p>
-                    <p className="text-xs text-sky-600 font-medium mt-1">Total Kuota</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Distribusi Jalur */}
-            <Card className="shadow-sm">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <ClipboardCheck className="w-5 h-5 text-amber-600" />
-                    Distribusi Jalur Pendaftaran
-                  </CardTitle>
-                  <Button
-                    onClick={() => setAddJalurOpen(true)}
-                    size="sm"
-                    className="bg-emerald-600 hover:bg-emerald-700"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Tambah Jalur
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {settingsLoading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-                    <p className="text-sm text-gray-400 ml-2">Memuat pengaturan...</p>
-                  </div>
-                ) : jalurConfigs.length === 0 ? (
-                  <div className="text-center py-12">
-                    <p className="text-gray-500">Belum ada jalur yang dikonfigurasi</p>
-                    <Button className="mt-3 bg-emerald-600 hover:bg-emerald-700" onClick={() => setAddJalurOpen(true)}>
-                      <Plus className="w-4 h-4" /> Tambah Jalur Pertama
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {/* Total percentage bar */}
-                    {(() => {
-                      const totalPersen = jalurConfigs.filter(j => j.aktif).reduce((sum, j) => sum + j.persentase, 0)
-                      const totalSiswa = jalurConfigs.filter(j => j.aktif).reduce((sum, j) => sum + Math.round(kuota * j.persentase / 100), 0)
-                      return (
-                        <div className={`rounded-xl p-4 border-2 ${totalPersen === 100 ? 'bg-emerald-50 border-emerald-300' : totalPersen > 100 ? 'bg-red-50 border-red-300' : 'bg-amber-50 border-amber-300'}`}>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              {totalPersen === 100 ? <CheckCircle2 className="w-5 h-5 text-emerald-600" /> :
-                               totalPersen > 100 ? <AlertTriangle className="w-5 h-5 text-red-600" /> :
-                               <AlertCircle className="w-5 h-5 text-amber-600" />}
-                              <span className="font-semibold text-sm">
-                                Total Persentase: {totalPersen.toFixed(1)}%
-                              </span>
-                            </div>
-                            <span className="text-sm font-medium">
-                              Total Siswa: <strong>{totalSiswa}</strong> dari {kuota} kuota
-                            </span>
-                          </div>
-                          {/* Progress bar */}
-                          <div className="mt-2 h-3 bg-gray-200 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all duration-500 ${totalPersen === 100 ? 'bg-emerald-500' : totalPersen > 100 ? 'bg-red-500' : 'bg-amber-500'}`}
-                              style={{ width: `${Math.min(totalPersen, 100)}%` }}
-                            />
-                          </div>
-                          {totalPersen !== 100 && (
-                            <p className={`text-xs mt-2 ${totalPersen > 100 ? 'text-red-600' : 'text-amber-600'}`}>
-                              {totalPersen > 100
-                                ? `⚠ Persentase melebihi 100%! Kurangi ${(totalPersen - 100).toFixed(1)}%`
-                                : `ℹ Persentase belum 100%. Tambahkan ${(100 - totalPersen).toFixed(1)}% lagi`
-                              }
-                            </p>
-                          )}
-                        </div>
-                      )
-                    })()}
-
-                    {/* Jalur list */}
-                    <div className="border rounded-xl overflow-hidden">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="bg-sky-50/80">
-                            <TableHead className="w-10 text-center">No</TableHead>
-                            <TableHead>Jalur</TableHead>
-                            <TableHead className="w-32 text-center">Persentase</TableHead>
-                            <TableHead className="w-40 text-center">Jumlah Siswa</TableHead>
-                            <TableHead className="w-24 text-center">Status</TableHead>
-                            <TableHead className="w-28 text-right">Aksi</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {jalurConfigs.map((jalur, idx) => {
-                            const jumlahSiswa = Math.round(kuota * jalur.persentase / 100)
-                            const barWidth = Math.min(jalur.persentase, 100)
-                            return (
-                              <TableRow key={jalur.id} className={!jalur.aktif ? 'opacity-50' : ''}>
-                                <TableCell className="text-center text-sm text-gray-500">{idx + 1}</TableCell>
-                                <TableCell>
-                                  <div className="flex items-center gap-2">
-                                    <div
-                                      className="w-3 h-3 rounded-full"
-                                      style={{
-                                        backgroundColor:
-                                          jalur.nama === 'Domisili' ? '#3b82f6' :
-                                          jalur.nama.includes('Afirmasi') || jalur.nama.includes('KTM') ? '#f59e0b' :
-                                          jalur.nama.includes('Disabilitas') ? '#8b5cf6' :
-                                          jalur.nama === 'Anak Guru' ? '#ec4899' :
-                                          jalur.nama === 'Mutasi' ? '#06b6d4' :
-                                          jalur.nama.includes('Prestasi') ? '#10b981' :
-                                          jalur.nama.includes('Non Akademik') ? '#f97316' :
-                                          '#6b7280'
-                                      }}
-                                    />
-                                    <span className="font-medium text-sm">{jalur.nama}</span>
-                                  </div>
-                                </TableCell>
-                                <TableCell className="text-center">
-                                  <div className="flex items-center justify-center gap-1">
-                                    <Input
-                                      type="number"
-                                      min={0}
-                                      max={100}
-                                      step={0.5}
-                                      value={jalur.persentase}
-                                      onChange={(e) => {
-                                        const val = parseFloat(e.target.value) || 0
-                                        setJalurConfigs(prev => prev.map(j => j.id === jalur.id ? { ...j, persentase: val } : j))
-                                      }}
-                                      onBlur={() => updateJalurPersentase(jalur.id, jalur.persentase)}
-                                      className="w-20 text-center text-sm font-bold"
-                                    />
-                                    <span className="text-xs text-gray-400">%</span>
-                                  </div>
-                                  {/* Mini progress bar */}
-                                  <div className="mt-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                    <div
-                                      className="h-full bg-sky-400 rounded-full transition-all"
-                                      style={{ width: `${barWidth}%` }}
-                                    />
-                                  </div>
-                                </TableCell>
-                                <TableCell className="text-center">
-                                  <div className="inline-flex flex-col items-center">
-                                    <span className="text-lg font-bold text-sky-700">{jumlahSiswa}</span>
-                                    <span className="text-xs text-gray-400">siswa</span>
-                                  </div>
-                                </TableCell>
-                                <TableCell className="text-center">
-                                  <button
-                                    onClick={() => toggleJalurAktif(jalur.id, !jalur.aktif)}
-                                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-colors ${
-                                      jalur.aktif
-                                        ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
-                                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                                    }`}
-                                  >
-                                    {jalur.aktif ? <><CheckCircle2 className="w-3 h-3" /> Aktif</> : <><XCircle className="w-3 h-3" /> Nonaktif</>}
-                                  </button>
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                    onClick={() => deleteJalur(jalur.id, jalur.nama)}
-                                    title="Hapus jalur"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </Button>
-                                </TableCell>
-                              </TableRow>
-                            )
-                          })}
-                        </TableBody>
-                      </Table>
-                    </div>
-
-                    {/* Summary Cards */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
-                      {jalurConfigs.filter(j => j.aktif).map(jalur => {
-                        const jumlahSiswa = Math.round(kuota * jalur.persentase / 100)
-                        const colors: Record<string, string> = {
-                          'Domisili': 'from-blue-500 to-blue-600',
-                          'Afirmasi (KTM)': 'from-amber-500 to-amber-600',
-                          'Disabilitas': 'from-purple-500 to-purple-600',
-                          'Anak Guru': 'from-pink-500 to-pink-600',
-                          'Mutasi': 'from-cyan-500 to-cyan-600',
-                          'Prestasi Nilai Rapor': 'from-emerald-500 to-emerald-600',
-                          'Prestasi Non Akademik': 'from-orange-500 to-orange-600',
-                        }
-                        const gradient = colors[jalur.nama] || 'from-gray-500 to-gray-600'
-                        return (
-                          <div key={jalur.id} className={`rounded-xl p-4 text-white bg-gradient-to-br ${gradient} shadow-sm`}>
-                            <p className="text-xs font-medium opacity-80">{jalur.nama}</p>
-                            <p className="text-3xl font-bold mt-1">{jumlahSiswa}</p>
-                            <p className="text-xs opacity-70 mt-0.5">{jalur.persentase}% dari {kuota}</p>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Sinkronisasi Portal SPMB */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Globe className="w-5 h-5 text-indigo-600" />
-                  Sinkronisasi Portal SPMB
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
-                    <div className="flex items-start gap-3">
-                      <Globe className="w-5 h-5 text-indigo-600 mt-0.5 shrink-0" />
-                      <div className="text-sm text-indigo-700">
-                        <p className="font-medium">Ambil data otomatis dari portal SPMB Sumatera Utara</p>
-                        <p className="mt-1 text-indigo-600">Masukkan kredensial login portal untuk mengambil data pendaftar secara otomatis. Data akan disinkronkan dengan database lokal menggunakan deduplikasi NISN.</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
-                        <Mail className="w-3.5 h-3.5" /> Email Portal
-                      </label>
-                      <Input
-                        type="email"
-                        value={portalSyncEmail}
-                        onChange={(e) => setPortalSyncEmail(e.target.value)}
-                        onFocus={(e) => e.target.removeAttribute('readonly')}
-                        placeholder="email@disdik.sumutprov.go.id"
-                        className="mt-1.5"
-                        autoComplete="off"
-                        readOnly
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
-                        <Lock className="w-3.5 h-3.5" /> Password Portal
-                      </label>
-                      <Input
-                        type="password"
-                        value={portalSyncPassword}
-                        onChange={(e) => setPortalSyncPassword(e.target.value)}
-                        onFocus={(e) => e.target.removeAttribute('readonly')}
-                        placeholder="Masukkan password..."
-                        className="mt-1.5"
-                        autoComplete="new-password"
-                        readOnly
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">Status Pendaftar</label>
-                      <select
-                        value={portalSyncStatus}
-                        onChange={(e) => setPortalSyncStatus(e.target.value)}
-                        className="mt-1.5 w-full h-10 px-3 border border-gray-200 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-sky-500"
-                      >
-                        <option value="accepted">Accepted (Diterima)</option>
-                        <option value="">Semua Status</option>
-                        <option value="pending">Pending</option>
-                        <option value="rejected">Rejected</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">Jumlah Halaman</label>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={100}
-                        value={portalSyncPages}
-                        onChange={(e) => setPortalSyncPages(parseInt(e.target.value) || 10)}
-                        className="mt-1.5"
-                      />
-                      <p className="text-xs text-gray-400 mt-1">Setiap halaman berisi 10 data</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <Button
-                      onClick={handlePortalSync}
-                      disabled={portalSyncing}
-                      className="bg-indigo-600 hover:bg-indigo-700"
-                    >
-                      {portalSyncing ? (
-                        <><Loader2 className="w-4 h-4 animate-spin" /> Menyinkronkan...</>
-                      ) : (
-                        <><RefreshCw className="w-4 h-4" /> Mulai Sinkronisasi</>
-                      )}
-                    </Button>
-                    <a
-                      href="https://adminspmb.disdik.sumutprov.go.id/admin/registration"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-indigo-600 hover:text-indigo-800 underline"
-                    >
-                      Buka Portal SPMB ↗
-                    </a>
-                  </div>
-
-                  {/* Sync Result */}
-                  {portalSyncResult && (
-                    <div className={`rounded-xl p-4 border-2 ${portalSyncResult.success ? 'bg-emerald-50 border-emerald-300' : 'bg-red-50 border-red-300'}`}>
-                      <div className="flex items-start gap-3">
-                        {portalSyncResult.success ? (
-                          <CheckCircle2 className="w-5 h-5 text-emerald-600 mt-0.5 shrink-0" />
-                        ) : (
-                          <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5 shrink-0" />
-                        )}
-                        <div>
-                          <p className={`font-semibold text-sm ${portalSyncResult.success ? 'text-emerald-700' : 'text-red-700'}`}>
-                            {portalSyncResult.success ? 'Sinkronisasi Berhasil' : 'Sinkronisasi Gagal'}
-                          </p>
-                          <p className={`text-sm mt-1 ${portalSyncResult.success ? 'text-emerald-600' : 'text-red-600'}`}>
-                            {portalSyncResult.message}
-                          </p>
-                          {portalSyncResult.success && portalSyncResult.total !== undefined && (
-                            <div className="flex items-center gap-4 mt-3">
-                              <div className="text-center">
-                                <p className="text-2xl font-bold text-emerald-700">{portalSyncResult.created}</p>
-                                <p className="text-xs text-emerald-600">Data Baru</p>
-                              </div>
-                              <div className="text-center">
-                                <p className="text-2xl font-bold text-amber-600">{portalSyncResult.updated}</p>
-                                <p className="text-xs text-amber-600">Diperbarui</p>
-                              </div>
-                              <div className="text-center">
-                                <p className="text-2xl font-bold text-gray-500">{portalSyncResult.unchanged}</p>
-                                <p className="text-xs text-gray-500">Tidak Berubah</p>
-                              </div>
-                              <div className="text-center">
-                                <p className="text-2xl font-bold text-sky-700">{portalSyncResult.total}</p>
-                                <p className="text-xs text-sky-700">Total Diambil</p>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Add Jalur Dialog */}
-            <Dialog open={addJalurOpen} onOpenChange={setAddJalurOpen}>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
-                    <Plus className="w-5 h-5 text-emerald-600" />
-                    Tambah Jalur Baru
-                  </DialogTitle>
-                  <DialogDescription>Tambahkan jalur pendaftaran baru untuk {appName}{schoolName ? ` — ${schoolName}` : ''}</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Nama Jalur</label>
-                    <Input
-                      value={newJalurNama}
-                      onChange={(e) => setNewJalurNama(e.target.value)}
-                      placeholder="Contoh: Zonasi, Perpindahan Orang Tua"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Persentase Kuota (%)</label>
-                    <Input
-                      type="number"
-                      min={0}
-                      max={100}
-                      step={0.5}
-                      value={newJalurPersentase}
-                      onChange={(e) => setNewJalurPersentase(parseFloat(e.target.value) || 0)}
-                      className="mt-1"
-                    />
-                  </div>
-                  {newJalurPersentase > 0 && kuota > 0 && (
-                    <div className="bg-sky-50 rounded-lg p-3 border border-sky-200">
-                      <p className="text-sm text-sky-700">
-                        Estimasi jumlah siswa: <strong>{Math.round(kuota * newJalurPersentase / 100)}</strong> siswa
-                      </p>
-                    </div>
-                  )}
-                </div>
-                <DialogFooter className="gap-2">
-                  <Button variant="outline" onClick={() => setAddJalurOpen(false)}>Batal</Button>
-                  <Button onClick={addJalur} className="bg-emerald-600 hover:bg-emerald-700">
-                    <Plus className="w-4 h-4" /> Tambah
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-
-            {/* Add User Dialog */}
-            <Dialog open={addUserOpen} onOpenChange={setAddUserOpen}>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
-                    <Plus className="w-5 h-5 text-emerald-600" />
-                    Tambah User Baru
-                  </DialogTitle>
-                  <DialogDescription>Tambahkan user baru untuk mengakses sistem {appName}{schoolName ? ` — ${schoolName}` : ''}</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Username</label>
-                    <Input
-                      value={addUserForm.username}
-                      onChange={(e) => setAddUserForm(prev => ({ ...prev, username: e.target.value }))}
-                      placeholder="Minimal 3 karakter"
-                      className="mt-1"
-                      autoComplete="off"
-                      readOnly
-                      onFocus={(e) => e.target.removeAttribute('readonly')}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Password</label>
-                    <Input
-                      type="text"
-                      value={addUserForm.password}
-                      onChange={(e) => setAddUserForm(prev => ({ ...prev, password: e.target.value }))}
-                      placeholder="Minimal 6 karakter"
-                      className="mt-1"
-                      autoComplete="off"
-                      readOnly
-                      onFocus={(e) => e.target.removeAttribute('readonly')}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Nama Lengkap</label>
-                    <Input
-                      value={addUserForm.namaLengkap}
-                      onChange={(e) => setAddUserForm(prev => ({ ...prev, namaLengkap: e.target.value }))}
-                      placeholder="Nama lengkap user"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Role</label>
-                    <select
-                      value={addUserForm.role}
-                      onChange={(e) => setAddUserForm(prev => ({ ...prev, role: e.target.value }))}
-                      className="mt-1 w-full h-10 px-3 border border-gray-200 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-500"
-                    >
-                      <option value="verifikator">Verifikator</option>
-                      <option value="admin">Admin</option>
-                    </select>
-                  </div>
-                </div>
-                <DialogFooter className="gap-2">
-                  <Button variant="outline" onClick={() => setAddUserOpen(false)}>Batal</Button>
-                  <Button onClick={handleAddUser} disabled={userSaving} className="bg-emerald-600 hover:bg-emerald-700">
-                    {userSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                    Tambah
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-
-            {/* Edit User Dialog */}
-            <Dialog open={editUserOpen} onOpenChange={setEditUserOpen}>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
-                    <Pencil className="w-5 h-5 text-violet-600" />
-                    Edit User
-                  </DialogTitle>
-                  <DialogDescription>Ubah data user @{editUserData?.username}</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Username</label>
-                    <Input
-                      value={editUserForm.username}
-                      onChange={(e) => setEditUserForm(prev => ({ ...prev, username: e.target.value }))}
-                      className="mt-1"
-                      autoComplete="off"
-                      readOnly
-                      onFocus={(e) => e.target.removeAttribute('readonly')}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Password</label>
-                    <Input
-                      type="text"
-                      value={editUserForm.password}
-                      onChange={(e) => setEditUserForm(prev => ({ ...prev, password: e.target.value }))}
-                      placeholder="Kosongkan jika tidak ingin mengubah password"
-                      className="mt-1"
-                      autoComplete="off"
-                      readOnly
-                      onFocus={(e) => e.target.removeAttribute('readonly')}
-                    />
-                    <p className="text-xs text-gray-400 mt-1">Kosongkan jika tidak ingin mengubah password</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Nama Lengkap</label>
-                    <Input
-                      value={editUserForm.namaLengkap}
-                      onChange={(e) => setEditUserForm(prev => ({ ...prev, namaLengkap: e.target.value }))}
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Role</label>
-                    <select
-                      value={editUserForm.role}
-                      onChange={(e) => setEditUserForm(prev => ({ ...prev, role: e.target.value }))}
-                      className="mt-1 w-full h-10 px-3 border border-gray-200 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-500"
-                    >
-                      <option value="verifikator">Verifikator</option>
-                      <option value="admin">Admin</option>
-                    </select>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <label className="text-sm font-medium text-gray-700">Status</label>
-                    <button
-                      type="button"
-                      onClick={() => setEditUserForm(prev => ({ ...prev, aktif: !prev.aktif }))}
-                      className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                        editUserForm.aktif
-                          ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
-                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                      }`}
-                    >
-                      {editUserForm.aktif ? <><CheckCircle2 className="w-3 h-3" /> Aktif</> : <><XCircle className="w-3 h-3" /> Nonaktif</>}
-                    </button>
-                  </div>
-                </div>
-                <DialogFooter className="gap-2">
-                  <Button variant="outline" onClick={() => setEditUserOpen(false)}>Batal</Button>
-                  <Button onClick={handleEditUser} disabled={userSaving} className="bg-violet-600 hover:bg-violet-700">
-                    {userSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                    Simpan
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-
-            {/* Edit Profile Dialog */}
-            <Dialog open={editProfileOpen} onOpenChange={setEditProfileOpen}>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
-                    <UserCog className="w-5 h-5 text-violet-600" />
-                    Edit Profil Saya
-                  </DialogTitle>
-                  <DialogDescription>Ubah data profil dan password akun Anda</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Username</label>
-                    <Input
-                      value={editProfileForm.username}
-                      onChange={(e) => setEditProfileForm(prev => ({ ...prev, username: e.target.value }))}
-                      className="mt-1"
-                      autoComplete="off"
-                      readOnly
-                      onFocus={(e) => e.target.removeAttribute('readonly')}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Nama Lengkap</label>
-                    <Input
-                      value={editProfileForm.namaLengkap}
-                      onChange={(e) => setEditProfileForm(prev => ({ ...prev, namaLengkap: e.target.value }))}
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Password Baru</label>
-                    <Input
-                      type="text"
-                      value={editProfileForm.password}
-                      onChange={(e) => setEditProfileForm(prev => ({ ...prev, password: e.target.value }))}
-                      placeholder="Kosongkan jika tidak ingin mengubah password"
-                      className="mt-1"
-                      autoComplete="off"
-                      readOnly
-                      onFocus={(e) => e.target.removeAttribute('readonly')}
-                    />
-                    <p className="text-xs text-gray-400 mt-1">Kosongkan jika tidak ingin mengubah password</p>
-                  </div>
-                </div>
-                <DialogFooter className="gap-2">
-                  <Button variant="outline" onClick={() => setEditProfileOpen(false)}>Batal</Button>
-                  <Button onClick={handleUpdateProfile} disabled={editProfileSaving} className="bg-violet-600 hover:bg-violet-700">
-                    {editProfileSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                    Simpan
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-
-            {/* Delete User Dialog */}
-            <Dialog open={deleteUserOpen} onOpenChange={setDeleteUserOpen}>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2 text-red-700">
-                    <Trash2 className="w-5 h-5" />
-                    Hapus User
-                  </DialogTitle>
-                  <DialogDescription>Apakah Anda yakin ingin menghapus user <strong>{deleteUserTarget?.namaLengkap}</strong>?</DialogDescription>
-                </DialogHeader>
-                <p className="text-sm text-gray-500">Tindakan ini tidak dapat dibatalkan. User yang dihapus tidak akan bisa login ke sistem.</p>
-                <DialogFooter className="gap-2">
-                  <Button variant="outline" onClick={() => setDeleteUserOpen(false)}>Batal</Button>
-                  <Button onClick={handleDeleteUser} disabled={deleteUserLoading} variant="destructive">
-                    {deleteUserLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                    Hapus
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </TabsContent>
+              </TabsContent>
+            )
+          })}
         </Tabs>
-        </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t bg-gradient-to-r from-slate-900 via-emerald-900 to-slate-900 mt-auto">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-1 sm:gap-2">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" />
-              <p className="text-xs sm:text-sm text-emerald-100 font-medium">&copy; 2026 {appName}{schoolName ? ` — ${schoolName}` : ''}</p>
-            </div>
-            <p className="text-[10px] sm:text-xs text-emerald-200/60">Sistem Verifikasi Penerimaan Peserta Didik Baru</p>
-          </div>
-        </div>
-      </footer>
-
-      {/* ==================== IMPORT DIALOG ==================== */}
-      <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Upload className="w-5 h-5 text-emerald-600" />
-              Import Data CSV
-            </DialogTitle>
-            <DialogDescription>
-              Import data pendaftar dari file CSV. Format harus sesuai template SPMB 2026.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Status Import</label>
-              <Select value={importStatus} onValueChange={setImportStatus}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ON PROGRESS">On Progress</SelectItem>
-                  <SelectItem value="PENDING">Pending</SelectItem>
-                  <SelectItem value="VERIFIED">Verified (Diterima)</SelectItem>
-                  <SelectItem value="REJECTED">Rejected (Ditolak)</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-gray-500">Status yang akan diterapkan ke semua data yang diimport</p>
-            </div>
-            <div
-              className="border-2 border-dashed rounded-lg p-8 text-center hover:border-emerald-400 transition-colors cursor-pointer"
-              onClick={() => document.getElementById('csv-upload')?.click()}
-              onDragOver={(e) => { e.preventDefault(); e.stopPropagation() }}
-              onDrop={(e) => {
-                e.preventDefault(); e.stopPropagation()
-                const file = e.dataTransfer.files[0]
-                if (file && file.name.endsWith('.csv')) setCsvFile(file)
-              }}
-            >
-              <FileSpreadsheet className="w-10 h-10 mx-auto text-gray-400 mb-3" />
-              {csvFile ? (
-                <div>
-                  <p className="font-medium text-emerald-700">{csvFile.name}</p>
-                  <p className="text-sm text-gray-500">{(csvFile.size / 1024).toFixed(1)} KB</p>
-                </div>
-              ) : (
-                <div>
-                  <p className="font-medium text-gray-700">Klik atau seret file CSV ke sini</p>
-                  <p className="text-sm text-gray-400 mt-1">Format: No.Registrasi, Nama, NISN, Sub Jalur, dll.</p>
-                </div>
-              )}
-              <input
-                id="csv-upload"
-                type="file"
-                accept=".csv"
-                className="hidden"
-                onChange={(e) => { const file = e.target.files?.[0]; if (file) setCsvFile(file) }}
-              />
-            </div>
-
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-              <div className="flex gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-                <div className="text-sm text-amber-700">
-                  <p className="font-medium">Format CSV yang diharapkan:</p>
-                  <p className="mt-1">No.Registrasi, Nama, NISN, Sub Jalur, NPSN Sekolah Pilihan, Nama Sekolah Pilihan, Jurusan, NPSN Sekolah Asal, Nama Sekolah Asal, Status, Waktu Daftar</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setImportDialogOpen(false)}>Batal</Button>
-            <Button onClick={handleImport} disabled={!csvFile || importing} className="bg-emerald-600 hover:bg-emerald-700">
-              {importing ? (<><Loader2 className="w-4 h-4 animate-spin" /> Mengimport...</>) : (<><Upload className="w-4 h-4" /> Import</>)}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ==================== CHANGE PASSWORD DIALOG ==================== */}
-      <Dialog open={changePasswordOpen} onOpenChange={setChangePasswordOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Lock className="w-5 h-5 text-emerald-600" />
-              Ganti Password
-            </DialogTitle>
-            <DialogDescription>Ubah password akun Anda</DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleChangePassword} className="space-y-4" autoComplete="off">
-            {changePasswordError && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2">
-                <XCircle className="w-4 h-4 text-red-500 shrink-0" />
-                <p className="text-red-700 text-sm">{changePasswordError}</p>
-              </div>
-            )}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Password Lama</label>
-              <div className="relative">
-                <Input
-                  type={showCurrentPassword ? 'text' : 'password'}
-                  name="current-password"
-                  value={changePasswordCurrent}
-                  onChange={(e) => setChangePasswordCurrent(e.target.value)}
-                  onFocus={(e) => e.target.removeAttribute('readonly')}
-                  placeholder="Masukkan password lama"
-                  autoComplete="off"
-                  readOnly
-                  required
-                />
-                <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600" onClick={() => setShowCurrentPassword(!showCurrentPassword)}>
-                  {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Password Baru</label>
-              <div className="relative">
-                <Input
-                  type={showNewPassword ? 'text' : 'password'}
-                  name="new-password"
-                  value={changePasswordNew}
-                  onChange={(e) => setChangePasswordNew(e.target.value)}
-                  onFocus={(e) => e.target.removeAttribute('readonly')}
-                  placeholder="Minimal 6 karakter"
-                  autoComplete="new-password"
-                  readOnly
-                  required
-                  minLength={6}
-                />
-                <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600" onClick={() => setShowNewPassword(!showNewPassword)}>
-                  {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Konfirmasi Password Baru</label>
-              <Input
-                type="password"
-                name="confirm-new-password"
-                value={changePasswordConfirm}
-                onChange={(e) => setChangePasswordConfirm(e.target.value)}
-                onFocus={(e) => e.target.removeAttribute('readonly')}
-                placeholder="Ulangi password baru"
-                autoComplete="new-password"
-                readOnly
-                required
-                minLength={6}
-              />
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setChangePasswordOpen(false)}>Batal</Button>
-              <Button type="submit" disabled={changePasswordLoading} className="bg-emerald-600 hover:bg-emerald-700">
-                {changePasswordLoading ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Menyimpan...</> : 'Simpan Password'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* ==================== RANKING PREVIEW DIALOG ==================== */}
-      <Dialog open={rankingPreviewOpen} onOpenChange={setRankingPreviewOpen}>
-        <DialogContent className="sm:max-w-6xl max-h-[90vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              {rankingPreviewType === 'pdf' ? (
-                <><Printer className="w-5 h-5 text-red-600" /> Preview Cetak PDF</>
-              ) : (
-                <><FileSpreadsheet className="w-5 h-5 text-emerald-600" /> Preview Cetak Excel</>
-              )}
-            </DialogTitle>
-            <DialogDescription>
-              {rankingPreviewType === 'pdf'
-                ? 'Pratinjau hasil cetak perangkingan. Klik "Cetak PDF" untuk membuka dialog cetak.'
-                : 'Pratinjau data yang akan diekspor ke Excel. Klik "Unduh Excel" untuk mengunduh file.'}
-            </DialogDescription>
-          </DialogHeader>
-
-          {/* Jalur Selector */}
-          <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg p-3 border border-amber-200">
-            <div className="flex items-center gap-2 mb-2">
-              <Filter className="w-4 h-4 text-amber-600" />
-              <span className="text-sm font-semibold text-amber-800">Pilih Jalur untuk Dicetak</span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium border-2 transition-all ${
-                  rankingPreviewJalur === 'all'
-                    ? 'bg-amber-600 text-white border-amber-600 shadow-md'
-                    : 'bg-white text-amber-700 border-amber-300 hover:border-amber-500 hover:bg-amber-50'
-                }`}
-                onClick={() => setRankingPreviewJalur('all')}
-              >
-                🏆 Semua Jalur ({rankingData.length})
-              </button>
-              {rankingFilters.jalurOptions.filter((j: string) => j && j.trim() !== '').map((j: string) => {
-                const count = rankingData.filter((r: Record<string, unknown>) => (r.subJalur as string) === j).length
-                return (
-                  <button
-                    key={j}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border-2 transition-all ${
-                      rankingPreviewJalur === j
-                        ? 'bg-amber-600 text-white border-amber-600 shadow-md'
-                        : 'bg-white text-gray-700 border-gray-200 hover:border-amber-400 hover:bg-amber-50'
-                    }`}
-                    onClick={() => setRankingPreviewJalur(j)}
-                  >
-                    {j} ({count})
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Preview Content */}
-          <div className="flex-1 min-h-0 overflow-auto border rounded-lg bg-white">
-            <div className="p-4">
-              {/* Header Preview */}
-              <div className="text-center mb-4 pb-3 border-b-4 border-double border-gray-300">
-                <h2 className="text-lg font-bold tracking-wider">LAPORAN PERANGKINGAN</h2>
-                <p className="text-sm text-gray-500">{appName}{schoolName ? ` — ${schoolName}` : ''} — Sistem Penerimaan Peserta Didik Baru</p>
-                <p className="text-xs text-gray-400 mt-1">
-                  Diurutkan berdasarkan: <strong>{rankingTampilan === 'jarak' ? 'Jarak Terdekat' : rankingTampilan === 'nilai' ? 'Nilai Tertinggi' : 'Skor Komposit'}</strong>
-                  {' · '}Dicetak pada: {new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                </p>
-              </div>
-
-              {/* Filters Preview */}
-              <div className="flex flex-wrap gap-2 justify-center mb-3">
-                <span className="text-xs bg-gray-100 px-2 py-1 rounded border">Jalur: {rankingPreviewJalur !== 'all' ? rankingPreviewJalur : 'Semua'}</span>
-                <span className="text-xs bg-gray-100 px-2 py-1 rounded border">Sekolah: {rankingSekolah !== 'all' ? rankingSekolah : 'Semua'}</span>
-                <span className="text-xs bg-gray-100 px-2 py-1 rounded border">Jurusan: {rankingJurusan !== 'all' ? rankingJurusan : 'Semua'}</span>
-                <span className="text-xs bg-gray-100 px-2 py-1 rounded border">Status: {rankingStatus !== 'all' ? (rankingStatus === 'VERIFIED' ? 'Diterima' : rankingStatus === 'REJECTED' ? 'Ditolak' : 'Menunggu') : 'Semua'}</span>
-              </div>
-
-              {/* Kuota Preview */}
-              {rankingKuota > 0 && (
-                <div className="text-center mb-3 text-xs">
-                  <span className="bg-sky-100 text-sky-700 px-3 py-1 rounded mr-2">Total Kuota: <strong>{rankingKuota}</strong></span>
-                  {rankingKuotaPerJalur.map(kj => (
-                    <span key={kj.nama} className="bg-sky-50 text-sky-600 px-2 py-1 rounded mr-1">{kj.nama}: {kj.kuota} ({kj.persentase}%)</span>
-                  ))}
-                </div>
-              )}
-
-              {/* Table Preview */}
-              <div className="overflow-x-auto border rounded">
-                <Table className="text-xs">
-                  <TableHeader>
-                    <TableRow className="bg-gray-50">
-                      <TableHead className="w-10 text-center font-semibold">No</TableHead>
-                      <TableHead className="w-20 text-center font-semibold">Jalur</TableHead>
-                      <TableHead className="font-semibold">Nama Pendaftar</TableHead>
-                      <TableHead className="font-semibold">Sekolah Asal</TableHead>
-                      <TableHead className="font-semibold">Jurusan</TableHead>
-                      <TableHead className={`text-right font-semibold ${rankingTampilan === 'jarak' ? 'bg-amber-50' : ''}`}>Jarak</TableHead>
-                      <TableHead className={`text-right font-semibold ${rankingTampilan === 'nilai' ? 'bg-amber-50' : ''}`}>Nilai</TableHead>
-                      <TableHead className={`text-right font-semibold ${rankingTampilan === 'komposit' ? 'bg-amber-50' : ''}`}>Skor</TableHead>
-                      <TableHead className="text-center font-semibold">Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {(rankingPreviewJalur === 'all'
-                      ? rankingData
-                      : rankingData.filter((r: Record<string, unknown>) => (r.subJalur as string) === rankingPreviewJalur)
-                    ).slice(0, 20).map((r: Record<string, unknown>, idx: number) => {
-                      const rankNum = idx + 1
-                      const jalurRank = (r._jalurRank as number) || -1
-                      const jarakNum = r._jarakNum as number
-                      const nilaiNum = r._nilaiNum as number
-                      const skorNum = r._skorNum as number
-
-                      const currentKuota = rankingKuotaPerJalur.find(k => {
-                        const jalurName = (r.subJalur as string || '').toLowerCase()
-                        return k.nama.toLowerCase().includes(jalurName) || jalurName.includes(k.nama.toLowerCase())
-                          || (k.nama.toLowerCase().includes('prestasi') && jalurName.includes('prestasi'))
-                          || (k.nama.toLowerCase().includes('domisili') && jalurName.includes('domisili'))
-                          || (k.nama.toLowerCase().includes('mutasi') && jalurName.includes('mutasi'))
-                          || (k.nama.toLowerCase().includes('afirmasi') && (jalurName.includes('keluarga') || jalurName.includes('ktm')))
-                      })?.kuota || 0
-
-                      const sameJalurAbove = rankingData
-                        .filter((other: Record<string, unknown>) =>
-                          (other.subJalur as string) === (r.subJalur as string) &&
-                          ((other._ranking as number) || 0) < rankNum
-                        ).length
-
-                      const withinKuota = currentKuota > 0 && sameJalurAbove < currentKuota
-                      const isVerified = r.verificationStatus === 'VERIFIED'
-
-                      return (
-                        <TableRow key={r.id as string} className={`${withinKuota && !isVerified ? 'bg-emerald-50/50' : ''} ${isVerified ? 'bg-emerald-50' : ''}`}>
-                          <TableCell className="text-center p-1">
-                            <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold ${
-                              rankNum === 1 ? 'bg-amber-400 text-white' :
-                              rankNum === 2 ? 'bg-gray-300 text-gray-700' :
-                              rankNum === 3 ? 'bg-amber-700 text-white' :
-                              withinKuota ? 'bg-emerald-100 text-emerald-700' :
-                              'bg-gray-100 text-gray-500'
-                            }`}>{rankNum}</span>
-                          </TableCell>
-                          <TableCell className="text-center p-1">
-                            <Badge variant="outline" className={`text-[9px] ${SUB_JALUR_COLORS[r.subJalur as string] || 'bg-gray-100 text-gray-700 border-gray-200'}`}>
-                              {r.subJalur as string}
-                            </Badge>
-                            {jalurRank > 0 && <span className="block text-[8px] text-sky-600">#{jalurRank}</span>}
-                          </TableCell>
-                          <TableCell className="p-1">
-                            <p className="text-xs font-medium">{r.nama as string}</p>
-                            <p className="text-[9px] text-gray-400">NISN: {r.nisn as string}</p>
-                          </TableCell>
-                          <TableCell className="text-xs p-1">{r.namaSekolahAsal as string}</TableCell>
-                          <TableCell className="text-xs p-1 text-gray-600">{r.jurusan as string}</TableCell>
-                          <TableCell className={`text-right p-1 ${rankingTampilan === 'jarak' ? 'bg-sky-50/50 font-bold' : ''}`}>
-                            <span className={`text-xs ${jarakNum > 0 ? 'text-sky-700' : 'text-gray-300'}`}>{r.lokasiJarak as string || '-'}</span>
-                          </TableCell>
-                          <TableCell className={`text-right p-1 ${rankingTampilan === 'nilai' ? 'bg-emerald-50/50 font-bold' : ''}`}>
-                            <span className={`text-xs ${nilaiNum > 0 ? 'text-emerald-700' : 'text-gray-300'}`}>{r.nilaiRataRata as string || r.skorNilaiRaport as string || '-'}</span>
-                          </TableCell>
-                          <TableCell className={`text-right p-1 ${rankingTampilan === 'komposit' ? 'bg-amber-50/50 font-bold' : ''}`}>
-                            <span className={`text-xs ${skorNum > 0 ? 'text-amber-700' : 'text-gray-300'}`}>{r.skor as string || '-'}</span>
-                          </TableCell>
-                          <TableCell className="text-center p-1">
-                            <Badge className={`text-[9px] ${STATUS_COLORS[r.verificationStatus as string] || 'bg-gray-100 text-gray-700'}`}>
-                              {r.verificationStatus === 'VERIFIED' ? 'Diterima' : r.verificationStatus === 'REJECTED' ? 'Ditolak' : 'Menunggu'}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
-                {(() => {
-                  const filteredCount = rankingPreviewJalur === 'all'
-                    ? rankingData.length
-                    : rankingData.filter((r: Record<string, unknown>) => (r.subJalur as string) === rankingPreviewJalur).length
-                  return filteredCount > 20 ? (
-                    <div className="text-center py-2 text-xs text-gray-400 border-t">
-                      {'... dan '}{filteredCount - 20}{' data lainnya (total: '}{filteredCount}{' pendaftar)'}
-                    </div>
-                  ) : null
-                })()}
-              </div>
-
-              {/* Legend */}
-              <div className="text-center mt-3 text-xs text-gray-400">
-                🟡 Rangking 1 · ⚪ Rangking 2 · 🟤 Rangking 3 · 🟢 Masuk Kuota · Total: {(() => {
-                  const fc = rankingPreviewJalur === 'all'
-                    ? rankingData.length
-                    : rankingData.filter((r: Record<string, unknown>) => (r.subJalur as string) === rankingPreviewJalur).length
-                  return fc
-                })()} pendaftar
-              </div>
-
-              {/* Excel Data Preview */}
-              {rankingPreviewType === 'excel' && (
-                <div className="mt-4 p-3 bg-emerald-50 rounded-lg border border-emerald-200">
-                  <h4 className="text-xs font-semibold text-emerald-800 mb-2">📋 Data yang akan diekspor ke Excel:</h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px]">
-                    <div className="bg-white rounded p-2 border">
-                      <span className="text-gray-500">Kolom Data</span>
-                      <p className="font-bold text-gray-800">17 kolom</p>
-                    </div>
-                    <div className="bg-white rounded p-2 border">
-                      <span className="text-gray-500">Baris Data</span>
-                      <p className="font-bold text-gray-800">{(() => {
-                        const fc = rankingPreviewJalur === 'all'
-                          ? rankingData.length
-                          : rankingData.filter((r: Record<string, unknown>) => (r.subJalur as string) === rankingPreviewJalur).length
-                        return fc
-                      })()} baris</p>
-                    </div>
-                    <div className="bg-white rounded p-2 border">
-                      <span className="text-gray-500">Sheet</span>
-                      <p className="font-bold text-gray-800">2 sheet</p>
-                    </div>
-                    <div className="bg-white rounded p-2 border">
-                      <span className="text-gray-500">Format</span>
-                      <p className="font-bold text-gray-800">.xlsx</p>
-                    </div>
-                  </div>
-                  <p className="text-[10px] text-emerald-600 mt-2">
-                    Sheet 1: Perangkingan (data lengkap) · Sheet 2: Ringkasan (filter & kuota)
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <DialogFooter className="flex-row gap-2 sm:justify-end">
-            <Button variant="outline" onClick={() => setRankingPreviewOpen(false)}>
-              Batal
-            </Button>
-            <Button
-              onClick={() => {
-                if (rankingPreviewType === 'pdf') {
-                  handleRankingPrintPDF()
-                } else {
-                  handleRankingExportExcel()
-                }
-                setRankingPreviewOpen(false)
-              }}
-              className={rankingPreviewType === 'pdf' ? 'bg-red-600 hover:bg-red-700' : 'bg-emerald-600 hover:bg-emerald-700'}
-            >
-              {rankingPreviewType === 'pdf' ? (
-                <><Printer className="w-4 h-4 mr-2" /> Cetak PDF</>
-              ) : (
-                <><FileDown className="w-4 h-4 mr-2" /> Unduh Excel</>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ==================== PORTAL PASTE DIALOG ==================== */}
-      <Dialog open={portalPasteOpen} onOpenChange={(open) => {
-        setPortalPasteOpen(open)
-        if (!open) { setPortalRawText(''); setPortalParsedData(null); setPortalSelectedJalur('') }
-      }}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ClipboardPaste className="w-5 h-5 text-emerald-600" />
-              Paste dari Portal SPMB
-            </DialogTitle>
-            <DialogDescription>
-              Copy data dari halaman detail peserta di portal SPMB Sumut, lalu paste di sini. Sistem akan otomatis mengenali dan memparse data.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            {!portalParsedData ? (
-              <>
-                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
-                  <div className="flex gap-2">
-                    <ClipboardCheck className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-                    <div className="text-sm text-emerald-700">
-                      <p className="font-medium">Cara penggunaan:</p>
-                      <ol className="mt-1 list-decimal list-inside space-y-0.5">
-                        <li>Buka portal SPMB Sumut</li>
-                        <li>Buka halaman detail peserta</li>
-                        <li>Select all (Ctrl+A) lalu Copy (Ctrl+C)</li>
-                        <li>Paste (Ctrl+V) di kotak di bawah ini</li>
-                        <li>Klik &quot;Parse Data&quot; untuk memproses</li>
-                      </ol>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-1.5 block">
-                    Data dari Portal SPMB
-                  </label>
-                  <Textarea
-                    placeholder="Paste data dari portal SPMB di sini...&#10;&#10;Contoh format yang dikenali:&#10;SANDYON ARTHUR NAVORA WAU&#10;No. Registrasi: 6&#10;&#10;Domisili&#10;Data Peserta&#10;Nama Peserta&#10;SANDYON ARTHUR NAVORA WAU&#10;..."
-                    value={portalRawText}
-                    onChange={(e) => setPortalRawText(e.target.value)}
-                    rows={12}
-                    className="font-mono text-xs"
-                  />
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                    <div className="text-sm text-emerald-700">
-                      <p className="font-medium">Data berhasil diparse!</p>
-                      <p>Periksa data di bawah sebelum menyimpan.</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Parsed Data Preview */}
-                <div className="space-y-3">
-                  {/* Header with name and sub jalur */}
-                  <Card className="border-2 border-emerald-200 bg-gradient-to-br from-emerald-50 to-white">
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-emerald-100 rounded-lg">
-                          <Users className="w-6 h-6 text-emerald-600" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-lg font-bold text-gray-900">{portalParsedData.nama || '-'}</p>
-                          <div className="flex items-center gap-2 mt-1 flex-wrap">
-                            <Badge variant="outline" className="font-mono">No. Reg: {portalParsedData.noRegistrasi || '-'}</Badge>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Jalur Pendaftaran Selector */}
-                  <Card className="border-2 border-amber-200 bg-gradient-to-br from-amber-50 to-white">
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-amber-100 rounded-lg">
-                          <ClipboardCheck className="w-5 h-5 text-amber-600" />
-                        </div>
-                        <div className="flex-1">
-                          <label className="text-sm font-semibold text-amber-800 block mb-1">
-                            Jalur Pendaftaran
-                          </label>
-                          <Select value={portalSelectedJalur} onValueChange={setPortalSelectedJalur}>
-                            <SelectTrigger className="w-full bg-white">
-                              <SelectValue placeholder="Pilih jalur pendaftaran..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {jalurConfigs.filter(j => j.aktif).map(jalur => (
-                                <SelectItem key={jalur.id} value={jalur.nama}>
-                                  <div className="flex items-center gap-2">
-                                    {(() => {
-                                      const Icon = getJalurIcon(jalur.nama)
-                                      return <Icon className="w-4 h-4" />
-                                    })()}
-                                    <span>{jalur.nama}</span>
-                                    <span className="text-xs text-gray-400">→ {getJalurSubFilter(jalur.nama)}</span>
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {portalSelectedJalur && (
-                            <div className="flex items-center gap-1.5 mt-1.5">
-                              <span className="text-xs text-gray-500">Data akan masuk ke Lembar Verifikasi:</span>
-                              <Badge variant="outline" className={SUB_JALUR_COLORS[getJalurSubFilter(portalSelectedJalur)] || 'bg-gray-100 text-gray-800'}>
-                                {getJalurSubFilter(portalSelectedJalur)}
-                              </Badge>
-                            </div>
-                          )}
-                          {!portalSelectedJalur && (
-                            <p className="text-xs text-red-500 mt-1">⚠️ Pilih jalur pendaftaran sebelum menyimpan</p>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Data Details Grid */}
-                  <div className="grid grid-cols-2 gap-3">
-                    {portalParsedData.nisn && (
-                      <div className="bg-gray-50 rounded-lg p-2.5">
-                        <label className="text-xs text-gray-500 font-medium flex items-center gap-1"><IdCard className="w-3 h-3" /> NISN</label>
-                        <p className="text-sm font-mono font-medium mt-0.5">{portalParsedData.nisn}</p>
-                      </div>
-                    )}
-                    {portalParsedData.nik && (
-                      <div className="bg-gray-50 rounded-lg p-2.5">
-                        <label className="text-xs text-gray-500 font-medium flex items-center gap-1"><IdCard className="w-3 h-3" /> NIK</label>
-                        <p className="text-sm font-mono font-medium mt-0.5">{portalParsedData.nik}</p>
-                      </div>
-                    )}
-                    {portalParsedData.tanggalLahir && (
-                      <div className="bg-gray-50 rounded-lg p-2.5">
-                        <label className="text-xs text-gray-500 font-medium flex items-center gap-1"><CalendarDays className="w-3 h-3" /> Tanggal Lahir</label>
-                        <p className="text-sm mt-0.5">{portalParsedData.tanggalLahir}</p>
-                      </div>
-                    )}
-                    {portalParsedData.noTelpSiswa && (
-                      <div className="bg-gray-50 rounded-lg p-2.5">
-                        <label className="text-xs text-gray-500 font-medium flex items-center gap-1"><Phone className="w-3 h-3" /> Telp Siswa</label>
-                        <p className="text-sm font-mono mt-0.5">{portalParsedData.noTelpSiswa}</p>
-                      </div>
-                    )}
-                    {portalParsedData.noTelpOrangtua && (
-                      <div className="bg-gray-50 rounded-lg p-2.5">
-                        <label className="text-xs text-gray-500 font-medium flex items-center gap-1"><Phone className="w-3 h-3" /> Telp Orangtua</label>
-                        <p className="text-sm font-mono mt-0.5">{portalParsedData.noTelpOrangtua}</p>
-                      </div>
-                    )}
-                    {portalParsedData.lokasiJarak && (
-                      <div className="bg-gray-50 rounded-lg p-2.5">
-                        <label className="text-xs text-gray-500 font-medium flex items-center gap-1"><MapPinned className="w-3 h-3" /> Jarak</label>
-                        <p className="text-sm mt-0.5">{portalParsedData.lokasiJarak}</p>
-                      </div>
-                    )}
-                    {portalParsedData.nilaiRataRata && (
-                      <div className="bg-gray-50 rounded-lg p-2.5">
-                        <label className="text-xs text-gray-500 font-medium flex items-center gap-1"><Award className="w-3 h-3" /> Nilai Rata-rata</label>
-                        <p className="text-sm font-bold text-emerald-600 mt-0.5">{portalParsedData.nilaiRataRata}</p>
-                      </div>
-                    )}
-                    {portalParsedData.skor && (
-                      <div className="bg-gray-50 rounded-lg p-2.5">
-                        <label className="text-xs text-gray-500 font-medium flex items-center gap-1"><Award className="w-3 h-3" /> Skor</label>
-                        <p className="text-sm font-bold text-amber-600 mt-0.5">{portalParsedData.skor}</p>
-                      </div>
-                    )}
-                    {portalParsedData.skorJarak && (
-                      <div className="bg-gray-50 rounded-lg p-2.5">
-                        <label className="text-xs text-gray-500 font-medium flex items-center gap-1"><MapPinned className="w-3 h-3" /> Skor Jarak</label>
-                        <p className="text-sm mt-0.5">{portalParsedData.skorJarak}</p>
-                      </div>
-                    )}
-                    {portalParsedData.skorNilaiRaport && (
-                      <div className="bg-sky-50 rounded-lg p-2.5">
-                        <label className="text-xs text-sky-600 font-medium flex items-center gap-1"><Award className="w-3 h-3" /> Skor Nilai Raport</label>
-                        <p className="text-sm font-bold text-sky-700 mt-0.5">{portalParsedData.skorNilaiRaport}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Schools */}
-                  <div className="grid grid-cols-2 gap-3">
-                    {portalParsedData.namaSekolahAsal && (
-                      <div className="bg-gray-50 rounded-lg p-2.5">
-                        <label className="text-xs text-gray-500 font-medium">Asal Sekolah</label>
-                        <p className="text-sm font-medium mt-0.5">{portalParsedData.namaSekolahAsal}</p>
-                      </div>
-                    )}
-                    {portalParsedData.namaSekolahPilihan && (
-                      <div className="bg-sky-50 rounded-lg p-2.5">
-                        <label className="text-xs text-sky-600 font-medium">Sekolah Pilihan</label>
-                        <p className="text-sm font-medium text-sky-800 mt-0.5">{portalParsedData.namaSekolahPilihan}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Address */}
-                  {(portalParsedData.alamat || portalParsedData.alamatLengkap) && (
-                    <div className="bg-gray-50 rounded-lg p-2.5">
-                      <label className="text-xs text-gray-500 font-medium">Alamat</label>
-                      <p className="text-sm mt-0.5">{portalParsedData.alamat}</p>
-                      {portalParsedData.alamatLengkap && portalParsedData.alamatLengkap !== portalParsedData.alamat && (
-                        <p className="text-xs text-gray-500 mt-0.5">{portalParsedData.alamatLengkap}</p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Nilai Rapor */}
-                  {portalParsedData.nilaiRapor && (() => {
-                    try {
-                      const grades = JSON.parse(portalParsedData.nilaiRapor)
-                      return (
-                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                          <h4 className="text-sm font-medium text-amber-800 mb-2 flex items-center gap-1">
-                            <GraduationCap className="w-4 h-4" /> Nilai Rapor
-                          </h4>
-                          <div className="grid grid-cols-2 gap-2">
-                            {Object.entries(grades).map(([subject, value]) => (
-                              <div key={subject} className="flex justify-between text-sm bg-white rounded px-2 py-1">
-                                <span className="text-gray-600 text-xs">{subject}</span>
-                                <span className="font-bold text-amber-700">{String(value)}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )
-                    } catch { return null }
-                  })()}
-
-                  {/* Coordinates */}
-                  {(portalParsedData.latitude || portalParsedData.longitude) && (
-                    <div className="bg-gray-50 rounded-lg p-2.5">
-                      <label className="text-xs text-gray-500 font-medium">Koordinat</label>
-                      <p className="text-xs font-mono mt-0.5">{portalParsedData.latitude}, {portalParsedData.longitude}</p>
-                    </div>
-                  )}
-
-                  {/* Verification Data */}
-                  {portalParsedData.dokumen && (
-                    <div className="bg-sky-50 border border-sky-200 rounded-lg p-3">
-                      <h4 className="text-sm font-medium text-sky-800 mb-2 flex items-center gap-1">
-                        <ClipboardCheck className="w-4 h-4" /> Data Verifikasi
-                      </h4>
-                      <div className="grid grid-cols-2 gap-2">
-                        {portalParsedData.dokumen && (
-                          <div className="col-span-2 bg-white rounded px-2 py-1.5">
-                            <label className="text-xs text-gray-500 font-medium">Dokumen</label>
-                            <p className="text-sm">{portalParsedData.dokumen}</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setPortalParsedData(null)}>
-                    <RotateCcw className="w-4 h-4" />
-                    Parse Ulang
-                  </Button>
-                </div>
-              </>
-            )}
-          </div>
-
-          <DialogFooter>
-            {!portalParsedData ? (
-              <Button onClick={handlePortalPaste} disabled={!portalRawText.trim() || portalParsing} className="bg-emerald-600 hover:bg-emerald-700">
-                {portalParsing ? (<><Loader2 className="w-4 h-4 animate-spin" /> Memproses...</>) : (<><ClipboardCheck className="w-4 h-4" /> Parse Data</>)}
-              </Button>
-            ) : (
-              <>
-                <Button variant="outline" onClick={() => { setPortalParsedData(null); setPortalRawText('') }}>
-                  Batal
-                </Button>
-                <Button onClick={handlePortalSave} disabled={importing || !portalSelectedJalur} className="bg-emerald-600 hover:bg-emerald-700">
-                  {importing ? (<><Loader2 className="w-4 h-4 animate-spin" /> Menyimpan...</>) : (<><Check className="w-4 h-4" /> Simpan Data</>)}
-                </Button>
-              </>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ==================== SINGLE VERIFY DIALOG ==================== */}
-      <Dialog open={verifyDialogOpen} onOpenChange={setVerifyDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              {verifyAction === 'VERIFIED' ? (
-                <><ThumbsUp className="w-5 h-5 text-emerald-600" /> Terima Pendaftar</>
-              ) : (
-                <><ThumbsDown className="w-5 h-5 text-red-600" /> Tolak Pendaftar</>
-              )}
-            </DialogTitle>
-            <DialogDescription>
-              {verifyAction === 'VERIFIED'
-                ? `Apakah Anda yakin ingin MENERIMA pendaftar ini? Data akan diverifikasi dan diterima di ${appName}${schoolName ? ' — ' + schoolName : ''}.`
-                : 'Apakah Anda yakin ingin MENOLAK pendaftar ini? Berikan alasan penolakan jika diperlukan.'}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            {verifyAction === 'REJECTED' && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium text-red-800">Perhatian!</p>
-                    <p className="text-sm text-red-700">Pendaftar yang ditolak tetap dapat diterima kembali nanti melalui menu Ditolak.</p>
-                  </div>
-                </div>
-              </div>
-            )}
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-1.5 block">
-                {verifyAction === 'VERIFIED' ? 'Catatan Verifikasi' : 'Alasan Penolakan'} {verifyAction === 'REJECTED' && <span className="text-red-500">*</span>}
-              </label>
-              <Textarea
-                placeholder={verifyAction === 'VERIFIED' ? 'Catatan tambahan (opsional)...' : 'Tuliskan alasan penolakan...'}
-                value={verifyNote}
-                onChange={(e) => setVerifyNote(e.target.value)}
-                rows={3}
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setVerifyDialogOpen(false)}>Batal</Button>
-            <Button
-              onClick={handleVerify}
-              disabled={verifying}
-              className={verifyAction === 'VERIFIED' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
-              variant={verifyAction === 'REJECTED' ? 'destructive' : 'default'}
-            >
-              {verifying ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> Memproses...</>
-              ) : verifyAction === 'VERIFIED' ? (
-                <><ThumbsUp className="w-4 h-4" /> Terima</>
-              ) : (
-                <><ThumbsDown className="w-4 h-4" /> Tolak</>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ==================== BULK VERIFY DIALOG ==================== */}
-      <Dialog open={bulkVerifyDialogOpen} onOpenChange={setBulkVerifyDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              {verifyAction === 'VERIFIED' ? (
-                <><ThumbsUp className="w-5 h-5 text-emerald-600" /> Terima {selectedIds.size} Pendaftar</>
-              ) : (
-                <><ThumbsDown className="w-5 h-5 text-red-600" /> Tolak {selectedIds.size} Pendaftar</>
-              )}
-            </DialogTitle>
-            <DialogDescription>
-              {verifyAction === 'VERIFIED'
-                ? `Apakah Anda yakin ingin MENERIMA ${selectedIds.size} pendaftar yang dipilih?`
-                : `Apakah Anda yakin ingin MENOLAK ${selectedIds.size} pendaftar yang dipilih?`}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            {verifyAction === 'REJECTED' && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium text-red-800">Perhatian!</p>
-                    <p className="text-sm text-red-700">Pendaftar yang ditolak tetap dapat diterima kembali nanti melalui menu Ditolak.</p>
-                  </div>
-                </div>
-              </div>
-            )}
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-1.5 block">
-                {verifyAction === 'VERIFIED' ? 'Catatan Verifikasi' : 'Alasan Penolakan'} {verifyAction === 'REJECTED' && <span className="text-red-500">*</span>}
-              </label>
-              <Textarea
-                placeholder={verifyAction === 'VERIFIED' ? 'Catatan untuk semua pendaftar (opsional)...' : 'Tuliskan alasan penolakan untuk semua pendaftar...'}
-                value={verifyNote}
-                onChange={(e) => setVerifyNote(e.target.value)}
-                rows={3}
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setBulkVerifyDialogOpen(false)}>Batal</Button>
-            <Button
-              onClick={handleBulkVerify}
-              disabled={verifying}
-              className={verifyAction === 'VERIFIED' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
-              variant={verifyAction === 'REJECTED' ? 'destructive' : 'default'}
-            >
-              {verifying ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> Memproses...</>
-              ) : verifyAction === 'VERIFIED' ? (
-                <><ThumbsUp className="w-4 h-4" /> Terima Semua</>
-              ) : (
-                <><ThumbsDown className="w-4 h-4" /> Tolak Semua</>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ==================== DETAIL DIALOG ==================== */}
-      <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
-          <DialogHeader className="flex-shrink-0">
-            <DialogTitle className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-emerald-600" />
-              Detail Pendaftar
-            </DialogTitle>
-            <DialogDescription>Informasi lengkap pendaftar {appName}{schoolName ? ` — ${schoolName}` : ''}</DialogDescription>
-          </DialogHeader>
-
-          {detailTarget && (
-            <div className="space-y-4 overflow-y-auto flex-1 min-h-0 pr-1" style={{ scrollbarGutter: 'stable' }}>
-              {/* Status badge at top */}
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className={`${STATUS_COLORS[detailTarget.verificationStatus]} text-sm px-3 py-1`}>
-                  {detailTarget.verificationStatus === 'PENDING' && <Clock className="w-4 h-4" />}
-                  {detailTarget.verificationStatus === 'VERIFIED' && <CheckCircle2 className="w-4 h-4" />}
-                  {detailTarget.verificationStatus === 'REJECTED' && <XCircle className="w-4 h-4" />}
-                  {detailTarget.verificationStatus === 'PENDING' ? 'Menunggu Verifikasi' :
-                   detailTarget.verificationStatus === 'VERIFIED' ? 'Diterima (Terverifikasi)' : 'Ditolak'}
-                </Badge>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs text-gray-500 font-medium">No. Registrasi</label>
-                  <p className="text-sm font-mono font-medium">{detailTarget.noRegistrasi}</p>
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 font-medium">NISN</label>
-                  <p className="text-sm font-mono">{detailTarget.nisn}</p>
-                </div>
-                <div className="col-span-2">
-                  <label className="text-xs text-gray-500 font-medium">Nama Lengkap</label>
-                  <p className="text-sm font-semibold">{detailTarget.nama}</p>
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 font-medium">Sub Jalur</label>
-                  <div className="mt-1">
-                    <Badge variant="outline" className={SUB_JALUR_COLORS[detailTarget.subJalur] || 'bg-gray-100 text-gray-800'}>
-                      {detailTarget.subJalur}
-                    </Badge>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 font-medium">Jurusan</label>
-                  <div className="mt-1">
-                    <Badge variant="secondary">{detailTarget.jurusan}</Badge>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-t pt-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Sekolah Asal</h4>
-                <div className="bg-sky-50 rounded-lg p-3">
-                  <p className="text-sm font-medium text-sky-800">{detailTarget.namaSekolahAsal}</p>
-                  <p className="text-xs text-sky-600">NPSN: {detailTarget.npsnSekolahAsal}</p>
-                </div>
-              </div>
-
-              {/* Portal SPMB Data */}
-              {(detailTarget.nik || detailTarget.tanggalLahir || detailTarget.alamat || detailTarget.noTelpSiswa || detailTarget.noTelpOrangtua || detailTarget.lokasiJarak || detailTarget.nilaiRataRata || detailTarget.skor || detailTarget.nilaiRapor || detailTarget.skorJarak || detailTarget.skorNilaiRaport) && (
-                <div className="border-t pt-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-1.5">
-                    <ClipboardCheck className="w-4 h-4 text-emerald-600" />
-                    Data Portal SPMB
-                  </h4>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    {detailTarget.nik && (
-                      <div className="bg-gray-50 rounded-lg p-2">
-                        <label className="text-xs text-gray-500 font-medium">NIK</label>
-                        <p className="text-sm font-mono">{detailTarget.nik}</p>
-                      </div>
-                    )}
-                    {detailTarget.tanggalLahir && (
-                      <div className="bg-gray-50 rounded-lg p-2">
-                        <label className="text-xs text-gray-500 font-medium">Tanggal Lahir</label>
-                        <p className="text-sm">{detailTarget.tanggalLahir}</p>
-                      </div>
-                    )}
-                    {detailTarget.noTelpSiswa && (
-                      <div className="bg-gray-50 rounded-lg p-2">
-                        <label className="text-xs text-gray-500 font-medium">Telp Siswa</label>
-                        <p className="text-sm font-mono">{detailTarget.noTelpSiswa}</p>
-                      </div>
-                    )}
-                    {detailTarget.noTelpOrangtua && (
-                      <div className="bg-gray-50 rounded-lg p-2">
-                        <label className="text-xs text-gray-500 font-medium">Telp Orangtua</label>
-                        <p className="text-sm font-mono">{detailTarget.noTelpOrangtua}</p>
-                      </div>
-                    )}
-                    {detailTarget.lokasiJarak && (
-                      <div className="bg-gray-50 rounded-lg p-2">
-                        <label className="text-xs text-gray-500 font-medium">Jarak</label>
-                        <p className="text-sm">{detailTarget.lokasiJarak}</p>
-                      </div>
-                    )}
-                    {detailTarget.nilaiRataRata && (
-                      <div className="bg-emerald-50 rounded-lg p-2">
-                        <label className="text-xs text-emerald-600 font-medium">Nilai Rata-rata</label>
-                        <p className="text-sm font-bold text-emerald-700">{detailTarget.nilaiRataRata}</p>
-                      </div>
-                    )}
-                    {detailTarget.skor && (
-                      <div className="bg-amber-50 rounded-lg p-2">
-                        <label className="text-xs text-amber-600 font-medium">Skor</label>
-                        <p className="text-sm font-bold text-amber-700">{detailTarget.skor}</p>
-                      </div>
-                    )}
-                    {detailTarget.skorJarak && (
-                      <div className="bg-gray-50 rounded-lg p-2">
-                        <label className="text-xs text-gray-500 font-medium">Skor Jarak</label>
-                        <p className="text-sm">{detailTarget.skorJarak}</p>
-                      </div>
-                    )}
-                    {detailTarget.skorNilaiRaport && (
-                      <div className="bg-sky-50 rounded-lg p-2">
-                        <label className="text-xs text-sky-600 font-medium">Skor Nilai Raport</label>
-                        <p className="text-sm font-bold text-sky-700">{detailTarget.skorNilaiRaport}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {detailTarget.alamat && (
-                    <div className="mt-3 bg-gray-50 rounded-lg p-2">
-                      <label className="text-xs text-gray-500 font-medium">Alamat</label>
-                      <p className="text-sm">{detailTarget.alamat}</p>
-                      {detailTarget.alamatLengkap && <p className="text-xs text-gray-400">{detailTarget.alamatLengkap}</p>}
-                    </div>
-                  )}
-
-                  {detailTarget.nilaiRapor && (() => {
-                    try {
-                      const grades = JSON.parse(detailTarget.nilaiRapor)
-                      return (
-                        <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
-                          <h5 className="text-xs font-medium text-amber-800 mb-2 flex items-center gap-1">
-                            <GraduationCap className="w-3.5 h-3.5" /> Nilai Rapor
-                          </h5>
-                          <div className="grid grid-cols-2 gap-1.5">
-                            {Object.entries(grades).map(([subject, value]) => (
-                              <div key={subject} className="flex justify-between text-xs bg-white rounded px-2 py-1">
-                                <span className="text-gray-600">{subject}</span>
-                                <span className="font-bold text-amber-700">{String(value)}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )
-                    } catch { return null }
-                  })()}
-
-                  {(detailTarget.latitude || detailTarget.longitude) && (
-                    <div className="mt-3 bg-gray-50 rounded-lg p-2">
-                      <label className="text-xs text-gray-500 font-medium">Koordinat</label>
-                      <p className="text-xs font-mono">{detailTarget.latitude}, {detailTarget.longitude}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Data Verifikasi */}
-              {(detailTarget.skorNilaiRaport || detailTarget.kekuranganVerifikasi || detailTarget.tanggalVerif || detailTarget.jamVerif || detailTarget.terbitKK || detailTarget.lamaKK || detailTarget.dokumen) && (
-                <div className="border-t pt-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-1.5">
-                    <ClipboardCheck className="w-4 h-4 text-sky-600" />
-                    Data Verifikasi
-                  </h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    {detailTarget.skorNilaiRaport && (
-                      <div className="bg-sky-50 rounded-lg p-2">
-                        <label className="text-xs text-sky-600 font-medium">Skor Nilai Raport</label>
-                        <p className="text-sm font-bold text-sky-700">{detailTarget.skorNilaiRaport}</p>
-                      </div>
-                    )}
-                    {detailTarget.kekuranganVerifikasi && (
-                      <div className="bg-red-50 rounded-lg p-2">
-                        <div className="flex items-center justify-between">
-                          <label className="text-xs text-red-600 font-medium">Kekurangan Verifikasi</label>
-                          <button
-                            className="text-[10px] flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-red-100 text-red-600 transition-colors"
-                            onClick={() => navigator.clipboard.writeText(detailTarget.kekuranganVerifikasi || '').then(() => {})}
-                            title="Copy alasan untuk paste ke Portal SPMB"
-                          >
-                            <Copy className="w-3 h-3" /> Copy
-                          </button>
-                        </div>
-                        <div className="text-sm text-red-700">
-                          {detailTarget.kekuranganVerifikasi.split(' | ').map((reason, i) => (
-                            <p key={i} className="mt-0.5">{reason}</p>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {detailTarget.tanggalVerif && (
-                      <div className="bg-gray-50 rounded-lg p-2">
-                        <label className="text-xs text-gray-500 font-medium flex items-center gap-1"><CalendarDays className="w-3 h-3" /> Tanggal Verifikasi</label>
-                        <p className="text-sm">{detailTarget.tanggalVerif}</p>
-                      </div>
-                    )}
-                    {detailTarget.jamVerif && (
-                      <div className="bg-gray-50 rounded-lg p-2">
-                        <label className="text-xs text-gray-500 font-medium">Jam Verifikasi</label>
-                        <p className="text-sm">{detailTarget.jamVerif}</p>
-                      </div>
-                    )}
-                    {detailTarget.terbitKK && (
-                      <div className="bg-gray-50 rounded-lg p-2">
-                        <label className="text-xs text-gray-500 font-medium flex items-center gap-1"><IdCard className="w-3 h-3" /> Terbit KK</label>
-                        <p className="text-sm">{detailTarget.terbitKK}</p>
-                      </div>
-                    )}
-                    {(detailTarget.terbitKK || detailTarget.lamaKK) && (
-                      <div className={`rounded-lg p-2 ${
-                        detailTarget.terbitKK && isKKKurangSetahun(detailTarget.terbitKK)
-                          ? 'bg-red-50 border border-red-200'
-                          : 'bg-emerald-50 border border-emerald-200'
-                      }`}>
-                        <label className={`text-xs font-medium flex items-center gap-1 ${
-                          detailTarget.terbitKK && isKKKurangSetahun(detailTarget.terbitKK)
-                            ? 'text-red-600'
-                            : 'text-emerald-600'
-                        }`}>
-                          <CalendarClock className="w-3 h-3" /> Lama KK
-                        </label>
-                        <p className={`text-sm font-bold ${
-                          detailTarget.terbitKK && isKKKurangSetahun(detailTarget.terbitKK)
-                            ? 'text-red-700'
-                            : 'text-emerald-700'
-                        }`}>
-                          {detailTarget.lamaKK || (detailTarget.terbitKK ? hitungLamaKK(detailTarget.terbitKK) : '-')}
-                        </p>
-                        {detailTarget.terbitKK && isKKKurangSetahun(detailTarget.terbitKK) && (
-                          <p className="text-xs text-red-500 mt-0.5">⚠ KK kurang dari 1 tahun</p>
-                        )}
-                      </div>
-                    )}
-                    {detailTarget.dokumen && (
-                      <div className="bg-gray-50 rounded-lg p-2 col-span-2">
-                        <label className="text-xs text-gray-500 font-medium">Dokumen</label>
-                        <p className="text-sm">{detailTarget.dokumen}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <div className="border-t pt-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Status Pendaftaran</label>
-                    <div className="mt-1"><Badge variant="outline">{detailTarget.status}</Badge></div>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Waktu Daftar</label>
-                    <p className="text-sm">{detailTarget.waktuDaftar}</p>
-                  </div>
-                  {detailTarget.verificationNote && (
-                    <div className="col-span-2">
-                      <label className="text-xs text-gray-500 font-medium">
-                        {detailTarget.verificationStatus === 'REJECTED' ? 'Alasan Penolakan' : 'Catatan Verifikasi'}
-                      </label>
-                      <p className="text-sm mt-1 bg-yellow-50 p-2 rounded border border-yellow-200">
-                        {detailTarget.verificationNote}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-2 pt-2 border-t">
-                {detailTarget.verificationStatus !== 'VERIFIED' && (
-                  <Button
-                    className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-                    onClick={() => {
-                      setVerifyTargetId(detailTarget.id)
-                      setVerifyAction('VERIFIED')
-                      setVerifyNote('')
-                      setDetailDialogOpen(false)
-                      setVerifyDialogOpen(true)
-                    }}
-                  >
-                    <ThumbsUp className="w-4 h-4" />
-                    Terima
-                  </Button>
-                )}
-                {detailTarget.verificationStatus !== 'REJECTED' && (
-                  <Button
-                    variant="destructive"
-                    className="flex-1"
-                    onClick={() => {
-                      setVerifyTargetId(detailTarget.id)
-                      setVerifyAction('REJECTED')
-                      setVerifyNote('')
-                      setDetailDialogOpen(false)
-                      setVerifyDialogOpen(true)
-                    }}
-                  >
-                    <ThumbsDown className="w-4 h-4" />
-                    Tolak
-                  </Button>
-                )}
-                {detailTarget.verificationStatus === 'VERIFIED' && (
-                  <Button
-                    variant="outline"
-                    className="flex-1 border-yellow-400 text-yellow-700 hover:bg-yellow-50"
-                    onClick={() => {
-                      setVerifyTargetId(detailTarget.id)
-                      setVerifyAction('REJECTED')
-                      setVerifyNote('')
-                      setDetailDialogOpen(false)
-                      setVerifyDialogOpen(true)
-                    }}
-                  >
-                    <RotateCcw className="w-4 h-4" />
-                    Batalkan & Tolak
-                  </Button>
-                )}
-                {detailTarget.verificationStatus === 'REJECTED' && (
-                  <Button
-                    variant="outline"
-                    className="flex-1 border-emerald-400 text-emerald-700 hover:bg-emerald-50"
-                    onClick={() => {
-                      setVerifyTargetId(detailTarget.id)
-                      setVerifyAction('VERIFIED')
-                      setVerifyNote('')
-                      setDetailDialogOpen(false)
-                      setVerifyDialogOpen(true)
-                    }}
-                  >
-                    <RotateCcw className="w-4 h-4" />
-                    Terima Ulang
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* ==================== EDIT DIALOG (Home Component) ==================== */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Pencil className="w-5 h-5 text-blue-600" /> Edit Data Pendaftar
-            </DialogTitle>
-            <DialogDescription>
-              Edit data pendaftar <span className="font-semibold">{editTarget?.nama}</span> ({editTarget?.noRegistrasi})
-            </DialogDescription>
-          </DialogHeader>
-          {editTarget && (
-            <div className="space-y-6">
-              {/* Data Pendaftar */}
-              <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
-                  <Users className="w-4 h-4 text-gray-500" /> Data Pendaftar
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">No. Registrasi</label>
-                    <Input value={editForm.noRegistrasi || ''} onChange={e => setEditForm({...editForm, noRegistrasi: e.target.value})} className="mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Nama</label>
-                    <Input value={editForm.nama || ''} onChange={e => setEditForm({...editForm, nama: e.target.value})} className="mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">NISN</label>
-                    <Input value={editForm.nisn || ''} onChange={e => setEditForm({...editForm, nisn: e.target.value})} className="mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Sub Jalur</label>
-                    <Select value={editForm.subJalur || ''} onValueChange={v => setEditForm({...editForm, subJalur: v})}>
-                      <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih Sub Jalur" /></SelectTrigger>
-                      <SelectContent>
-                        {subJalurOptions.map(opt => (
-                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">NIK</label>
-                    <Input value={editForm.nik || ''} onChange={e => setEditForm({...editForm, nik: e.target.value})} className="mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Tanggal Lahir</label>
-                    <Input type="date" value={editForm.tanggalLahir || ''} onChange={e => setEditForm({...editForm, tanggalLahir: e.target.value})} className="mt-1" />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className="text-xs text-gray-500 font-medium">Alamat</label>
-                    <Input value={editForm.alamat || ''} onChange={e => setEditForm({...editForm, alamat: e.target.value})} className="mt-1" />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className="text-xs text-gray-500 font-medium">Alamat Lengkap</label>
-                    <Textarea value={editForm.alamatLengkap || ''} onChange={e => setEditForm({...editForm, alamatLengkap: e.target.value})} className="mt-1" rows={2} />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">No. Telp Siswa</label>
-                    <Input value={editForm.noTelpSiswa || ''} onChange={e => setEditForm({...editForm, noTelpSiswa: e.target.value})} className="mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">No. Telp Orangtua</label>
-                    <Input value={editForm.noTelpOrangtua || ''} onChange={e => setEditForm({...editForm, noTelpOrangtua: e.target.value})} className="mt-1" />
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Data Sekolah */}
-              <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
-                  <School className="w-4 h-4 text-gray-500" /> Data Sekolah
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">NPSN Sekolah Pilihan</label>
-                    <Input value={editForm.npsnSekolahPilihan || ''} onChange={e => setEditForm({...editForm, npsnSekolahPilihan: e.target.value})} className="mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Nama Sekolah Pilihan</label>
-                    <Input value={editForm.namaSekolahPilihan || ''} onChange={e => setEditForm({...editForm, namaSekolahPilihan: e.target.value})} className="mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Jurusan</label>
-                    <Input value={editForm.jurusan || ''} onChange={e => setEditForm({...editForm, jurusan: e.target.value})} className="mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">NPSN Sekolah Asal</label>
-                    <Input value={editForm.npsnSekolahAsal || ''} onChange={e => setEditForm({...editForm, npsnSekolahAsal: e.target.value})} className="mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Nama Sekolah Asal</label>
-                    <Input value={editForm.namaSekolahAsal || ''} onChange={e => setEditForm({...editForm, namaSekolahAsal: e.target.value})} className="mt-1" />
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Data Verifikasi */}
-              <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
-                  <ClipboardCheck className="w-4 h-4 text-gray-500" /> Data Verifikasi
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Skor Jarak</label>
-                    <Input value={editForm.skorJarak || ''} onChange={e => setEditForm({...editForm, skorJarak: e.target.value})} className="mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Skor Nilai Raport</label>
-                    <Input value={editForm.skorNilaiRaport || ''} onChange={e => setEditForm({...editForm, skorNilaiRaport: e.target.value})} className="mt-1" />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className="text-xs text-gray-500 font-medium">Kekurangan Verifikasi</label>
-                    <div className="mt-1">
-                      <KekuranganVerifSelect
-                        value={editForm.kekuranganVerifikasi || ''}
-                        onChange={(val) => setEditForm({...editForm, kekuranganVerifikasi: val})}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Tanggal Verifikasi</label>
-                    <Input type="date" value={editForm.tanggalVerif || ''} onChange={e => setEditForm({...editForm, tanggalVerif: e.target.value})} className="mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Jam Verifikasi</label>
-                    <Input type="time" value={editForm.jamVerif || ''} onChange={e => setEditForm({...editForm, jamVerif: e.target.value})} className="mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Terbit KK</label>
-                    <div className="flex items-center gap-1 mt-1">
-                      <Input type="date" value={editForm.terbitKK || ''} onChange={e => setEditForm({...editForm, terbitKK: e.target.value})} className="flex-1" />
-                      {editForm.terbitKK && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50 h-9 px-2"
-                          onClick={() => setEditForm({...editForm, terbitKK: ''})}
-                          title="Kosongkan"
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Lama KK</label>
-                    <Input value={editForm.terbitKK ? hitungLamaKK(editForm.terbitKK) : ''} readOnly className="mt-1 bg-gray-50" />
-                    <p className="text-xs text-gray-400 mt-1">Dihitung otomatis dari Terbit KK</p>
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Data Lokasi & Nilai */}
-              <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
-                  <MapPin className="w-4 h-4 text-gray-500" /> Lokasi & Nilai
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Latitude</label>
-                    <Input value={editForm.latitude || ''} onChange={e => setEditForm({...editForm, latitude: e.target.value})} className="mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Longitude</label>
-                    <Input value={editForm.longitude || ''} onChange={e => setEditForm({...editForm, longitude: e.target.value})} className="mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Lokasi Jarak</label>
-                    <Input value={editForm.lokasiJarak || ''} onChange={e => setEditForm({...editForm, lokasiJarak: e.target.value})} className="mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Nilai Rata-Rata</label>
-                    <Input value={editForm.nilaiRataRata || ''} onChange={e => setEditForm({...editForm, nilaiRataRata: e.target.value})} className="mt-1" />
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Status Kelulusan & Daftar Ulang */}
-              <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
-                  <GraduationCap className="w-4 h-4 text-gray-500" /> Kelulusan & Daftar Ulang
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Status Kelulusan</label>
-                    <Select value={editForm.statusLulus || 'BELUM'} onValueChange={v => setEditForm({...editForm, statusLulus: v})}>
-                      <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih Status" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="BELUM">Belum Ditentukan</SelectItem>
-                        <SelectItem value="LULUS">Lulus</SelectItem>
-                        <SelectItem value="TIDAK_LULUS">Tidak Lulus</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium">Status Daftar Ulang</label>
-                    <Select value={editForm.statusDaftarUlang || 'BELUM'} onValueChange={v => setEditForm({...editForm, statusDaftarUlang: v})}>
-                      <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih Status" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="BELUM">Belum Ditentukan</SelectItem>
-                        <SelectItem value="DAFTAR_ULANG">Daftar Ulang</SelectItem>
-                        <SelectItem value="TIDAK_DAFTAR_ULANG">Tidak Daftar Ulang</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Batal</Button>
-            <Button onClick={handleSaveEdit} disabled={saving} className="bg-blue-600 hover:bg-blue-700">
-              {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Menyimpan...</> : <><Pencil className="w-4 h-4" /> Simpan</>}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ==================== DELETE DIALOG (Home Component) ==================== */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Trash2 className="w-5 h-5 text-red-600" /> Hapus Data Pendaftar
-            </DialogTitle>
-            <DialogDescription>
-              Apakah Anda yakin ingin menghapus data pendaftar <span className="font-semibold">{deleteTarget?.nama}</span>? Tindakan ini tidak dapat dibatalkan.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-            <div className="flex gap-2">
-              <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 shrink-0" />
-              <p className="text-sm text-red-700">Data yang sudah dihapus tidak dapat dikembalikan. Pastikan Anda yakin sebelum melanjutkan.</p>
-            </div>
-          </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Batal</Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
-              {deleting ? <><Loader2 className="w-4 h-4 animate-spin" /> Menghapus...</> : <><Trash2 className="w-4 h-4" /> Hapus</>}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ==================== DUPLICATE CHECK DIALOG ==================== */}
-      <Dialog open={duplicateDialogOpen} onOpenChange={setDuplicateDialogOpen}>
-        <DialogContent className="sm:max-w-3xl max-h-[85vh]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-amber-600" />
-              Pemeriksaan Data Duplikat
-            </DialogTitle>
-            <DialogDescription>
-              Mendeteksi data ganda berdasarkan NISN dan nama yang sama
-            </DialogDescription>
-          </DialogHeader>
-
-          {duplicateLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
-              <p className="text-sm text-gray-400 ml-3">Memeriksa data duplikat...</p>
-            </div>
-          ) : duplicateData.summary ? (
-            <div className="space-y-4 overflow-y-auto max-h-[60vh]">
-              {/* Summary */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="bg-gray-50 rounded-xl p-3 text-center border">
-                  <p className="text-2xl font-bold text-gray-700">{duplicateData.summary.totalChecked}</p>
-                  <p className="text-xs text-gray-500">Data Diperiksa</p>
-                </div>
-                <div className="bg-amber-50 rounded-xl p-3 text-center border border-amber-200">
-                  <p className="text-2xl font-bold text-amber-600">{duplicateData.summary.nisnDuplicateGroups}</p>
-                  <p className="text-xs text-amber-600">Duplikat NISN</p>
-                </div>
-                <div className="bg-red-50 rounded-xl p-3 text-center border border-red-200">
-                  <p className="text-2xl font-bold text-red-600">{duplicateData.summary.nameDuplicateGroups}</p>
-                  <p className="text-xs text-red-600">Nama Mirip</p>
-                </div>
-                <div className="bg-emerald-50 rounded-xl p-3 text-center border border-emerald-200">
-                  <p className="text-2xl font-bold text-emerald-600">
-                    {duplicateData.summary.nisnDuplicateGroups + duplicateData.summary.nameDuplicateGroups === 0 ? 0 : duplicateData.summary.nisnDuplicateCount + duplicateData.summary.nameDuplicateCount}
-                  </p>
-                  <p className="text-xs text-emerald-600">Total Terindikasi</p>
-                </div>
-              </div>
-
-              {duplicateData.duplicates.length === 0 ? (
-                <div className="text-center py-8">
-                  <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-2" />
-                  <p className="font-semibold text-emerald-700">Tidak Ada Data Duplikat</p>
-                  <p className="text-sm text-gray-500 mt-1">Semua data pendaftar unik, tidak ditemukan duplikat</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {duplicateData.duplicates.map((group, groupIdx) => (
-                    <div key={groupIdx} className={`border rounded-xl overflow-hidden ${group.type === 'nisn' ? 'border-amber-300' : 'border-red-300'}`}>
-                      <div className={`px-4 py-2.5 flex items-center justify-between ${group.type === 'nisn' ? 'bg-amber-50' : 'bg-red-50'}`}>
-                        <div className="flex items-center gap-2">
-                          {group.type === 'nisn' ? (
-                            <Badge className="bg-amber-500 text-white text-[10px]">NISN Ganda</Badge>
-                          ) : (
-                            <Badge className="bg-red-500 text-white text-[10px]">Nama Mirip</Badge>
-                          )}
-                          <span className="text-sm font-semibold text-gray-800">{group.label}</span>
-                        </div>
-                        <Badge variant="secondary" className="text-[10px]">{group.count} data</Badge>
-                      </div>
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="bg-gray-50/50">
-                            <TableHead className="w-8 text-xs">No</TableHead>
-                            <TableHead className="text-xs">No. Reg</TableHead>
-                            <TableHead className="text-xs">Nama</TableHead>
-                            <TableHead className="text-xs">NISN</TableHead>
-                            <TableHead className="text-xs">Sekolah Pilihan</TableHead>
-                            <TableHead className="text-xs">Sekolah Asal</TableHead>
-                            <TableHead className="text-xs">Status</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {group.registrations.map((reg, regIdx) => (
-                            <TableRow key={reg.id} className={
-                              reg.verificationStatus === 'VERIFIED' ? 'bg-emerald-50/30' :
-                              reg.verificationStatus === 'REJECTED' ? 'bg-red-50/30' : ''
-                            }>
-                              <TableCell className="text-xs text-gray-400">{regIdx + 1}</TableCell>
-                              <TableCell className="font-mono text-xs">{reg.noRegistrasi}</TableCell>
-                              <TableCell className="text-xs font-medium">{reg.nama}</TableCell>
-                              <TableCell className="font-mono text-xs">{reg.nisn}</TableCell>
-                              <TableCell className="text-xs">{reg.namaSekolahPilihan}</TableCell>
-                              <TableCell className="text-xs">{reg.namaSekolahAsal}</TableCell>
-                              <TableCell>
-                                <Badge variant="outline" className={`text-[10px] ${STATUS_COLORS[reg.verificationStatus]}`}>
-                                  {reg.verificationStatus === 'PENDING' ? 'Menunggu' :
-                                   reg.verificationStatus === 'VERIFIED' ? 'Diterima' : 'Ditolak'}
-                                </Badge>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ) : null}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDuplicateDialogOpen(false)}>Tutup</Button>
-            {!duplicateLoading && (
-              <Button onClick={checkDuplicates} className="bg-amber-600 hover:bg-amber-700">
-                <RefreshCw className="w-4 h-4" /> Periksa Ulang
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+      </TabsContent>
+
+      {/* ==================== DATA PENDAFTAR TAB ==================== */}
+      <TabsContent value="data" className="space-y-4">
+        <DataPendaftarTab
+          search={search} setSearch={setSearch}
+          subJalurFilter={subJalurFilter} setSubJalurFilter={setSubJalurFilter}
+          verificationFilter={verificationFilter} setVerificationFilter={setVerificationFilter}
+          jurusanFilter={jurusanFilter} setJurusanFilter={setJurusanFilter}
+          registrations={registrations}
+          pagination={pagination} setPagination={setPagination}
+          selectedIds={selectedIds} setSelectedIds={setSelectedIds}
+          loading={loading}
+          namaSortData={namaSortData} setNamaSortData={setNamaSortData}
+          groupBySekolah={groupBySekolah} setGroupBySekolah={setGroupBySekolah}
+          subJalurOptions={subJalurOptions}
+          dataLimit={dataLimit} setDataLimit={setDataLimit}
+          setImportDialogOpen={setImportDialogOpen}
+          setSumutBerkahOpen={setSumutBerkahOpen}
+          checkDuplicates={checkDuplicates}
+          setVerifyAction={setVerifyAction}
+          setBulkVerifyDialogOpen={setBulkVerifyDialogOpen}
+          setVerifyTargetId={setVerifyTargetId}
+          setVerifyNote={setVerifyNote}
+          setVerifyDialogOpen={setVerifyDialogOpen}
+          setDetailTarget={setDetailTarget}
+          setDetailDialogOpen={setDetailDialogOpen}
+          openEditDialog={openEditDialog}
+          openDeleteDialog={openDeleteDialog}
+        />
+      </TabsContent>
+
+      {/* ==================== RANKING TAB ==================== */}
+      <TabsContent value="ranking" className="space-y-6">
+        <RankingTab
+          rankingJalur={rankingJalur} setRankingJalur={setRankingJalur}
+          rankingSekolah={rankingSekolah} setRankingSekolah={setRankingSekolah}
+          rankingJurusan={rankingJurusan} setRankingJurusan={setRankingJurusan}
+          rankingTampilan={rankingTampilan} setRankingTampilan={setRankingTampilan}
+          rankingStatus={rankingStatus} setRankingStatus={setRankingStatus}
+          rankingData={rankingData}
+          rankingFilters={rankingFilters}
+          rankingKuota={rankingKuota}
+          rankingKuotaPerJalur={rankingKuotaPerJalur}
+          rankingLoading={rankingLoading}
+          namaSortRanking={namaSortRanking} setNamaSortRanking={setNamaSortRanking}
+          fetchRanking={fetchRanking}
+          handleRankingPreview={handleRankingPreview}
+        />
+      </TabsContent>
+
+      {/* ==================== DITERIMA TAB ==================== */}
+      <TabsContent value="diterima" className="space-y-6">
+        <DiterimaTab
+          stats={stats}
+          appName={appName}
+          schoolName={schoolName}
+          appSubtitle={appSubtitle}
+          verifiedPercent={verifiedPercent}
+          diterimaFilterJalur={diterimaFilterJalur} setDiterimaFilterJalur={setDiterimaFilterJalur}
+          diterimaFilterSekolah={diterimaFilterSekolah} setDiterimaFilterSekolah={setDiterimaFilterSekolah}
+          subJalurOptions={subJalurOptions}
+          namaSortDiterima={namaSortDiterima} setNamaSortDiterima={setNamaSortDiterima}
+          handlePrintReport={handlePrintReport}
+          setDetailTarget={setDetailTarget} setDetailDialogOpen={setDetailDialogOpen}
+          openEditDialog={openEditDialog} openDeleteDialog={openDeleteDialog}
+        />
+      </TabsContent>
+
+      {/* ==================== DITOLAK TAB ==================== */}
+      <TabsContent value="ditolak" className="space-y-6">
+        <DitolakTab
+          stats={stats}
+          appName={appName}
+          schoolName={schoolName}
+          appSubtitle={appSubtitle}
+          rejectedPercent={rejectedPercent}
+          ditolakFilterJalur={ditolakFilterJalur} setDitolakFilterJalur={setDitolakFilterJalur}
+          subJalurOptions={subJalurOptions}
+          namaSortDitolak={namaSortDitolak} setNamaSortDitolak={setNamaSortDitolak}
+          handlePrintReport={handlePrintReport}
+          setDetailTarget={setDetailTarget} setDetailDialogOpen={setDetailDialogOpen}
+          openEditDialog={openEditDialog} openDeleteDialog={openDeleteDialog}
+        />
+      </TabsContent>
+
+      {/* ==================== KELULUSAN TAB ==================== */}
+      <TabsContent value="kelulusan" className="space-y-6">
+        <KelulusanTab
+          stats={stats}
+          appName={appName}
+          schoolName={schoolName}
+          appSubtitle={appSubtitle}
+          registrations={registrations}
+          selectedIds={selectedIds} setSelectedIds={setSelectedIds}
+          fetchStats={fetchStats}
+          fetchRegistrations={fetchRegistrations}
+          toast={toast}
+        />
+      </TabsContent>
+
+      {/* ==================== DAFTAR ULANG TAB ==================== */}
+      <TabsContent value="daftar-ulang" className="space-y-6">
+        <DaftarUlangTab
+          stats={stats}
+          appName={appName}
+          schoolName={schoolName}
+          appSubtitle={appSubtitle}
+          registrations={registrations}
+          selectedIds={selectedIds} setSelectedIds={setSelectedIds}
+          fetchStats={fetchStats}
+          fetchRegistrations={fetchRegistrations}
+          toast={toast}
+        />
+      </TabsContent>
+
+      {/* ==================== PENGATURAN TAB ==================== */}
+      <TabsContent value="pengaturan" className="space-y-6">
+        <PengaturanTab
+          appName={appName} schoolName={schoolName} authUser={authUser}
+          users={users} usersLoading={usersLoading}
+          addUserOpen={addUserOpen} setAddUserOpen={setAddUserOpen}
+          addUserForm={addUserForm} setAddUserForm={setAddUserForm}
+          userSaving={userSaving} handleAddUser={handleAddUser}
+          editUserOpen={editUserOpen} setEditUserOpen={setEditUserOpen}
+          editUserData={editUserData} setEditUserData={setEditUserData} editUserForm={editUserForm} setEditUserForm={setEditUserForm}
+          handleEditUser={handleEditUser}
+          deleteUserOpen={deleteUserOpen} setDeleteUserOpen={setDeleteUserOpen}
+          deleteUserTarget={deleteUserTarget} setDeleteUserTarget={setDeleteUserTarget} deleteUserLoading={deleteUserLoading} handleDeleteUser={handleDeleteUser}
+          editProfileOpen={editProfileOpen} setEditProfileOpen={setEditProfileOpen}
+          editProfileForm={editProfileForm} setEditProfileForm={setEditProfileForm}
+          editProfileSaving={editProfileSaving} handleUpdateProfile={handleUpdateProfile}
+          setAppName={setAppName} setSchoolName={setSchoolName}
+          appIcon={appIcon} setAppIcon={setAppIcon}
+          appSubtitle={appSubtitle} setAppSubtitle={setAppSubtitle}
+          saveAppName={saveAppName} settingsSaving={settingsSaving}
+          kuota={kuota} setKuota={setKuota} saveKuota={saveKuota}
+          jalurConfigs={jalurConfigs} setJalurConfigs={setJalurConfigs}
+          updateJalurPersentase={updateJalurPersentase}
+          addJalurOpen={addJalurOpen} setAddJalurOpen={setAddJalurOpen}
+          newJalurNama={newJalurNama} setNewJalurNama={setNewJalurNama}
+          newJalurPersentase={newJalurPersentase} setNewJalurPersentase={setNewJalurPersentase}
+          addJalur={addJalur} deleteJalur={deleteJalur} toggleJalurAktif={toggleJalurAktif}
+          settingsLoading={settingsLoading}
+          portalSyncEmail={portalSyncEmail} setPortalSyncEmail={setPortalSyncEmail}
+          portalSyncPassword={portalSyncPassword} setPortalSyncPassword={setPortalSyncPassword}
+          portalSyncStatus={portalSyncStatus} setPortalSyncStatus={setPortalSyncStatus}
+          portalSyncPages={portalSyncPages} setPortalSyncPages={setPortalSyncPages}
+          portalSyncing={portalSyncing} handlePortalSync={handlePortalSync}
+          portalSyncResult={portalSyncResult}
+          resetPasswordOpen={resetPasswordOpen} setResetPasswordOpen={setResetPasswordOpen}
+          resetPasswordTarget={resetPasswordTarget} resetPasswordNew={resetPasswordNew} setResetPasswordNew={setResetPasswordNew}
+          resetPasswordLoading={resetPasswordLoading} handleResetPassword={handleResetPassword}
+          showResetPassword={showResetPassword} setShowResetPassword={setShowResetPassword}
+          tahap={tahap} setTahap={setTahap}
+          jalurAktifPerTahap={jalurAktifPerTahap} setJalurAktifPerTahap={setJalurAktifPerTahap}
+          fetchStats={fetchStats} fetchRegistrations={fetchRegistrations} fetchRanking={fetchRanking}
+        />
+      </TabsContent>
+    </AppLayout>
   )
 }

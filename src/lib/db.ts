@@ -1,17 +1,22 @@
 import dotenv from 'dotenv'
 import path from 'path'
 
-// Force override DATABASE_URL from .env file
-dotenv.config({ path: path.resolve(process.cwd(), '.env'), override: true })
+// Only load .env file in development/local environment
+// Vercel provides environment variables automatically via dashboard
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  dotenv.config({ path: path.resolve(process.cwd(), '.env'), override: true })
+}
 
 import { neon } from '@neondatabase/serverless'
 
 const connectionString = process.env.DATABASE_URL
 if (!connectionString) {
-  throw new Error('DATABASE_URL environment variable is not set')
+  throw new Error('DATABASE_URL environment variable is not set. Please configure it in your deployment platform (Vercel Dashboard → Settings → Environment Variables)')
 }
 
-const sql = neon(connectionString)
+const sql = neon(connectionString, {
+  fetchConnectionCache: true,
+})
 
 // ====== Query Builder Helpers ======
 
@@ -67,7 +72,7 @@ function buildWhere(where: WhereCondition, paramStartIdx = 1): BuildWhereResult 
         params.push(...innerResult.params)
         clauses.push(`NOT (${innerResult.clauses.join(' AND ')})`)
       } else if (opValue.contains !== undefined) {
-        clauses.push(`${col(key)} LIKE $${paramIdx}`)
+        clauses.push(`${col(key)} ILIKE $${paramIdx}`)
         params.push(`%${opValue.contains}%`)
         paramIdx++
       } else if (opValue.in !== undefined) {
@@ -77,7 +82,7 @@ function buildWhere(where: WhereCondition, paramStartIdx = 1): BuildWhereResult 
         params.push(...vals)
         paramIdx += vals.length
       } else if (opValue.startsWith !== undefined) {
-        clauses.push(`${col(key)} LIKE $${paramIdx}`)
+        clauses.push(`${col(key)} ILIKE $${paramIdx}`)
         params.push(`${opValue.startsWith}%`)
         paramIdx++
       }

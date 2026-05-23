@@ -1,0 +1,48 @@
+# ============================================
+# SPMB 2026 - docker-compose.yml untuk Production
+# ============================================
+# Database menggunakan Neon PostgreSQL (cloud)
+# Jadi tidak perlu container database lokal
+
+version: "3.8"
+
+services:
+  spmb-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: spmb-2026
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - NODE_ENV=production
+    # Jika butuh reverse proxy (nginx/caddy), uncomment:
+    # networks:
+    #   - spmb-network
+
+  # Opsional: Reverse Proxy dengan Caddy
+  # caddy:
+  #   image: caddy:2-alpine
+  #   container_name: spmb-caddy
+  #   restart: unless-stopped
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./Caddyfile.prod:/etc/caddy/Caddyfile
+  #     - caddy_data:/data
+  #     - caddy_config:/config
+  #   depends_on:
+  #     - spmb-app
+  #   networks:
+  #     - spmb-network
+
+# networks:
+#   spmb-network:
+#     driver: bridge
+
+# volumes:
+#   caddy_data:
+#   caddy_config:
