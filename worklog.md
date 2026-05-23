@@ -53,3 +53,31 @@ Stage Summary:
 - Standalone build optimized from 153MB to 57MB
 - Dev server running normally on port 3000
 - Ready for deployment
+---
+Task ID: 2
+Agent: Main
+Task: Completely replace Prisma with Neon serverless direct queries to fix deployment 412 error
+
+Work Log:
+- Identified root cause: Prisma native engine (libquery_engine-debian-openssl-3.0.x.so.node) crashes on Z.ai serverless runtime
+- Attempted Neon adapter approach - but Prisma library runtime still requires native engine file
+- Attempted Prisma edge runtime - conflicts with adapter usage
+- Final solution: Completely replaced Prisma ORM with direct Neon serverless SQL queries
+- Created new db.ts with Model class that provides Prisma-compatible API (findMany, findFirst, findUnique, create, update, updateMany, delete, count, groupBy, upsert)
+- Built WHERE clause builder supporting: equality, contains, in, startsWith, NOT, AND, OR
+- Added auto-generation of id (cuid format), createdAt, updatedAt timestamps
+- Added Date serialization for PostgreSQL
+- Fixed groupBy orderBy for Prisma's { _count: { id: 'desc' } } format
+- Fixed field-level NOT operator: { key: { not: { startsWith: 'session:' } } }
+- Fixed Setting table (no createdAt column)
+- Build size reduced from 153MB → 25MB (84% reduction!)
+- No more native binary dependencies - fully compatible with serverless/edge
+- All API endpoints tested and working: settings, auth, dashboard, registrations, ranking, duplicates
+- Lint passes clean
+- Standalone production build tested successfully
+
+Stage Summary:
+- Prisma completely removed from runtime (still in schema for db:push/migrate)
+- Build: 153MB → 25MB (no @prisma, no native engine, no sharp)
+- All 20 API endpoints working with Neon SQL queries
+- Ready for Z.ai serverless deployment
