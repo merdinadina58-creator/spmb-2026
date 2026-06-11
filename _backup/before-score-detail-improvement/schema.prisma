@@ -1,0 +1,107 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Registration {
+  id                  String   @id @default(cuid())
+  noRegistrasi        String
+  nama                String
+  nisn                String
+  subJalur            String
+  npsnSekolahPilihan  String
+  namaSekolahPilihan  String
+  jurusan             String
+  npsnSekolahAsal     String
+  namaSekolahAsal     String
+  status              String   @default("ON PROGRESS")
+  waktuDaftar         String
+  verificationStatus  String   @default("PENDING") // PENDING, VERIFIED, REJECTED
+  verificationNote    String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  // Portal SPMB additional fields
+  nik                 String?
+  tanggalLahir        String?
+  alamat              String?
+  alamatLengkap       String?
+  noTelpSiswa         String?
+  noTelpOrangtua      String?
+  latitude            String?
+  longitude           String?
+  lokasiJarak         String?
+  nilaiRataRata       String?
+  skorJarak           String?
+  skorNilaiRaport     String?
+  skor                String?
+  nilaiRapor          String?  // JSON string for subject grades
+  skorLomba           String?  // Skor Lomba from Portal SPMB
+  nilaiRataRataTKA    String?  // Nilai Rata Rata TKA from Portal SPMB
+  skorPrestasiAkademik String? // Skor Prestasi Akademik from Portal SPMB
+
+  // Sumut Berkah portal fields
+  totalNilai          String?  // Total Nilai from Sumut Berkah ranking
+  jarakKeSekolah      String?  // Jarak ke sekolah from Sumut Berkah ranking (e.g. "1.342 m")
+  jarakKeSekolahMeter Float?   // Numeric distance in meters for sorting
+
+  // Verification-specific fields
+  kekuranganVerifikasi String?  // Missing documents/issues for verification
+  tanggalVerif        String?  // Date of verification
+  jamVerif            String?  // Time of verification
+  terbitKK            String?  // Family card issuance date
+  lamaKK              String?  // Duration since KK issued
+  dokumen             String?  // JSON string for uploaded documents
+
+  @@unique([noRegistrasi, npsnSekolahPilihan])
+  @@unique([nisn, npsnSekolahPilihan])
+}
+
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model JalurConfig {
+  id          String   @id @default(cuid())
+  nama        String   @unique  // Nama jalur, e.g. "Domisili", "Afirmasi (KTM)"
+  persentase  Float    @default(0)  // Persentase kuota
+  urutan      Int      @default(0)  // Urutan tampilan
+  aktif       Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model User {
+  id          String   @id @default(cuid())
+  username    String   @unique
+  password    String   // Hashed password
+  namaLengkap String
+  role        String   @default("admin")  // admin, operator
+  aktif       Boolean  @default(true)
+  lastLogin   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  auditLogs   AuditLog[]
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  action      String   // VERIFY, REJECT, IMPORT, EDIT, DELETE, BULK_VERIFY, SYNC_STATUS, SETTINGS_CHANGE, USER_MANAGE
+  entityType  String   // Registration, Setting, User, JalurConfig
+  entityId    String?  // ID of the affected entity
+  details     String?  // JSON string with action details
+  createdAt   DateTime @default(now())
+}
