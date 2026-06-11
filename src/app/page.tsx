@@ -762,32 +762,27 @@ export default function Home() {
   }, [fetchSettings, isAuthenticated])
 
   // Register PWA (manifest + service worker) ONLY after authentication
-  // This avoids 401 errors from Vercel Deployment Protection on preview deployments
+  // Avoids 403 console errors from Vercel Deployment Protection on preview deployments
+  // by using a silent GET (not HEAD) and catching errors without console spam
   useEffect(() => {
     if (!isAuthenticated) return
 
-    // First verify that /api/manifest is reachable (won't be blocked after auth)
-    fetch('/api/manifest', { method: 'HEAD' }).then(res => {
-      if (!res.ok) return // Vercel still blocking — skip PWA setup
+    // Add manifest link directly — if Vercel DP blocks it, the browser handles it silently
+    // (no 403 in console because we don't use fetch/HEAD which always shows errors)
+    const existingManifest = document.querySelector("link[rel='manifest']")
+    if (!existingManifest) {
+      const link = document.createElement('link')
+      link.rel = 'manifest'
+      link.href = '/api/manifest'
+      document.head.appendChild(link)
+    }
 
-      // Add manifest link dynamically
-      const existingManifest = document.querySelector("link[rel='manifest']")
-      if (!existingManifest) {
-        const link = document.createElement('link')
-        link.rel = 'manifest'
-        link.href = '/api/manifest'
-        document.head.appendChild(link)
-      }
-
-      // Register service worker
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {
-          // PWA is optional — silently fail
-        })
-      }
-    }).catch(() => {
-      // Can't reach manifest — skip PWA setup entirely (Vercel DP blocking)
-    })
+    // Register service worker (silently fails if blocked)
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {
+        // PWA is optional — silently fail (no console error)
+      })
+    }
   }, [isAuthenticated])
 
   // Load users when Pengaturan tab is active

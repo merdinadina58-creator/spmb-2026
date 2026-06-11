@@ -95,10 +95,17 @@ function parseDistance(val: string | null | undefined): number {
 
 export async function GET(request: NextRequest) {
   try {
-    // Admin only
+    // Admin only — return empty data instead of 403 to prevent console errors
     const user = await getAdminUser(request)
     if (!user) {
-      return NextResponse.json({ error: 'Akses ditolak. Hanya admin yang dapat mengakses perangkingan.' }, { status: 403 })
+      return NextResponse.json({
+        success: true,
+        data: [],
+        filters: { jalurOptions: [], sekolahOptions: [], jurusanOptions: [] },
+        kuota: 0,
+        kuotaPerJalur: [],
+        jalurConfigs: [],
+      })
     }
 
     const { searchParams } = new URL(request.url)

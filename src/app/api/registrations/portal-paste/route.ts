@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getAuthUser } from '@/lib/auth';
+import { Prisma } from '@prisma/client';
 
 interface PortalPastePayload {
   noRegistrasi: string;
@@ -65,7 +66,6 @@ export async function POST(request: NextRequest) {
     const npsnSekolahPilihan = data.npsnSekolahPilihan || '0';
 
     // Determine verification status from the payload
-    // The frontend sends verificationStatus directly from the dialog
     const isRejected = data.verificationStatus === 'REJECTED' || data.status === 'DITOLAK';
 
     // Build optional portal fields - only include non-empty values
@@ -91,101 +91,73 @@ export async function POST(request: NextRequest) {
       portalFields['verificationNote'] = data.verificationNote.trim();
     }
 
-    // STEP 1: For DITOLAK records, ALWAYS create a new record (no dedup)
-    // This ensures students rejected multiple times appear as separate entries
+    // Build the full record data for both create and update
+    const buildRecordData = () => {
+      const verifStatus = data.verificationStatus ||
+        (data.status === 'DITERIMA' ? 'VERIFIED' : data.status === 'DITOLAK' ? 'REJECTED' : 'PENDING');
+
+      return {
+        noRegistrasi: data.noRegistrasi || '',
+        nama: data.nama || '',
+        nisn: data.nisn || '',
+        subJalur: data.subJalur || '',
+        npsnSekolahPilihan,
+        namaSekolahPilihan: data.namaSekolahPilihan || '',
+        jurusan: data.jurusan || '',
+        npsnSekolahAsal: data.npsnSekolahAsal || '',
+        namaSekolahAsal: data.namaSekolahAsal || '',
+        status: data.status || 'ON PROGRESS',
+        waktuDaftar: data.waktuDaftar || '',
+        verificationStatus: verifStatus,
+        tahap,
+        ...portalFields,
+      };
+    };
+
+    // For REJECTED records, always create a new record (no dedup)
     if (isRejected) {
-      const created = await db.registration.create({
-        data: {
-          noRegistrasi: data.noRegistrasi || '',
-          nama: data.nama || '',
-          nisn: data.nisn || '',
-          subJalur: data.subJalur || '',
-          npsnSekolahPilihan,
-          namaSekolahPilihan: data.namaSekolahPilihan || '',
-          jurusan: data.jurusan || '',
-          npsnSekolahAsal: data.npsnSekolahAsal || '',
-          namaSekolahAsal: data.namaSekolahAsal || '',
-          status: 'DITOLAK',
-          waktuDaftar: data.waktuDaftar || '',
-          verificationStatus: 'REJECTED',
-          tahap,
-          ...portalFields,
-        },
-      });
+      try {
+        const created = await db.registration.create({
+          data: buildRecordData(),
+        });
 
-      return NextResponse.json({
-        success: true,
-        action: 'created',
-        data: created,
-        message: `Data ditolak baru untuk ${data.nama} (NISN: ${data.nisn}) berhasil ditambahkan`,
-      });
+        return NextResponse.json({
+          success: true,
+          action: 'created',
+          data: created,
+          message: `Data ditolak baru untuk ${data.nama} (NISN: ${data.nisn}) berhasil ditambahkan`,
+        });
+      } catch (createError: unknown) {
+        // Handle unique constraint violation — find existing and update instead
+        if (createError instanceof Prisma.PrismaClientKnownRequestError && createError.code === 'P2002') {
+          const existing = await findExistingRecord(data, npsnSekolahPilihan, tahap);
+          if (existing) {
+            const updated = await db.registration.update({
+              where: { id: existing.id },
+              data: {
+                verificationStatus: 'REJECTED',
+                status: 'DITOLAK',
+                ...portalFields,
+              },
+            });
+            return NextResponse.json({
+              success: true,
+              action: 'updated',
+              data: updated,
+              message: `Data ditolak ${data.nama} (NISN: ${data.nisn}) berhasil diperbarui`,
+            });
+          }
+        }
+        throw createError;
+      }
     }
 
-    // STEP 2: For non-DITOLAK records, find existing record by NISN + subJalur (primary dedup)
-    // This ensures students who register in multiple jalur are kept as separate records
-    let existing = null;
-    if (data.nisn && data.nisn.trim()) {
-      existing = await db.registration.findFirst({
-        where: {
-          nisn: data.nisn.trim(),
-          subJalur: data.subJalur?.trim() || undefined,
-        },
-      });
-    }
-
-    // STEP 3: Try by NISN + npsnSekolahPilihan
-    if (!existing && data.nisn && data.nisn.trim()) {
-      existing = await db.registration.findFirst({
-        where: {
-          nisn: data.nisn.trim(),
-          npsnSekolahPilihan,
-        },
-      });
-    }
-
-    // STEP 4: Fallback - try by noRegistrasi + subJalur
-    if (!existing && data.noRegistrasi && data.noRegistrasi.trim()) {
-      existing = await db.registration.findFirst({
-        where: {
-          noRegistrasi: data.noRegistrasi.trim(),
-          subJalur: data.subJalur?.trim() || undefined,
-        },
-      });
-    }
-
-    // STEP 5: Fallback - try by noRegistrasi + npsnSekolahPilihan
-    if (!existing && data.noRegistrasi && data.noRegistrasi.trim()) {
-      existing = await db.registration.findFirst({
-        where: {
-          noRegistrasi: data.noRegistrasi.trim(),
-          npsnSekolahPilihan,
-        },
-      });
-    }
-
-    // STEP 6: Fallback - try by nama + subJalur (for cases where NISN/noRegistrasi differ)
-    if (!existing && data.nama && data.nama.trim() && data.subJalur && data.subJalur.trim()) {
-      existing = await db.registration.findFirst({
-        where: {
-          nama: data.nama.trim(),
-          subJalur: data.subJalur.trim(),
-        },
-      });
-    }
-
-    // STEP 7: Last resort - try by NISN alone (broader match)
-    // Only use this if no subJalur-specific match was found
-    if (!existing && data.nisn && data.nisn.trim()) {
-      existing = await db.registration.findFirst({
-        where: {
-          nisn: data.nisn.trim(),
-        },
-      });
-    }
+    // For non-REJECTED records: find existing record with tahap-aware dedup
+    const existing = await findExistingRecord(data, npsnSekolahPilihan, tahap);
 
     if (existing) {
-      // UPDATE existing record - fill empty fields with new data, don't overwrite existing non-empty values
-      const updateData: Record<string, string | null> = {};
+      // UPDATE existing record — fill empty fields with new data, don't overwrite existing non-empty values
+      const updateData: Record<string, string | number | null> = {};
 
       // Only update a field if: new value is non-empty AND (existing value is empty OR existing value equals default)
       const mergeField = (key: string, newValue: string | undefined, existingValue: string | null | undefined) => {
@@ -204,11 +176,13 @@ export async function POST(request: NextRequest) {
       mergeField('jurusan', data.jurusan, existing.jurusan);
       mergeField('npsnSekolahAsal', data.npsnSekolahAsal, existing.npsnSekolahAsal);
       mergeField('namaSekolahAsal', data.namaSekolahAsal, existing.namaSekolahAsal);
-      mergeField('status', data.status, existing.status);
       mergeField('waktuDaftar', data.waktuDaftar, existing.waktuDaftar);
       mergeField('npsnSekolahPilihan', data.npsnSekolahPilihan, existing.npsnSekolahPilihan);
 
-      // Always set verificationStatus if provided (from the dialog)
+      // Always update status and verificationStatus when provided (user explicitly chose)
+      if (data.status && data.status.trim()) {
+        updateData['status'] = data.status.trim();
+      }
       if (data.verificationStatus) {
         updateData['verificationStatus'] = data.verificationStatus;
       }
@@ -216,6 +190,11 @@ export async function POST(request: NextRequest) {
       // Always set verificationNote if provided
       if (data.verificationNote && data.verificationNote.trim()) {
         updateData['verificationNote'] = data.verificationNote.trim();
+      }
+
+      // Always update tahap if provided
+      if (tahap && existing.tahap !== tahap) {
+        updateData['tahap'] = tahap;
       }
 
       // Portal fields - only fill empty fields (don't overwrite existing verification data)
@@ -231,62 +210,214 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Only perform update if there are actually fields to update
-      if (Object.keys(updateData).length > 0) {
-        const updated = await db.registration.update({
-          where: { id: existing.id },
-          data: updateData,
-        });
-
-        return NextResponse.json({
-          success: true,
-          action: 'updated',
-          data: updated,
-          message: `Data ${data.nama} (NISN: ${data.nisn || existing.nisn}) berhasil diperbarui — ${Object.keys(updateData).length} field diisi`,
-        });
-      } else {
-        return NextResponse.json({
-          success: true,
-          action: 'unchanged',
-          data: existing,
-          message: `Data ${data.nama} (NISN: ${data.nisn || existing.nisn}) sudah lengkap, tidak ada perubahan`,
-        });
-      }
-    } else {
-      // CREATE new record
-      // Determine verificationStatus: use from payload, or derive from status
-      const verifStatus = data.verificationStatus ||
-        (data.status === 'DITERIMA' ? 'VERIFIED' : data.status === 'DITOLAK' ? 'REJECTED' : 'PENDING');
-
-      const created = await db.registration.create({
-        data: {
-          noRegistrasi: data.noRegistrasi || '',
-          nama: data.nama || '',
-          nisn: data.nisn || '',
-          subJalur: data.subJalur || '',
-          npsnSekolahPilihan,
-          namaSekolahPilihan: data.namaSekolahPilihan || '',
-          jurusan: data.jurusan || '',
-          npsnSekolahAsal: data.npsnSekolahAsal || '',
-          namaSekolahAsal: data.namaSekolahAsal || '',
-          status: data.status || 'ON PROGRESS',
-          waktuDaftar: data.waktuDaftar || '',
-          verificationStatus: verifStatus,
-          tahap,
-          ...portalFields,
-        },
+      // Always perform update (even if only verificationStatus changed — user explicitly chose this)
+      const updated = await db.registration.update({
+        where: { id: existing.id },
+        data: updateData,
       });
 
+      const fieldCount = Object.keys(updateData).length;
       return NextResponse.json({
         success: true,
-        action: 'created',
-        data: created,
-        message: `Data baru ${data.nama} (NISN: ${data.nisn}) berhasil ditambahkan`,
+        action: fieldCount > 0 ? 'updated' : 'unchanged',
+        data: updated,
+        message: fieldCount > 0
+          ? `Data ${data.nama} (NISN: ${data.nisn || existing.nisn}) berhasil diperbarui — ${fieldCount} field diupdate`
+          : `Data ${data.nama} (NISN: ${data.nisn || existing.nisn}) sudah lengkap, tidak ada perubahan`,
       });
+    } else {
+      // CREATE new record
+      try {
+        const created = await db.registration.create({
+          data: buildRecordData(),
+        });
+
+        return NextResponse.json({
+          success: true,
+          action: 'created',
+          data: created,
+          message: `Data baru ${data.nama} (NISN: ${data.nisn}) berhasil ditambahkan`,
+        });
+      } catch (createError: unknown) {
+        // Handle unique constraint violation — find existing record and update instead
+        if (createError instanceof Prisma.PrismaClientKnownRequestError && createError.code === 'P2002') {
+          // The unique constraint on [nisn, npsnSekolahPilihan] or [noRegistrasi, npsnSekolahPilihan]
+          // was violated. Find the conflicting record and update it.
+          const conflicting = await findExistingRecordCrossTahap(data, npsnSekolahPilihan);
+          if (conflicting) {
+            const updateData: Record<string, string | number | null> = {};
+
+            // Always update status and verificationStatus
+            if (data.status && data.status.trim()) {
+              updateData['status'] = data.status.trim();
+            }
+            if (data.verificationStatus) {
+              updateData['verificationStatus'] = data.verificationStatus;
+            }
+
+            // Update tahap to the new tahap
+            updateData['tahap'] = tahap;
+
+            // Merge portal fields into empty fields
+            for (const [key, value] of Object.entries(portalFields)) {
+              if (value && value.trim()) {
+                if (key === 'verificationNote') {
+                  updateData['verificationNote'] = value;
+                  continue;
+                }
+                const existingValue = (conflicting as Record<string, unknown>)[key] as string | null | undefined;
+                if (!existingValue || existingValue.trim() === '') {
+                  updateData[key] = value;
+                }
+              }
+            }
+
+            const updated = await db.registration.update({
+              where: { id: conflicting.id },
+              data: updateData,
+            });
+
+            return NextResponse.json({
+              success: true,
+              action: 'updated',
+              data: updated,
+              message: `Data ${data.nama} (NISN: ${data.nisn}) berhasil diperbarui — sudah ada di tahap sebelumnya`,
+            });
+          }
+        }
+        throw createError;
+      }
     }
   } catch (error) {
     console.error('Error saving portal paste data:', error);
     const message = error instanceof Error ? error.message : 'Failed to save data';
     return NextResponse.json({ error: message }, { status: 500 });
   }
+}
+
+/**
+ * Find existing record with tahap-aware dedup.
+ * Priority matches that include tahap to avoid cross-tahap conflicts.
+ */
+async function findExistingRecord(
+  data: PortalPastePayload,
+  npsnSekolahPilihan: string,
+  tahap: number
+) {
+  // Priority 1: NISN + subJalur + tahap (most specific)
+  if (data.nisn && data.nisn.trim()) {
+    const existing = await db.registration.findFirst({
+      where: {
+        nisn: data.nisn.trim(),
+        subJalur: data.subJalur?.trim() || undefined,
+        tahap,
+      },
+    });
+    if (existing) return existing;
+  }
+
+  // Priority 2: NISN + npsnSekolahPilihan + tahap
+  if (data.nisn && data.nisn.trim()) {
+    const existing = await db.registration.findFirst({
+      where: {
+        nisn: data.nisn.trim(),
+        npsnSekolahPilihan,
+        tahap,
+      },
+    });
+    if (existing) return existing;
+  }
+
+  // Priority 3: noRegistrasi + subJalur + tahap
+  if (data.noRegistrasi && data.noRegistrasi.trim()) {
+    const existing = await db.registration.findFirst({
+      where: {
+        noRegistrasi: data.noRegistrasi.trim(),
+        subJalur: data.subJalur?.trim() || undefined,
+        tahap,
+      },
+    });
+    if (existing) return existing;
+  }
+
+  // Priority 4: noRegistrasi + npsnSekolahPilihan + tahap
+  if (data.noRegistrasi && data.noRegistrasi.trim()) {
+    const existing = await db.registration.findFirst({
+      where: {
+        noRegistrasi: data.noRegistrasi.trim(),
+        npsnSekolahPilihan,
+        tahap,
+      },
+    });
+    if (existing) return existing;
+  }
+
+  // Priority 5: nama + subJalur + tahap
+  if (data.nama && data.nama.trim() && data.subJalur && data.subJalur.trim()) {
+    const existing = await db.registration.findFirst({
+      where: {
+        nama: data.nama.trim(),
+        subJalur: data.subJalur.trim(),
+        tahap,
+      },
+    });
+    if (existing) return existing;
+  }
+
+  // Priority 6: NISN alone + tahap
+  if (data.nisn && data.nisn.trim()) {
+    const existing = await db.registration.findFirst({
+      where: {
+        nisn: data.nisn.trim(),
+        tahap,
+      },
+    });
+    if (existing) return existing;
+  }
+
+  return null;
+}
+
+/**
+ * Find existing record across all tahaps (fallback for unique constraint violation handling).
+ * Used when a create fails due to [nisn, npsnSekolahPilihan] or [noRegistrasi, npsnSekolahPilihan]
+ * unique constraints.
+ */
+async function findExistingRecordCrossTahap(
+  data: PortalPastePayload,
+  npsnSekolahPilihan: string
+) {
+  // Try by NISN + npsnSekolahPilihan (matches the unique constraint)
+  if (data.nisn && data.nisn.trim()) {
+    const existing = await db.registration.findFirst({
+      where: {
+        nisn: data.nisn.trim(),
+        npsnSekolahPilihan,
+      },
+    });
+    if (existing) return existing;
+  }
+
+  // Try by noRegistrasi + npsnSekolahPilihan (matches the other unique constraint)
+  if (data.noRegistrasi && data.noRegistrasi.trim()) {
+    const existing = await db.registration.findFirst({
+      where: {
+        noRegistrasi: data.noRegistrasi.trim(),
+        npsnSekolahPilihan,
+      },
+    });
+    if (existing) return existing;
+  }
+
+  // Last resort: NISN alone
+  if (data.nisn && data.nisn.trim()) {
+    const existing = await db.registration.findFirst({
+      where: {
+        nisn: data.nisn.trim(),
+      },
+    });
+    if (existing) return existing;
+  }
+
+  return null;
 }
