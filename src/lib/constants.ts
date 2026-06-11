@@ -4,6 +4,33 @@ export const STATUS_COLORS: Record<string, string> = {
   REJECTED: 'bg-red-100 text-red-800 border-red-300',
 }
 
+/**
+ * Map a raw status string (from CSV, portal, etc.) to the canonical
+ * { verificationStatus, status } pair used throughout the app.
+ */
+export function mapStatusToVerificationStatus(rawStatus: string): {
+  verificationStatus: string
+  status: string
+} {
+  const s = (rawStatus || '').trim().toUpperCase()
+
+  if (s === 'DITERIMA' || s === 'VERIFIED' || s === 'DITERIMA (VERIFIED)' || s === 'ACCEPTED') {
+    return { verificationStatus: 'VERIFIED', status: 'DITERIMA' }
+  }
+  if (s === 'DITOLAK' || s === 'REJECTED' || s === 'REJECT') {
+    return { verificationStatus: 'REJECTED', status: 'DITOLAK' }
+  }
+  if (s === 'ON PROGRESS' || s === 'PENDING' || s === 'MENUNGGU' || s === 'PROSES' || s === 'ON_PROGRESS') {
+    return { verificationStatus: 'PENDING', status: 'ON PROGRESS' }
+  }
+
+  // Fallback: try to detect from partial match
+  if (s.includes('TERIMA')) return { verificationStatus: 'VERIFIED', status: 'DITERIMA' }
+  if (s.includes('TOLAK')) return { verificationStatus: 'REJECTED', status: 'DITOLAK' }
+
+  return { verificationStatus: 'PENDING', status: 'ON PROGRESS' }
+}
+
 export const STATUS_LULUS_COLORS: Record<string, string> = {
   BELUM: 'bg-gray-100 text-gray-600 border-gray-300',
   LULUS: 'bg-emerald-100 text-emerald-800 border-emerald-300',
