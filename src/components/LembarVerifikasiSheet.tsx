@@ -80,6 +80,7 @@ export default function LembarVerifikasiSheet({
   onViewDetail,
   toast,
   highlightRegId,
+  refreshKey,
 }: {
   config: LembarVerifikasiConfig
   subJalurOptions: Array<{ label: string; value: string }>
@@ -88,6 +89,7 @@ export default function LembarVerifikasiSheet({
   onViewDetail: (reg: Registration) => void
   toast: ReturnType<typeof useToast>['toast']
   highlightRegId?: string | null
+  refreshKey?: number
 }) {
   const [data, setData] = useState<LembarVerifikasiData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -338,29 +340,29 @@ export default function LembarVerifikasiSheet({
       if (search) params.set('search', search)
       if (verificationFilter !== 'all') params.set('verificationStatus', verificationFilter)
 
-      const res = await fetch(`/api/registrations?${params}`)
-      const result = await res.json()
+      // Parallelize both API calls for faster load
+      const [regsResult, statsResult] = await Promise.all([
+        fetch(`/api/registrations?${params}`).then(r => r.json()),
+        fetch('/api/lembar-stats').then(r => r.json()),
+      ])
 
-      const regs: Registration[] = dedupById(result.data || [])
-      const pag = result.pagination || { page: 1, limit: lembarLimit, total: 0, totalPages: 0 }
-
-      // Calculate stats from current data set
-      const statsRes = await fetch('/api/dashboard')
-      const statsData = await statsRes.json()
+      const regs: Registration[] = dedupById(regsResult.data || [])
+      const pag = regsResult.pagination || { page: 1, limit: lembarLimit, total: 0, totalPages: 0 }
 
       // Filter stats for this sub jalur
+      const statsData = statsResult
       const jalurNames = config.subJalurFilter.split(',').map(s => s.trim())
-      const relevantSubJalurStats = statsData.bySubJalur.filter(
+      const relevantSubJalurStats = (statsData.bySubJalur || []).filter(
         (item: { name: string; count: number }) => jalurNames.includes(item.name)
       )
       const totalForJalur = relevantSubJalurStats.reduce((acc: number, item: { count: number }) => acc + item.count, 0)
 
-      const relevantVerifiedStats = statsData.verifiedBySubJalur.filter(
+      const relevantVerifiedStats = (statsData.verifiedBySubJalur || []).filter(
         (item: { name: string; count: number }) => jalurNames.includes(item.name)
       )
       const verifiedForJalur = relevantVerifiedStats.reduce((acc: number, item: { count: number }) => acc + item.count, 0)
 
-      const relevantRejectedStats = statsData.rejectedBySubJalur.filter(
+      const relevantRejectedStats = (statsData.rejectedBySubJalur || []).filter(
         (item: { name: string; count: number }) => jalurNames.includes(item.name)
       )
       const rejectedForJalur = relevantRejectedStats.reduce((acc: number, item: { count: number }) => acc + item.count, 0)
@@ -382,11 +384,11 @@ export default function LembarVerifikasiSheet({
     } finally {
       setLoading(false)
     }
-  }, [page, search, verificationFilter, config.subJalurFilter, lembarLimit, toast])
+  }, [page, search, verificationFilter, config.subJalurFilter, lembarLimit, toast, refreshKey])
 
   useEffect(() => {
     fetchData()
-  }, [fetchData])
+  }, [fetchData, refreshKey])
 
   const handleVerify = async () => {
     if (!verifyTargetId) return

@@ -278,6 +278,8 @@ export default function Home() {
   const [portalTerbitKK, setPortalTerbitKK] = useState('')
   // Highlight recently saved student in Lembar Verifikasi
   const [highlightRegId, setHighlightRegId] = useState<string | null>(null)
+  // Refresh key to force LembarVerifikasiSheet to re-fetch data after portal paste
+  const [lembarRefreshKey, setLembarRefreshKey] = useState(0)
 
   // Sumut Berkah paste state
   const [sumutBerkahOpen, setSumutBerkahOpen] = useState(false)
@@ -1032,6 +1034,9 @@ export default function Home() {
         setPortalTanggalVerif('')
         setPortalJamVerif('')
         setPortalTerbitKK('')
+        // Refresh Lembar Verifikasi sheet immediately (lightweight)
+        setLembarRefreshKey(prev => prev + 1)
+        // Also refresh parent-level data for other tabs
         fetchRegistrations()
         fetchStats()
 
@@ -1693,6 +1698,7 @@ export default function Home() {
                           onViewDetail={handleViewDetail}
                           toast={toast}
                           highlightRegId={highlightRegId}
+                          refreshKey={lembarRefreshKey}
                         />
                       </TabsContent>
 
@@ -1707,6 +1713,7 @@ export default function Home() {
                             onViewDetail={handleViewDetail}
                             toast={toast}
                             highlightRegId={highlightRegId}
+                            refreshKey={lembarRefreshKey}
                           />
                         </TabsContent>
                       ))}
@@ -1721,6 +1728,7 @@ export default function Home() {
                     onViewDetail={handleViewDetail}
                     toast={toast}
                     highlightRegId={highlightRegId}
+                    refreshKey={lembarRefreshKey}
                   />
                 )}
               </TabsContent>
