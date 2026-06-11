@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -46,6 +46,15 @@ model Registration {
   skorLomba           String?  // Skor Lomba from Portal SPMB
   nilaiRataRataTKA    String?  // Nilai Rata Rata TKA from Portal SPMB
   skorPrestasiAkademik String? // Skor Prestasi Akademik from Portal SPMB
+
+  // TKA individual scores (from Portal SPMB)
+  nilaiTKABIndo       String?  // Nilai TKA Bahasa Indonesia
+  nilaiTKAMatematika  String?  // Nilai TKA Matematika
+  rataRataTKA         String?  // Rata-rata TKA (legacy column)
+
+  // Prestasi details (from Portal SPMB)
+  sertifikatPrestasi  String?  // Sertifikat Prestasi
+  skorPrestasi        String?  // Skor Prestasi (legacy column)
 
   // Sumut Berkah portal fields
   totalNilai          String?  // Total Nilai from Sumut Berkah ranking
