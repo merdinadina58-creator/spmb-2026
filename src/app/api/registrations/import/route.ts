@@ -26,6 +26,10 @@ interface CSVPayload {
   lokasiJarak?: string;
   nilaiRataRata?: string;
   skorJarak?: string;
+  skorNilaiRaport?: string;
+  skorLomba?: string;
+  nilaiRataRataTKA?: string;
+  skorPrestasiAkademik?: string;
   skor?: string;
   nilaiRapor?: string;
 }
@@ -85,7 +89,7 @@ export async function POST(request: NextRequest) {
 
         // Build optional portal data - only include non-empty values
         const portalData: Record<string, string> = {};
-        const optFields = ['nik', 'tanggalLahir', 'alamat', 'alamatLengkap', 'noTelpSiswa', 'noTelpOrangtua', 'latitude', 'longitude', 'lokasiJarak', 'nilaiRataRata', 'skorJarak', 'skor', 'nilaiRapor'] as const;
+        const optFields = ['nik', 'tanggalLahir', 'alamat', 'alamatLengkap', 'noTelpSiswa', 'noTelpOrangtua', 'latitude', 'longitude', 'lokasiJarak', 'nilaiRataRata', 'skorJarak', 'skorNilaiRaport', 'skorLomba', 'nilaiRataRataTKA', 'skorPrestasiAkademik', 'skor', 'nilaiRapor'] as const;
         for (const f of optFields) {
           const val = (row as Record<string, unknown>)[f];
           if (val && typeof val === 'string' && (val as string).trim()) {

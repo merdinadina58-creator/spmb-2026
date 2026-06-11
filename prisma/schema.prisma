@@ -43,6 +43,9 @@ model Registration {
   skorNilaiRaport     String?
   skor                String?
   nilaiRapor          String?  // JSON string for subject grades
+  skorLomba           String?  // Skor Lomba from Portal SPMB
+  nilaiRataRataTKA    String?  // Nilai Rata Rata TKA from Portal SPMB
+  skorPrestasiAkademik String? // Skor Prestasi Akademik from Portal SPMB
 
   // Sumut Berkah portal fields
   totalNilai          String?  // Total Nilai from Sumut Berkah ranking

@@ -31,6 +31,9 @@ export interface Registration {
   nilaiRapor?: string | null
   // Verification-specific fields
   skorNilaiRaport?: string | null
+  skorLomba?: string | null
+  nilaiRataRataTKA?: string | null
+  skorPrestasiAkademik?: string | null
   kekuranganVerifikasi?: string | null
   tanggalVerif?: string | null
   jamVerif?: string | null

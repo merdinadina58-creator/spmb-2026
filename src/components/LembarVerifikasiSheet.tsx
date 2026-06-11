@@ -249,6 +249,9 @@ export default function LembarVerifikasiSheet({
       namaSekolahAsal: reg.namaSekolahAsal || '',
       skorJarak: reg.skorJarak || '',
       skorNilaiRaport: reg.skorNilaiRaport || '',
+      skorLomba: reg.skorLomba || '',
+      nilaiRataRataTKA: reg.nilaiRataRataTKA || '',
+      skorPrestasiAkademik: reg.skorPrestasiAkademik || '',
       kekuranganVerifikasi: reg.kekuranganVerifikasi || '',
       tanggalVerif: reg.tanggalVerif || '',
       jamVerif: reg.jamVerif || '',
@@ -473,7 +476,7 @@ export default function LembarVerifikasiSheet({
   const rejectedPct = s.total > 0 ? Math.round((s.rejected / s.total) * 100) : 0
   const pendingPct = s.total > 0 ? Math.round((s.pending / s.total) * 100) : 0
   const progressPct = s.total > 0 ? Math.round(((s.verified + s.rejected) / s.total) * 100) : 0
-  const totalCols = config.needsSkor ? 16 : 14
+  const totalCols = config.needsSkor ? 20 : 18
 
   return (
     <div className="space-y-6">
@@ -694,6 +697,10 @@ export default function LembarVerifikasiSheet({
                   <TableHead>Skor Jarak</TableHead>
                   {config.needsSkor && <TableHead>Total Nilai</TableHead>}
                   {config.needsSkor && <TableHead>Skor Nilai Raport</TableHead>}
+                  <TableHead className="bg-purple-50 text-purple-700">Nilai Rata² Raport</TableHead>
+                  <TableHead className="bg-purple-50 text-purple-700">Skor Lomba</TableHead>
+                  <TableHead className="bg-purple-50 text-purple-700">Nilai TKA</TableHead>
+                  <TableHead className="bg-purple-50 text-purple-700">Skor Pres. Akad.</TableHead>
                   <TableHead className="min-w-[180px]">
                     <span className="inline-flex items-center gap-1 cursor-pointer group" onClick={() => {
                       if (selectedIds.size > 0) {
@@ -793,6 +800,22 @@ export default function LembarVerifikasiSheet({
                         )}
                       </TableCell>
                       )}
+                      {/* Nilai Rata-rata Raport */}
+                      <TableCell className="text-sm text-center bg-purple-50/50">
+                        {reg.nilaiRataRata || '-'}
+                      </TableCell>
+                      {/* Skor Lomba */}
+                      <TableCell className="text-sm text-center bg-purple-50/50">
+                        {reg.skorLomba || '-'}
+                      </TableCell>
+                      {/* Nilai Rata Rata TKA */}
+                      <TableCell className="text-sm text-center bg-purple-50/50">
+                        {reg.nilaiRataRataTKA || '-'}
+                      </TableCell>
+                      {/* Skor Prestasi Akademik */}
+                      <TableCell className="text-sm text-center bg-purple-50/50">
+                        {reg.skorPrestasiAkademik || '-'}
+                      </TableCell>
                       {/* Kekurangan Verifikasi - Multi-Select Dropdown */}
                       <TableCell className="text-sm align-top" style={{ maxWidth: '280px' }}>
                         <div className="space-y-1">
@@ -1304,6 +1327,22 @@ export default function LembarVerifikasiSheet({
                   <div>
                     <label className="text-xs text-gray-500 font-medium">Skor Nilai Raport</label>
                     <Input value={editForm.skorNilaiRaport || ''} onChange={e => setEditForm({...editForm, skorNilaiRaport: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Nilai Rata-rata Raport</label>
+                    <Input value={editForm.nilaiRataRata || ''} onChange={e => setEditForm({...editForm, nilaiRataRata: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Skor Lomba</label>
+                    <Input value={editForm.skorLomba || ''} onChange={e => setEditForm({...editForm, skorLomba: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Nilai Rata Rata TKA</label>
+                    <Input value={editForm.nilaiRataRataTKA || ''} onChange={e => setEditForm({...editForm, nilaiRataRataTKA: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Skor Prestasi Akademik</label>
+                    <Input value={editForm.skorPrestasiAkademik || ''} onChange={e => setEditForm({...editForm, skorPrestasiAkademik: e.target.value})} className="mt-1" />
                   </div>
                   <div>
                     <label className="text-xs text-gray-500 font-medium">Total Nilai (Sumut Berkah)</label>

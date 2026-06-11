@@ -308,6 +308,27 @@ export function parsePortalText(
     result['skorNilaiRaport'] = result['nilaiRataRata']
   }
 
+  // Skor Lomba - from "Skor Lomba" label
+  const skorLomba = findNextLine('Skor Lomba')
+  if (skorLomba) {
+    const match = skorLomba.match(/([\d]+[\.,]?[\d]*)/)
+    result['skorLomba'] = match ? match[1] : skorLomba
+  }
+
+  // Nilai Rata Rata TKA - from "Nilai Rata Rata TKA" or "Nilai Rata-rata TKA" label
+  const nilaiRataRataTKA = findNextLine('Nilai Rata Rata TKA') || findNextLine('Nilai Rata-rata TKA') || findNextLine('Rata-rata TKA') || findNextLine('Rata Rata TKA')
+  if (nilaiRataRataTKA) {
+    const match = nilaiRataRataTKA.match(/([\d]+[\.,]?[\d]*)/)
+    result['nilaiRataRataTKA'] = match ? match[1] : nilaiRataRataTKA
+  }
+
+  // Skor Prestasi Akademik - from "Skor Prestasi Akademik" label
+  const skorPrestasiAkademik = findNextLine('Skor Prestasi Akademik')
+  if (skorPrestasiAkademik) {
+    const match = skorPrestasiAkademik.match(/([\d]+[\.,]?[\d]*)/)
+    result['skorPrestasiAkademik'] = match ? match[1] : skorPrestasiAkademik
+  }
+
   // Dokumen - parse from "Dokumen" section
   const dokumenSection = findNextLine('Dokumen')
   if (dokumenSection) {

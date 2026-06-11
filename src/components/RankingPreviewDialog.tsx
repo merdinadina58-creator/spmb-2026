@@ -210,7 +210,8 @@ export default function RankingPreviewDialog({
                     <TableHead rowSpan={2} className="font-semibold text-white bg-slate-800">Sekolah Asal</TableHead>
                     <TableHead rowSpan={2} className="w-12 text-center font-semibold text-white bg-slate-800">Jurusan</TableHead>
                     <TableHead colSpan={2} className={`text-center font-semibold ${rankingTampilan === 'jarak' ? 'bg-sky-900 text-sky-100' : 'bg-slate-700 text-white'}`}>Jarak</TableHead>
-                    <TableHead colSpan={2} className={`text-center font-semibold ${rankingTampilan === 'nilai' ? 'bg-emerald-900 text-emerald-100' : 'bg-slate-700 text-white'}`}>Nilai</TableHead>
+                    <TableHead colSpan={2} className={`text-center font-semibold ${rankingTampilan === 'nilai' ? 'bg-emerald-900 text-emerald-100' : 'bg-slate-700 text-white'}`}>Nilai Raport</TableHead>
+                    <TableHead colSpan={3} className="text-center font-semibold text-white bg-purple-900">Detail Portal</TableHead>
                     <TableHead colSpan={2} className={`text-center font-semibold ${rankingTampilan === 'komposit' ? 'bg-amber-900 text-amber-100' : 'bg-slate-700 text-white'}`}>Skor</TableHead>
                     <TableHead colSpan={5} className="text-center font-semibold text-white bg-slate-700">Verifikasi</TableHead>
                     <TableHead rowSpan={2} className="w-12 text-center font-semibold text-white bg-slate-800">Status</TableHead>
@@ -223,6 +224,9 @@ export default function RankingPreviewDialog({
                     <TableHead className={`font-semibold ${rankingTampilan === 'jarak' ? 'bg-sky-50' : ''}`}>Skor</TableHead>
                     <TableHead className={`font-semibold ${rankingTampilan === 'nilai' ? 'bg-emerald-50' : ''}`}>Rata²</TableHead>
                     <TableHead className={`font-semibold ${rankingTampilan === 'nilai' ? 'bg-emerald-50' : ''}`}>Skor</TableHead>
+                    <TableHead className="font-semibold bg-purple-50 text-purple-700">Skor Lomba</TableHead>
+                    <TableHead className="font-semibold bg-purple-50 text-purple-700">Nilai TKA</TableHead>
+                    <TableHead className="font-semibold bg-purple-50 text-purple-700">Skor Pres. Akad.</TableHead>
                     <TableHead className="font-semibold">Total</TableHead>
                     <TableHead className={`font-semibold ${rankingTampilan === 'komposit' ? 'bg-amber-50' : ''}`}>Komposit</TableHead>
                     <TableHead className="font-semibold">Kekurangan</TableHead>
@@ -300,6 +304,15 @@ export default function RankingPreviewDialog({
                         <TableCell className={`text-center p-0.5 ${rankingTampilan === 'nilai' ? 'bg-emerald-50/50' : ''}`}>
                           <span className={`text-[9px] ${nilaiNum > 0 ? 'text-emerald-700' : 'text-gray-300'}`}>{v(r, 'skorNilaiRaport')}</span>
                         </TableCell>
+                        <TableCell className="text-center p-0.5 bg-purple-50/50">
+                          <span className={`text-[9px] ${v(r, 'skorLomba') !== '-' ? 'text-purple-700' : 'text-gray-300'}`}>{v(r, 'skorLomba')}</span>
+                        </TableCell>
+                        <TableCell className="text-center p-0.5 bg-purple-50/50">
+                          <span className={`text-[9px] ${v(r, 'nilaiRataRataTKA') !== '-' ? 'text-purple-700' : 'text-gray-300'}`}>{v(r, 'nilaiRataRataTKA')}</span>
+                        </TableCell>
+                        <TableCell className="text-center p-0.5 bg-purple-50/50">
+                          <span className={`text-[9px] ${v(r, 'skorPrestasiAkademik') !== '-' ? 'text-purple-700' : 'text-gray-300'}`}>{v(r, 'skorPrestasiAkademik')}</span>
+                        </TableCell>
                         <TableCell className="text-center p-0.5">
                           <span className={`text-[9px] ${skorNum > 0 ? 'text-amber-700' : 'text-gray-300'}`}>{v(r, 'totalNilai')}</span>
                         </TableCell>
@@ -349,7 +362,7 @@ export default function RankingPreviewDialog({
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px]">
                   <div className="bg-white rounded p-2 border">
                     <span className="text-gray-500">Kolom Data</span>
-                    <p className="font-bold text-gray-800">24 kolom</p>
+                    <p className="font-bold text-gray-800">27 kolom</p>
                   </div>
                   <div className="bg-white rounded p-2 border">
                     <span className="text-gray-500">Baris Data</span>

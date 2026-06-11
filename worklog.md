@@ -398,3 +398,31 @@ Stage Summary:
 - **When switching to Tahap 2**: Only Prestasi Akademik and Prestasi Nonakademik are activated
 - **When switching back to Tahap 1**: All jalur are reactivated
 - Existing data (before migration) is automatically tagged as Tahap 1
+
+---
+Task ID: 1
+Agent: Main Agent
+Task: Add detail portal score columns (Nilai Rata-rata Raport, Skor Jarak, Skor Lomba, Nilai Rata Rata TKA, Skor Prestasi Akademik) to PDF print, Excel export, Lembar Verifikasi, and preview dialogs
+
+Work Log:
+- Added 3 new fields to Prisma schema: skorLomba, nilaiRataRataTKA, skorPrestasiAkademik
+- Pushed schema to SQLite database
+- Updated TypeScript type (types.ts) with new fields
+- Updated parse-portal.ts to extract Skor Lomba, Nilai Rata Rata TKA, Skor Prestasi Akademik from portal paste
+- Updated API routes: registrations/[id], portal-paste, import, portal-sync
+- Updated ranking-print.ts: added "Detail Portal" column group (colspan=3) in PDF HTML and 3 new columns in Excel export
+- Updated RankingPreviewDialog.tsx: added "Detail Portal" header group with Skor Lomba, Nilai TKA, Skor Pres. Akad. columns
+- Updated LembarVerifikasiSheet.tsx: added 4 new columns (Nilai Rata² Raport, Skor Lomba, Nilai TKA, Skor Pres. Akad.) and edit dialog fields
+- Updated EditDialog.tsx with new input fields
+- Updated DetailDialog.tsx with new display fields
+- Updated page.tsx editForm initialization with new fields
+- Browser verified: all new columns visible in Lembar Verifikasi and Ranking Preview Dialog
+
+Stage Summary:
+- 3 new DB fields added and migrated: skorLomba, nilaiRataRataTKA, skorPrestasiAkademik
+- PDF print now shows "Detail Portal" column group with Skor Lomba, Nilai TKA, Skor Pres. Akad.
+- Excel export includes the 3 new columns (27 total columns)
+- Lembar Verifikasi shows 4 additional columns: Nilai Rata² Raport, Skor Lomba, Nilai TKA, Skor Pres. Akad.
+- All portal paste, import, and sync APIs handle the new fields
+- Edit dialogs allow editing of all new fields
+- Verified working via agent-browser on both Lembar Verifikasi and Ranking Preview Dialog

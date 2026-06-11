@@ -121,6 +121,11 @@ export function getRankingPrintHTML(params: {
       ? kekurangan.split(' | ').map(k => `<span style="display:block;font-size:8px;color:#b91c1c;line-height:1.2">${k}</span>`).join('')
       : '<span style="color:#ccc">-</span>'
 
+    // Detail Portal values
+    const skorLomba = v(r, 'skorLomba')
+    const nilaiRataRataTKA = v(r, 'nilaiRataRataTKA')
+    const skorPrestasiAkademik = v(r, 'skorPrestasiAkademik')
+
     return `<tr style="background:${rowBg}">
       <td style="padding:4px 3px;border:1px solid #ddd;text-align:center"><span style="display:inline-block;width:22px;height:22px;line-height:22px;border-radius:50%;background:${rankBg};color:${rankColor};font-size:9px;font-weight:bold">${rankNum}</span></td>
       <td style="padding:4px 3px;border:1px solid #ddd;text-align:center;font-size:9px;line-height:1.2">${r.subJalur as string}<br><span style="font-size:8px;color:#0369a1">#${jalurRank}</span></td>
@@ -132,6 +137,9 @@ export function getRankingPrintHTML(params: {
       <td style="padding:4px 3px;border:1px solid #ddd;text-align:center;font-size:9px;color:${jarakNum > 0 ? '#0369a1' : '#ccc'}">${v(r, 'skorJarak')}</td>
       <td style="padding:4px 3px;border:1px solid #ddd;text-align:right;font-size:9px;font-weight:${rankingTampilan === 'nilai' ? 'bold' : 'normal'};color:${nilaiNum > 0 ? '#047857' : '#ccc'}">${v(r, 'nilaiRataRata')}</td>
       <td style="padding:4px 3px;border:1px solid #ddd;text-align:center;font-size:9px;color:${nilaiNum > 0 ? '#047857' : '#ccc'}">${v(r, 'skorNilaiRaport')}</td>
+      <td style="padding:4px 3px;border:1px solid #ddd;text-align:center;font-size:9px;color:#7c3aed">${skorLomba}</td>
+      <td style="padding:4px 3px;border:1px solid #ddd;text-align:center;font-size:9px;color:#7c3aed">${nilaiRataRataTKA}</td>
+      <td style="padding:4px 3px;border:1px solid #ddd;text-align:center;font-size:9px;color:#7c3aed">${skorPrestasiAkademik}</td>
       <td style="padding:4px 3px;border:1px solid #ddd;text-align:center;font-size:9px;color:${skorNum > 0 ? '#b45309' : '#ccc'}">${v(r, 'totalNilai')}</td>
       <td style="padding:4px 3px;border:1px solid #ddd;text-align:center;font-size:9px;font-weight:${rankingTampilan === 'komposit' ? 'bold' : 'normal'};color:${skorNum > 0 ? '#b45309' : '#ccc'}">${v(r, 'skor')}</td>
       <td style="padding:4px 3px;border:1px solid #ddd;font-size:8px;line-height:1.2;max-width:120px;overflow:hidden">${kekuranganText}</td>
@@ -265,7 +273,8 @@ export function getRankingPrintHTML(params: {
             <th class="group-header" rowspan="2" style="width:100px">Sekolah Asal</th>
             <th class="group-header" rowspan="2" style="width:55px">Jurusan</th>
             <th class="group-header" colspan="2" style="${rankingTampilan === 'jarak' ? 'background:#0c4a6e' : ''}">Jarak</th>
-            <th class="group-header" colspan="2" style="${rankingTampilan === 'nilai' ? 'background:#064e3b' : ''}">Nilai</th>
+            <th class="group-header" colspan="2" style="${rankingTampilan === 'nilai' ? 'background:#064e3b' : ''}">Nilai Raport</th>
+            <th class="group-header" colspan="3" style="background:#4c1d95">Detail Portal</th>
             <th class="group-header" colspan="2" style="${rankingTampilan === 'komposit' ? 'background:#78350f' : ''}">Skor</th>
             <th class="group-header" colspan="5">Verifikasi</th>
             <th class="group-header" rowspan="2" style="width:45px">Status</th>
@@ -278,9 +287,13 @@ export function getRankingPrintHTML(params: {
             <!-- Jarak -->
             <th class="${rankingTampilan === 'jarak' ? 'active' : ''}" style="width:60px">Jarak</th>
             <th class="${rankingTampilan === 'jarak' ? 'active' : ''}" style="width:45px">Skor</th>
-            <!-- Nilai -->
+            <!-- Nilai Raport -->
             <th class="${rankingTampilan === 'nilai' ? 'active' : ''}" style="width:50px">Rata²</th>
             <th class="${rankingTampilan === 'nilai' ? 'active' : ''}" style="width:45px">Skor</th>
+            <!-- Detail Portal -->
+            <th style="width:45px;background:#f5f3ff;color:#6d28d9">Skor Lomba</th>
+            <th style="width:50px;background:#f5f3ff;color:#6d28d9">Nilai TKA</th>
+            <th style="width:50px;background:#f5f3ff;color:#6d28d9">Skor Pres. Akad.</th>
             <!-- Skor -->
             <th style="width:45px">Total</th>
             <th class="${rankingTampilan === 'komposit' ? 'active' : ''}" style="width:45px">Komposit</th>
@@ -390,6 +403,9 @@ export function handleRankingExportExcel(params: {
       'Skor Jarak': v(r, 'skorJarak'),
       'Nilai Rata-Rata': v(r, 'nilaiRataRata'),
       'Skor Nilai Raport': v(r, 'skorNilaiRaport'),
+      'Skor Lomba': v(r, 'skorLomba'),
+      'Nilai Rata-Rata TKA': v(r, 'nilaiRataRataTKA'),
+      'Skor Prestasi Akademik': v(r, 'skorPrestasiAkademik'),
       'Total Nilai': v(r, 'totalNilai'),
       'Skor Komposit': v(r, 'skor'),
       'Kekurangan Verifikasi': v(r, 'kekuranganVerifikasi'),
@@ -408,8 +424,8 @@ export function handleRankingExportExcel(params: {
   ws['!cols'] = [
     { wch: 10 }, { wch: 14 }, { wch: 20 }, { wch: 18 }, { wch: 25 },
     { wch: 16 }, { wch: 18 }, { wch: 18 }, { wch: 14 }, { wch: 22 },
-    { wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 12 },
-    { wch: 14 }, { wch: 28 }, { wch: 14 }, { wch: 10 }, { wch: 14 },
+    { wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 18 }, { wch: 18 }, { wch: 20 },
+    { wch: 14 }, { wch: 14 }, { wch: 28 }, { wch: 14 }, { wch: 10 }, { wch: 14 },
     { wch: 12 }, { wch: 14 }, { wch: 10 },
   ]
 

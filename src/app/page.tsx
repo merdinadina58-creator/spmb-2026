@@ -1331,6 +1331,7 @@ export default function Home() {
       noTelpSiswa: reg.noTelpSiswa || '', noTelpOrangtua: reg.noTelpOrangtua || '', npsnSekolahPilihan: reg.npsnSekolahPilihan || '',
       namaSekolahPilihan: reg.namaSekolahPilihan || '', jurusan: reg.jurusan || '', npsnSekolahAsal: reg.npsnSekolahAsal || '',
       namaSekolahAsal: reg.namaSekolahAsal || '', skorJarak: reg.skorJarak || '', skorNilaiRaport: reg.skorNilaiRaport || '',
+      skorLomba: reg.skorLomba || '', nilaiRataRataTKA: reg.nilaiRataRataTKA || '', skorPrestasiAkademik: reg.skorPrestasiAkademik || '',
       kekuranganVerifikasi: reg.kekuranganVerifikasi || '', tanggalVerif: reg.tanggalVerif || '', jamVerif: reg.jamVerif || '',
       terbitKK: reg.terbitKK || '', latitude: reg.latitude || '', longitude: reg.longitude || '', lokasiJarak: reg.lokasiJarak || '',
       nilaiRataRata: reg.nilaiRataRata || '', totalNilai: reg.totalNilai || '',
