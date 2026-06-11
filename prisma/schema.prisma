@@ -60,6 +60,13 @@ model Registration {
   lamaKK              String?  // Duration since KK issued
   dokumen             String?  // JSON string for uploaded documents
 
+  // Kelulusan & Daftar Ulang
+  statusLulus         String?  // LULUS, TIDAK_LULUS, BELUM
+  statusDaftarUlang   String?  // DAFTAR_ULANG, TIDAK_DAFTAR_ULANG, BELUM
+
+  // Tahap Pendaftaran
+  tahap               Int?     // Tahap pendaftaran (1, 2, 3, etc.)
+
   @@unique([noRegistrasi, npsnSekolahPilihan])
   @@unique([nisn, npsnSekolahPilihan])
 }
