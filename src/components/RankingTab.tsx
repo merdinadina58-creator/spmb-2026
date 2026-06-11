@@ -234,17 +234,17 @@ export default function RankingTab(props: RankingTabProps) {
               <div className="p-1.5 bg-emerald-100 rounded-lg">
                 <Award className="w-4 h-4 text-emerald-600" />
               </div>
-              <h4 className="font-semibold text-sm text-emerald-900">Prestasi — Nilai Tertinggi</h4>
+              <h4 className="font-semibold text-sm text-emerald-900">Prestasi — Skor Tertinggi</h4>
             </div>
             {(() => {
               const prestasiData = rankingData
                 .filter((r: Record<string, unknown>) => {
                   const sj = (r.subJalur as string || '').toLowerCase()
-                  return (sj.includes('prestasi') || sj.includes('akademik') || sj.includes('non')) && (r._nilaiNum as number) > 0
+                  return (sj.includes('prestasi') || sj.includes('akademik') || sj.includes('non')) && (r._skorPrestasiAkademikNum as number) > 0
                 })
-                .sort((a: Record<string, unknown>, b: Record<string, unknown>) => (b._nilaiNum as number) - (a._nilaiNum as number))
+                .sort((a: Record<string, unknown>, b: Record<string, unknown>) => (b._skorPrestasiAkademikNum as number) - (a._skorPrestasiAkademikNum as number))
                 .slice(0, 5)
-              if (prestasiData.length === 0) return <p className="text-xs text-gray-400 text-center py-3">Belum ada data nilai untuk Prestasi</p>
+              if (prestasiData.length === 0) return <p className="text-xs text-gray-400 text-center py-3">Belum ada data skor prestasi untuk Jalur Prestasi</p>
               const presKuota = rankingKuotaPerJalur.find(k => k.nama.toLowerCase().includes('prestasi'))?.kuota || 0
               return (
                 <div className="space-y-1.5">
@@ -258,8 +258,8 @@ export default function RankingTab(props: RankingTabProps) {
                         <p className="text-[10px] text-gray-500">{r.namaSekolahAsal as string} — {r.jurusan as string}</p>
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="text-xs font-bold text-emerald-700">{r.nilaiRataRata as string || r.skorNilaiRaport as string || '-'}</p>
-                        <p className="text-[10px] text-gray-400">nilai</p>
+                        <p className="text-xs font-bold text-emerald-700">{r.skorPrestasiAkademik as string || '-'}</p>
+                        <p className="text-[10px] text-gray-400">skor prestasi</p>
                       </div>
                     </div>
                   ))}
