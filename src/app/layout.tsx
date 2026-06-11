@@ -11,13 +11,14 @@ export const viewport: Viewport = {
 
 // NOTE: manifest is NOT included here because Vercel Deployment Protection
 // blocks the manifest fetch on preview deployments, causing 401 console errors.
-// The manifest link is added dynamically after authentication succeeds (see page.tsx).
+// The manifest link and service worker are added dynamically after the user
+// authenticates (see page.tsx).
 export const metadata: Metadata = {
   title: "SPMB 2026 - Sistem Verifikasi Pendaftaran",
   description: "Sistem Verifikasi Penerimaan Murid Baru Tahun 2026",
   icons: {
-    icon: "/icon-192.png",
-    apple: "/icon-192.png",
+    icon: "/api/app-icon?size=192",
+    apple: "/api/app-icon?size=192",
   },
   appleWebApp: {
     capable: true,
@@ -35,9 +36,9 @@ export default function RootLayout({
   return (
     <html lang="id" suppressHydrationWarning>
       <head>
-        <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
-        <link rel="apple-touch-icon" href="/icon-192.png" />
-        <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/api/app-icon?size=192" />
+        <link rel="apple-touch-icon" href="/api/app-icon?size=192" />
+        <link rel="apple-touch-icon" sizes="512x512" href="/api/app-icon?size=512" />
       </head>
       <body
         className="antialiased bg-background text-foreground font-sans"
@@ -47,10 +48,26 @@ export default function RootLayout({
         </ErrorBoundary>
         <Toaster />
         {/*
-          Service Worker and manifest are NOT registered here.
-          They are added dynamically after authentication succeeds (see page.tsx)
-          to avoid 401 errors from Vercel Deployment Protection on preview deployments.
+          NO manifest link, NO service worker registration here.
+          Both are added dynamically after authentication succeeds (see page.tsx)
+          to prevent 401 console errors from Vercel Deployment Protection.
+
+          Also: unregister any stale service workers from previous deployments
+          that might still be fetching /manifest.json in the background.
         */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              // Unregister stale service workers from previous deployments
+              // that may still fetch /manifest.json and cause 401 errors
+              if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function(regs) {
+                  regs.forEach(function(reg) { reg.unregister(); });
+                });
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   );

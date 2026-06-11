@@ -766,21 +766,28 @@ export default function Home() {
   useEffect(() => {
     if (!isAuthenticated) return
 
-    // Add manifest link dynamically (after auth, so Vercel Deployment Protection won't block)
-    const existingManifest = document.querySelector("link[rel='manifest']")
-    if (!existingManifest) {
-      const link = document.createElement('link')
-      link.rel = 'manifest'
-      link.href = '/manifest.json'
-      document.head.appendChild(link)
-    }
+    // First verify that /api/manifest is reachable (won't be blocked after auth)
+    fetch('/api/manifest', { method: 'HEAD' }).then(res => {
+      if (!res.ok) return // Vercel still blocking — skip PWA setup
 
-    // Register service worker (after auth, to avoid 401 on sw.js fetch)
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {
-        // PWA is optional — silently fail
-      })
-    }
+      // Add manifest link dynamically
+      const existingManifest = document.querySelector("link[rel='manifest']")
+      if (!existingManifest) {
+        const link = document.createElement('link')
+        link.rel = 'manifest'
+        link.href = '/api/manifest'
+        document.head.appendChild(link)
+      }
+
+      // Register service worker
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {
+          // PWA is optional — silently fail
+        })
+      }
+    }).catch(() => {
+      // Can't reach manifest — skip PWA setup entirely (Vercel DP blocking)
+    })
   }, [isAuthenticated])
 
   // Load users when Pengaturan tab is active
@@ -848,46 +855,27 @@ export default function Home() {
 
   useEffect(() => {
     if (appIcon) {
-      // Update favicon dynamically — try the dynamic API endpoint first, fallback to static
-      // This ensures both the browser tab icon AND PWA install icon use the admin-uploaded icon
+      // Update favicon dynamically using the admin-uploaded icon
       let link = document.querySelector<HTMLLinkElement>("link[rel~='icon']")
       if (!link) {
         link = document.createElement('link')
         link.rel = 'icon'
         document.head.appendChild(link)
       }
-      // Try dynamic icon endpoint; fallback to static if it fails (e.g. Vercel Deployment Protection)
-      const dynamicIconUrl = `/api/app-icon?size=192&t=${Date.now()}`
-      fetch(dynamicIconUrl, { method: 'HEAD' }).then(res => {
-        link!.href = res.ok ? dynamicIconUrl : '/icon-192.png'
-      }).catch(() => {
-        link!.href = '/icon-192.png'
-      })
+      // Use the dynamic icon endpoint with cache-busting for the admin-uploaded icon
+      link.href = `/api/app-icon?size=192&t=${Date.now()}`
 
       // Update all apple-touch-icon links (for iOS home screen)
       const appleLinks = document.querySelectorAll<HTMLLinkElement>("link[rel='apple-touch-icon']")
       appleLinks.forEach((appleLink, idx) => {
         const size = idx === 0 ? '192' : '512'
-        const dynamicUrl = `/api/app-icon?size=${size}&t=${Date.now()}`
-        fetch(dynamicUrl, { method: 'HEAD' }).then(res => {
-          appleLink.href = res.ok ? dynamicUrl : `/icon-${size}.png`
-        }).catch(() => {
-          appleLink.href = `/icon-${size}.png`
-        })
+        appleLink.href = `/api/app-icon?size=${size}&t=${Date.now()}`
       })
 
-      // Update manifest link if it exists (added after auth)
+      // Update manifest link if it exists (added after auth) to pick up new icon
       const manifestLink = document.querySelector<HTMLLinkElement>("link[rel='manifest']")
       if (manifestLink) {
-        const dynamicManifestUrl = `/api/manifest?t=${Date.now()}`
-        fetch(dynamicManifestUrl, { method: 'HEAD' }).then(res => {
-          if (res.ok) {
-            manifestLink.href = dynamicManifestUrl
-          }
-          // If not ok, keep static /manifest.json — don't change
-        }).catch(() => {
-          // Keep static manifest — no 401 error
-        })
+        manifestLink.href = `/api/manifest?t=${Date.now()}`
       }
     }
   }, [appIcon])
