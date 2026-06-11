@@ -922,8 +922,8 @@ export default function Home() {
   }, [rankingJalur, rankingSekolah, rankingJurusan, rankingTampilan, rankingStatus, tahap, toast])
 
   useEffect(() => {
-    if (isAuthenticated && authUser?.role === 'admin') fetchRanking()
-  }, [fetchRanking, isAuthenticated, authUser?.role])
+    if (isAuthenticated && authUser?.role === 'admin' && authUser?.id) fetchRanking()
+  }, [fetchRanking, isAuthenticated, authUser?.role, authUser?.id])
 
   // ==================== CONDITIONAL RENDERS ====================
   // Auth screens
@@ -1043,6 +1043,15 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(saveData),
       })
+
+      // Handle auth errors explicitly
+      if (res.status === 401 || res.status === 403) {
+        toast({ title: 'Sesi Berakhir', description: 'Sesi login Anda telah habis. Silakan login ulang.', variant: 'destructive' })
+        setIsAuthenticated(false)
+        setAuthUser(null)
+        return
+      }
+
       const data = await res.json()
       if (data.success) {
         const nisnLabel = portalParsedData.nisn ? ` (NISN: ${portalParsedData.nisn})` : ''
