@@ -700,7 +700,9 @@ export default function LembarVerifikasiSheet({
                   <TableHead className="bg-purple-50 text-purple-700">Nilai Rata² Raport</TableHead>
                   <TableHead className="bg-purple-50 text-purple-700">Skor Lomba</TableHead>
                   <TableHead className="bg-purple-50 text-purple-700">Nilai TKA</TableHead>
-                  <TableHead className="bg-purple-50 text-purple-700">Skor Pres. Akad.</TableHead>
+                  <TableHead className="bg-purple-50 text-purple-700">
+                    {config.subJalurFilter?.toLowerCase().includes('non') ? 'Skor Pres. Non-Akad.' : 'Skor Pres. Akad.'}
+                  </TableHead>
                   <TableHead className="min-w-[180px]">
                     <span className="inline-flex items-center gap-1 cursor-pointer group" onClick={() => {
                       if (selectedIds.size > 0) {
@@ -1341,7 +1343,7 @@ export default function LembarVerifikasiSheet({
                     <Input value={editForm.nilaiRataRataTKA || ''} onChange={e => setEditForm({...editForm, nilaiRataRataTKA: e.target.value})} className="mt-1" />
                   </div>
                   <div>
-                    <label className="text-xs text-gray-500 font-medium">Skor Prestasi Akademik</label>
+                    <label className="text-xs text-gray-500 font-medium">Skor Prestasi</label>
                     <Input value={editForm.skorPrestasiAkademik || ''} onChange={e => setEditForm({...editForm, skorPrestasiAkademik: e.target.value})} className="mt-1" />
                   </div>
                   <div>

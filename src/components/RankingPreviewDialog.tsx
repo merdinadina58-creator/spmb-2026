@@ -226,7 +226,7 @@ export default function RankingPreviewDialog({
                     <TableHead className={`font-semibold ${rankingTampilan === 'nilai' ? 'bg-emerald-50' : ''}`}>Skor</TableHead>
                     <TableHead className="font-semibold bg-purple-50 text-purple-700">Skor Lomba</TableHead>
                     <TableHead className="font-semibold bg-purple-50 text-purple-700">Nilai TKA</TableHead>
-                    <TableHead className="font-semibold bg-purple-50 text-purple-700">Skor Pres. Akad.</TableHead>
+                    <TableHead className="font-semibold bg-purple-50 text-purple-700">Skor Prestasi</TableHead>
                     <TableHead className="font-semibold">Total</TableHead>
                     <TableHead className={`font-semibold ${rankingTampilan === 'komposit' ? 'bg-amber-50' : ''}`}>Komposit</TableHead>
                     <TableHead className="font-semibold">Kekurangan</TableHead>

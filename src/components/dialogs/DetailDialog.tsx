@@ -198,7 +198,7 @@ export default function DetailDialog({
                   )}
                   {(target as Record<string, unknown>).skorPrestasiAkademik && (
                     <div className="bg-purple-50 rounded-lg p-2">
-                      <label className="text-xs text-purple-600 font-medium">Skor Prestasi Akademik</label>
+                      <label className="text-xs text-purple-600 font-medium">Skor Prestasi</label>
                       <p className="text-sm font-bold text-purple-700">{String((target as Record<string, unknown>).skorPrestasiAkademik || '-')}</p>
                     </div>
                   )}

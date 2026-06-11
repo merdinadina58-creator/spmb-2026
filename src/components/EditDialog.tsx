@@ -168,7 +168,7 @@ export default function EditDialog({
                   <Input value={editForm.nilaiRataRataTKA || ''} onChange={e => setEditForm({...editForm, nilaiRataRataTKA: e.target.value})} className="mt-1" />
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500 font-medium">Skor Prestasi Akademik</label>
+                  <label className="text-xs text-gray-500 font-medium">Skor Prestasi</label>
                   <Input value={editForm.skorPrestasiAkademik || ''} onChange={e => setEditForm({...editForm, skorPrestasiAkademik: e.target.value})} className="mt-1" />
                 </div>
                 <div>

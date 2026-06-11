@@ -293,7 +293,7 @@ export function getRankingPrintHTML(params: {
             <!-- Detail Portal -->
             <th style="width:45px;background:#f5f3ff;color:#6d28d9">Skor Lomba</th>
             <th style="width:50px;background:#f5f3ff;color:#6d28d9">Nilai TKA</th>
-            <th style="width:50px;background:#f5f3ff;color:#6d28d9">Skor Pres. Akad.</th>
+            <th style="width:55px;background:#f5f3ff;color:#6d28d9">Skor Prestasi</th>
             <!-- Skor -->
             <th style="width:45px">Total</th>
             <th class="${rankingTampilan === 'komposit' ? 'active' : ''}" style="width:45px">Komposit</th>
@@ -405,7 +405,7 @@ export function handleRankingExportExcel(params: {
       'Skor Nilai Raport': v(r, 'skorNilaiRaport'),
       'Skor Lomba': v(r, 'skorLomba'),
       'Nilai Rata-Rata TKA': v(r, 'nilaiRataRataTKA'),
-      'Skor Prestasi Akademik': v(r, 'skorPrestasiAkademik'),
+      'Skor Prestasi': v(r, 'skorPrestasiAkademik'),
       'Total Nilai': v(r, 'totalNilai'),
       'Skor Komposit': v(r, 'skor'),
       'Kekurangan Verifikasi': v(r, 'kekuranganVerifikasi'),
