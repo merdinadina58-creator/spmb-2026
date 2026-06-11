@@ -121,39 +121,65 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // STEP 2: For non-DITOLAK records, find existing record using a single OR query
-    // This consolidates 6 sequential queries into 1 for much better performance
+    // STEP 2: For non-DITOLAK records, find existing record by NISN + subJalur (primary dedup)
+    // This ensures students who register in multiple jalur are kept as separate records
     let existing = null;
-    const orConditions: Array<Record<string, unknown>> = [];
-
-    // Priority 1: NISN + subJalur (most specific)
-    if (data.nisn && data.nisn.trim() && data.subJalur && data.subJalur.trim()) {
-      orConditions.push({ nisn: data.nisn.trim(), subJalur: data.subJalur.trim() });
-    }
-    // Priority 2: NISN + npsnSekolahPilihan
     if (data.nisn && data.nisn.trim()) {
-      orConditions.push({ nisn: data.nisn.trim(), npsnSekolahPilihan });
-    }
-    // Priority 3: noRegistrasi + subJalur
-    if (data.noRegistrasi && data.noRegistrasi.trim() && data.subJalur && data.subJalur.trim()) {
-      orConditions.push({ noRegistrasi: data.noRegistrasi.trim(), subJalur: data.subJalur.trim() });
-    }
-    // Priority 4: noRegistrasi + npsnSekolahPilihan
-    if (data.noRegistrasi && data.noRegistrasi.trim()) {
-      orConditions.push({ noRegistrasi: data.noRegistrasi.trim(), npsnSekolahPilihan });
-    }
-    // Priority 5: nama + subJalur (for cases where NISN/noRegistrasi differ)
-    if (data.nama && data.nama.trim() && data.subJalur && data.subJalur.trim()) {
-      orConditions.push({ nama: data.nama.trim(), subJalur: data.subJalur.trim() });
-    }
-    // Priority 6: NISN alone (broader match, last resort)
-    if (data.nisn && data.nisn.trim()) {
-      orConditions.push({ nisn: data.nisn.trim() });
-    }
-
-    if (orConditions.length > 0) {
       existing = await db.registration.findFirst({
-        where: { OR: orConditions },
+        where: {
+          nisn: data.nisn.trim(),
+          subJalur: data.subJalur?.trim() || undefined,
+        },
+      });
+    }
+
+    // STEP 3: Try by NISN + npsnSekolahPilihan
+    if (!existing && data.nisn && data.nisn.trim()) {
+      existing = await db.registration.findFirst({
+        where: {
+          nisn: data.nisn.trim(),
+          npsnSekolahPilihan,
+        },
+      });
+    }
+
+    // STEP 4: Fallback - try by noRegistrasi + subJalur
+    if (!existing && data.noRegistrasi && data.noRegistrasi.trim()) {
+      existing = await db.registration.findFirst({
+        where: {
+          noRegistrasi: data.noRegistrasi.trim(),
+          subJalur: data.subJalur?.trim() || undefined,
+        },
+      });
+    }
+
+    // STEP 5: Fallback - try by noRegistrasi + npsnSekolahPilihan
+    if (!existing && data.noRegistrasi && data.noRegistrasi.trim()) {
+      existing = await db.registration.findFirst({
+        where: {
+          noRegistrasi: data.noRegistrasi.trim(),
+          npsnSekolahPilihan,
+        },
+      });
+    }
+
+    // STEP 6: Fallback - try by nama + subJalur (for cases where NISN/noRegistrasi differ)
+    if (!existing && data.nama && data.nama.trim() && data.subJalur && data.subJalur.trim()) {
+      existing = await db.registration.findFirst({
+        where: {
+          nama: data.nama.trim(),
+          subJalur: data.subJalur.trim(),
+        },
+      });
+    }
+
+    // STEP 7: Last resort - try by NISN alone (broader match)
+    // Only use this if no subJalur-specific match was found
+    if (!existing && data.nisn && data.nisn.trim()) {
+      existing = await db.registration.findFirst({
+        where: {
+          nisn: data.nisn.trim(),
+        },
       });
     }
 

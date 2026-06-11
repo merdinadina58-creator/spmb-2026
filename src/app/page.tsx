@@ -280,6 +280,8 @@ export default function Home() {
   const [highlightRegId, setHighlightRegId] = useState<string | null>(null)
   // Refresh key to force LembarVerifikasiSheet to re-fetch data after portal paste
   const [lembarRefreshKey, setLembarRefreshKey] = useState(0)
+  // Track which save button was clicked for correct loading spinner
+  const [savingStatus, setSavingStatus] = useState<'VERIFIED' | 'REJECTED' | 'PENDING' | null>(null)
 
   // Sumut Berkah paste state
   const [sumutBerkahOpen, setSumutBerkahOpen] = useState(false)
@@ -972,6 +974,7 @@ export default function Home() {
     }
 
     setImporting(true)
+    setSavingStatus(effectiveStatus)
     try {
       const saveData = { ...portalParsedData }
       if (portalSelectedJalur) {
@@ -1063,6 +1066,7 @@ export default function Home() {
       toast({ title: 'Gagal', description: 'Terjadi kesalahan', variant: 'destructive' })
     } finally {
       setImporting(false)
+      setSavingStatus(null)
     }
   }
 
@@ -1531,6 +1535,7 @@ export default function Home() {
             setPortalSelectedJalur={setPortalSelectedJalur}
             jalurConfigs={jalurConfigs}
             importing={importing}
+            savingStatus={savingStatus}
             onPaste={handlePortalPaste}
             onSave={handlePortalSave}
             portalKekurangan={portalKekurangan}

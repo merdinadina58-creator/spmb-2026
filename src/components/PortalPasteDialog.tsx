@@ -53,6 +53,7 @@ interface PortalPasteDialogProps {
   setPortalSelectedJalur: (jalur: string) => void
   jalurConfigs: Array<{ id: string; nama: string; persentase: number; urutan: number; aktif: boolean }>
   importing: boolean
+  savingStatus: 'VERIFIED' | 'REJECTED' | 'PENDING' | null
   onPaste: () => void
   onSave: (status?: 'VERIFIED' | 'REJECTED' | 'PENDING') => void
   // Quick verification fields
@@ -82,6 +83,7 @@ export default function PortalPasteDialog({
   setPortalSelectedJalur,
   jalurConfigs,
   importing,
+  savingStatus,
   onPaste,
   onSave,
   portalVerifStatus,
@@ -603,42 +605,45 @@ export default function PortalPasteDialog({
 
         <DialogFooter>
           {!portalParsedData ? (
-            <Button onClick={onPaste} disabled={!portalRawText.trim() || portalParsing} className="bg-emerald-600 hover:bg-emerald-700">
+            <Button type="button" onClick={onPaste} disabled={!portalRawText.trim() || portalParsing} className="bg-emerald-600 hover:bg-emerald-700">
               {portalParsing ? (<><Loader2 className="w-4 h-4 animate-spin" /> Memproses...</>) : (<><ClipboardCheck className="w-4 h-4" /> Parse Data</>)}
             </Button>
           ) : (
             <>
-              <Button variant="outline" onClick={() => { setPortalParsedData(null); setPortalRawText('') }}>
+              <Button type="button" variant="outline" onClick={() => { setPortalParsedData(null); setPortalRawText('') }}>
                 Batal
               </Button>
               <Button
+                type="button"
                 onClick={() => onSave('PENDING')}
                 disabled={importing || !portalSelectedJalur}
                 className="bg-amber-500 hover:bg-amber-600"
               >
-                {importing && isPending ? (
+                {importing && savingStatus === 'PENDING' ? (
                   <><Loader2 className="w-4 h-4 animate-spin" /> Menyimpan...</>
                 ) : (
                   <><Clock className="w-4 h-4" /> Simpan</>
                 )}
               </Button>
               <Button
+                type="button"
                 onClick={() => onSave('VERIFIED')}
                 disabled={importing || !portalSelectedJalur}
                 className="bg-emerald-600 hover:bg-emerald-700"
               >
-                {importing && !isPending && !isRejected ? (
+                {importing && savingStatus === 'VERIFIED' ? (
                   <><Loader2 className="w-4 h-4 animate-spin" /> Menyimpan...</>
                 ) : (
                   <><ThumbsUp className="w-4 h-4" /> Terima &amp; Simpan</>
                 )}
               </Button>
               <Button
+                type="button"
                 onClick={() => onSave('REJECTED')}
                 disabled={importing || !canSave}
                 className="bg-red-600 hover:bg-red-700"
               >
-                {importing && isRejected ? (
+                {importing && savingStatus === 'REJECTED' ? (
                   <><Loader2 className="w-4 h-4 animate-spin" /> Menyimpan...</>
                 ) : (
                   <><ThumbsDown className="w-4 h-4" /> Tolak &amp; Simpan</>
