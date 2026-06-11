@@ -476,7 +476,7 @@ export default function LembarVerifikasiSheet({
   const rejectedPct = s.total > 0 ? Math.round((s.rejected / s.total) * 100) : 0
   const pendingPct = s.total > 0 ? Math.round((s.pending / s.total) * 100) : 0
   const progressPct = s.total > 0 ? Math.round(((s.verified + s.rejected) / s.total) * 100) : 0
-  const totalCols = config.needsSkor ? 20 : 18
+  const totalCols = config.needsSkor ? 19 : 18
 
   return (
     <div className="space-y-6">
@@ -695,7 +695,6 @@ export default function LembarVerifikasiSheet({
                     />
                   </TableHead>
                   <TableHead>Skor Jarak</TableHead>
-                  {config.needsSkor && <TableHead>Total Nilai</TableHead>}
                   {config.needsSkor && <TableHead>Skor Nilai Raport</TableHead>}
                   <TableHead className="bg-purple-50 text-purple-700">Nilai Rata² Raport</TableHead>
                   <TableHead className="bg-purple-50 text-purple-700">Skor Lomba</TableHead>
@@ -769,12 +768,6 @@ export default function LembarVerifikasiSheet({
                       <TableCell className="text-sm text-center">
                         {reg.skorJarak || '-'}
                       </TableCell>
-                      {/* Total Nilai (only if jalur needs skor) */}
-                      {config.needsSkor && (
-                      <TableCell className="text-sm text-center">
-                        {reg.totalNilai || '-'}
-                      </TableCell>
-                      )}
                       {/* Skor Nilai Raport (only if jalur needs skor) */}
                       {config.needsSkor && (
                       <TableCell className="text-sm text-center">

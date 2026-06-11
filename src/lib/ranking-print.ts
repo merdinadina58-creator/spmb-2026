@@ -406,7 +406,6 @@ export function handleRankingExportExcel(params: {
       'Skor Lomba': v(r, 'skorLomba'),
       'Nilai Rata-Rata TKA': v(r, 'nilaiRataRataTKA'),
       'Skor Prestasi': v(r, 'skorPrestasiAkademik'),
-      'Total Nilai': v(r, 'totalNilai'),
       'Skor Komposit': v(r, 'skor'),
       'Kekurangan Verifikasi': v(r, 'kekuranganVerifikasi'),
       'Tanggal Verif': v(r, 'tanggalVerif'),

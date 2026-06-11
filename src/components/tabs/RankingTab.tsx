@@ -299,7 +299,6 @@ export default function RankingTab({ authUser, toast, subJalurOptions, rankingTa
         'Sekolah Asal': r.namaSekolahAsal as string,
         'Jarak': r.jarakKeSekolah as string || r.lokasiJarak as string || '-',
         'Skor Jarak': r.skorJarak as string || '-',
-        'Total Nilai': r.totalNilai as string || '-',
         'Nilai Rata-Rata': r.nilaiRataRata as string || '-',
         'Skor Nilai Raport': r.skorNilaiRaport as string || '-',
         'Skor Komposit': r.skor as string || '-',
