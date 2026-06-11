@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     if (!sessionToken) {
       return NextResponse.json(
         { success: false, authenticated: false },
-        { status: 401, headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
+        { status: 200, headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
       )
     }
 
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     if (!session) {
       return NextResponse.json(
         { success: false, authenticated: false },
-        { status: 401 }
+        { status: 200, headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
       )
     }
 
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
       try { await db.setting.delete({ where: { key: `session:${sessionToken}` } }) } catch {}
       return NextResponse.json(
         { success: false, authenticated: false },
-        { status: 401 }
+        { status: 200, headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
       )
     }
 
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
       try { await db.setting.delete({ where: { key: `session:${sessionToken}` } }) } catch {}
       return NextResponse.json(
         { success: false, authenticated: false },
-        { status: 401 }
+        { status: 200, headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
       )
     }
 
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
       try { await db.setting.delete({ where: { key: `session:${sessionToken}` } }) } catch {}
       return NextResponse.json(
         { success: false, authenticated: false },
-        { status: 401 }
+        { status: 200, headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
       )
     }
 
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
       try { await db.setting.delete({ where: { key: `session:${sessionToken}` } }) } catch {}
       return NextResponse.json(
         { success: false, authenticated: false },
-        { status: 401 }
+        { status: 200, headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
       )
     }
 

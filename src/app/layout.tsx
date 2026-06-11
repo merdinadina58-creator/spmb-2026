@@ -12,10 +12,10 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "SPMB 2026 - Sistem Verifikasi Pendaftaran",
   description: "Sistem Verifikasi Penerimaan Murid Baru Tahun 2026",
-  manifest: "/api/manifest",
+  manifest: "/manifest.json",
   icons: {
-    icon: "/api/app-icon?size=192",
-    apple: "/api/app-icon?size=192",
+    icon: "/icon-192.png",
+    apple: "/icon-192.png",
   },
   appleWebApp: {
     capable: true,
@@ -33,8 +33,9 @@ export default function RootLayout({
   return (
     <html lang="id" suppressHydrationWarning>
       <head>
-        <link rel="apple-touch-icon" href="/api/app-icon?size=192" />
-        <link rel="apple-touch-icon" sizes="512x512" href="/api/app-icon?size=512" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+        <link rel="apple-touch-icon" href="/icon-192.png" />
+        <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png" />
       </head>
       <body
         className="antialiased bg-background text-foreground font-sans"
@@ -43,7 +44,7 @@ export default function RootLayout({
           {children}
         </ErrorBoundary>
         <Toaster />
-        {/* Service Worker Registration */}
+        {/* Service Worker Registration — with silent error handling to avoid console 401s */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -51,22 +52,11 @@ export default function RootLayout({
                 window.addEventListener('load', function() {
                   navigator.serviceWorker.register('/sw.js', { scope: '/' })
                     .then(function(reg) {
-                      console.log('[PWA] Service Worker registered, scope:', reg.scope);
                       reg.update().catch(function() {});
                     })
-                    .catch(function(err) {
-                      console.warn('[PWA] Service Worker registration failed:', err);
+                    .catch(function() {
+                      // Silently fail — PWA is optional
                     });
-
-                  navigator.serviceWorker.addEventListener('controllerchange', function() {
-                    console.log('[PWA] New Service Worker activated');
-                  });
-                });
-
-                navigator.serviceWorker.addEventListener('message', function(event) {
-                  if (event.data && event.data.type === 'SW_UPDATED') {
-                    console.log('[PWA] App updated, refresh recommended');
-                  }
                 });
               }
             `,

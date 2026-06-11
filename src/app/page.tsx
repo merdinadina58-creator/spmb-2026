@@ -845,9 +845,18 @@ export default function Home() {
       })
 
       // Also update the manifest link with cache-busting to trigger PWA icon refresh
+      // Use /api/manifest for dynamic icons, but fallback gracefully if it fails (e.g. Vercel Deployment Protection)
       const manifestLink = document.querySelector<HTMLLinkElement>("link[rel='manifest']")
       if (manifestLink) {
-        manifestLink.href = `/api/manifest?t=${Date.now()}`
+        const dynamicManifestUrl = `/api/manifest?t=${Date.now()}`
+        // Try fetching the dynamic manifest; if it fails (401), keep the static one
+        fetch(dynamicManifestUrl, { method: 'HEAD' }).then(res => {
+          if (res.ok) {
+            manifestLink.href = dynamicManifestUrl
+          }
+        }).catch(() => {
+          // Keep static manifest — /manifest.json
+        })
       }
     }
   }, [appIcon])
