@@ -54,10 +54,10 @@ interface PortalPasteDialogProps {
   jalurConfigs: Array<{ id: string; nama: string; persentase: number; urutan: number; aktif: boolean }>
   importing: boolean
   onPaste: () => void
-  onSave: () => void
+  onSave: (status?: 'VERIFIED' | 'REJECTED' | 'PENDING') => void
   // Quick verification fields
-  portalVerifStatus: 'VERIFIED' | 'REJECTED'
-  setPortalVerifStatus: (v: 'VERIFIED' | 'REJECTED') => void
+  portalVerifStatus: 'VERIFIED' | 'REJECTED' | 'PENDING'
+  setPortalVerifStatus: (v: 'VERIFIED' | 'REJECTED' | 'PENDING') => void
   portalKekurangan: string
   setPortalKekurangan: (v: string) => void
   portalVerifNote: string
@@ -106,6 +106,7 @@ export default function PortalPasteDialog({
 
   // Validation: if REJECTED, must have kekurangan selected (same rule as Kekurangan Verifikasi column)
   const isRejected = portalVerifStatus === 'REJECTED'
+  const isPending = portalVerifStatus === 'PENDING'
   const hasAlasanPenolakan = portalKekurangan.trim().length > 0
   const canSave = portalSelectedJalur && (!isRejected || hasAlasanPenolakan)
 
@@ -449,7 +450,19 @@ export default function PortalPasteDialog({
                       <label className="text-xs font-medium text-gray-600 flex items-center gap-1 mb-1.5">
                         <ShieldCheck className="w-3 h-3" /> Status Verifikasi <span className="text-red-500">*</span>
                       </label>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-3 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setPortalVerifStatus('PENDING')}
+                          className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border-2 transition-all text-sm font-medium ${
+                            portalVerifStatus === 'PENDING'
+                              ? 'border-amber-500 bg-amber-50 text-amber-700 shadow-sm'
+                              : 'border-gray-200 bg-white text-gray-500 hover:border-amber-300 hover:bg-amber-50/50'
+                          }`}
+                        >
+                          <Clock className={`w-4 h-4 ${portalVerifStatus === 'PENDING' ? 'text-amber-600' : ''}`} />
+                          MENUNGGU
+                        </button>
                         <button
                           type="button"
                           onClick={() => setPortalVerifStatus('VERIFIED')}
@@ -599,16 +612,36 @@ export default function PortalPasteDialog({
                 Batal
               </Button>
               <Button
-                onClick={onSave}
-                disabled={importing || !canSave}
-                className={isRejected ? 'bg-red-600 hover:bg-red-700' : 'bg-emerald-600 hover:bg-emerald-700'}
+                onClick={() => onSave('PENDING')}
+                disabled={importing || !portalSelectedJalur}
+                className="bg-amber-500 hover:bg-amber-600"
               >
-                {importing ? (
+                {importing && isPending ? (
                   <><Loader2 className="w-4 h-4 animate-spin" /> Menyimpan...</>
-                ) : isRejected ? (
-                  <><ThumbsDown className="w-4 h-4" /> Tolak &amp; Simpan</>
+                ) : (
+                  <><Clock className="w-4 h-4" /> Simpan</>
+                )}
+              </Button>
+              <Button
+                onClick={() => onSave('VERIFIED')}
+                disabled={importing || !portalSelectedJalur}
+                className="bg-emerald-600 hover:bg-emerald-700"
+              >
+                {importing && !isPending && !isRejected ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Menyimpan...</>
                 ) : (
                   <><ThumbsUp className="w-4 h-4" /> Terima &amp; Simpan</>
+                )}
+              </Button>
+              <Button
+                onClick={() => onSave('REJECTED')}
+                disabled={importing || !canSave}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {importing && isRejected ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Menyimpan...</>
+                ) : (
+                  <><ThumbsDown className="w-4 h-4" /> Tolak &amp; Simpan</>
                 )}
               </Button>
             </>

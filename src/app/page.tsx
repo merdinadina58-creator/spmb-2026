@@ -270,7 +270,7 @@ export default function Home() {
   const [portalParsing, setPortalParsing] = useState(false)
   const [portalSelectedJalur, setPortalSelectedJalur] = useState('')
   // Portal quick verification fields
-  const [portalVerifStatus, setPortalVerifStatus] = useState<'VERIFIED' | 'REJECTED'>('VERIFIED')
+  const [portalVerifStatus, setPortalVerifStatus] = useState<'VERIFIED' | 'REJECTED' | 'PENDING'>('VERIFIED')
   const [portalKekurangan, setPortalKekurangan] = useState('')
   const [portalVerifNote, setPortalVerifNote] = useState('')
   const [portalTanggalVerif, setPortalTanggalVerif] = useState('')
@@ -957,11 +957,14 @@ export default function Home() {
     }
   }
 
-  const handlePortalSave = async () => {
+  const handlePortalSave = async (overrideStatus?: 'VERIFIED' | 'REJECTED' | 'PENDING') => {
     if (!portalParsedData) return
 
+    // Use override status if provided, otherwise use the dialog selector
+    const effectiveStatus = overrideStatus || portalVerifStatus
+
     // Validation: if REJECTED, must have kekurangan verifikasi selected (same rule as Kekurangan Verifikasi column)
-    if (portalVerifStatus === 'REJECTED' && !portalKekurangan.trim()) {
+    if (effectiveStatus === 'REJECTED' && !portalKekurangan.trim()) {
       toast({ title: 'Gagal', description: 'Kekurangan verifikasi wajib dipilih! Pilih minimal 1 alasan penolakan.', variant: 'destructive' })
       return
     }
@@ -975,10 +978,13 @@ export default function Home() {
       delete saveData['_detectedJalurNama']
       delete saveData['_jalurAutoDetected']
 
-      // Set verification status from the dialog selector
-      if (portalVerifStatus === 'REJECTED') {
+      // Set verification status from the effective status
+      if (effectiveStatus === 'REJECTED') {
         saveData['status'] = 'DITOLAK'
         saveData['verificationStatus'] = 'REJECTED'
+      } else if (effectiveStatus === 'PENDING') {
+        saveData['verificationStatus'] = 'PENDING'
+        saveData['status'] = 'ON PROGRESS'
       } else {
         saveData['verificationStatus'] = 'VERIFIED'
         // Keep original status from portal if DITERIMA, otherwise default
