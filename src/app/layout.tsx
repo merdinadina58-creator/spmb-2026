@@ -10,9 +10,9 @@ export const viewport: Viewport = {
 };
 
 // NOTE: manifest is NOT included here because Vercel Deployment Protection
-// blocks the manifest fetch on preview deployments, causing 401 console errors.
-// The manifest link and service worker are added dynamically after the user
-// authenticates (see page.tsx).
+// blocks /api/manifest on preview deployments, causing 401 console errors.
+// PWA (manifest + service worker) is disabled on preview to avoid these errors.
+// On production (custom domain, no DP), PWA works normally.
 export const metadata: Metadata = {
   title: "SPMB 2026 - Sistem Verifikasi Pendaftaran",
   description: "Sistem Verifikasi Penerimaan Murid Baru Tahun 2026",
@@ -48,12 +48,11 @@ export default function RootLayout({
         </ErrorBoundary>
         <Toaster />
         {/*
-          NO manifest link, NO service worker registration here.
-          Both are added dynamically after authentication succeeds (see page.tsx)
-          to prevent 401 console errors from Vercel Deployment Protection.
+          NO manifest link here — it causes 401 errors on Vercel preview (DP blocks it).
+          PWA is disabled on preview deployments to keep the console clean.
 
           Also: unregister any stale service workers from previous deployments
-          that might still be fetching /manifest.json in the background.
+          that might still be fetching /manifest.json or /sw.js in the background.
         */}
         <script
           dangerouslySetInnerHTML={{

@@ -761,29 +761,13 @@ export default function Home() {
     if (isAuthenticated) fetchSettings()
   }, [fetchSettings, isAuthenticated])
 
-  // Register PWA (manifest + service worker) ONLY after authentication
-  // Avoids 403 console errors from Vercel Deployment Protection on preview deployments
-  // by using a silent GET (not HEAD) and catching errors without console spam
-  useEffect(() => {
-    if (!isAuthenticated) return
-
-    // Add manifest link directly — if Vercel DP blocks it, the browser handles it silently
-    // (no 403 in console because we don't use fetch/HEAD which always shows errors)
-    const existingManifest = document.querySelector("link[rel='manifest']")
-    if (!existingManifest) {
-      const link = document.createElement('link')
-      link.rel = 'manifest'
-      link.href = '/api/manifest'
-      document.head.appendChild(link)
-    }
-
-    // Register service worker (silently fails if blocked)
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {
-        // PWA is optional — silently fail (no console error)
-      })
-    }
-  }, [isAuthenticated])
+  // PWA (manifest + service worker) is DISABLED on Vercel preview deployments
+  // because Vercel Deployment Protection blocks /api/manifest and /sw.js with 401,
+  // which causes console errors. PWA is only useful on production (custom domain).
+  // On production (no DP), the manifest link in layout.tsx and SW registration work fine.
+  //
+  // If you want to enable PWA on preview, remove Vercel Deployment Protection from
+  // your project settings at: vercel.com → Settings → Deployment Protection
 
   // Load users when Pengaturan tab is active
   useEffect(() => {
