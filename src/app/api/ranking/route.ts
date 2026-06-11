@@ -157,12 +157,14 @@ export async function GET(request: NextRequest) {
       const jarakNum = parseDistance(r.lokasiJarak || r.skorJarak)
       const nilaiNum = parseIndonesianNumber(r.nilaiRataRata || r.skorNilaiRaport)
       const skorNum = parseIndonesianNumber(r.skor)
+      const skorPrestasiAkademikNum = parseIndonesianNumber(r.skorPrestasiAkademik)
 
       return {
         ...r,
         _jarakNum: jarakNum,
         _nilaiNum: nilaiNum,
         _skorNum: skorNum,
+        _skorPrestasiAkademikNum: skorPrestasiAkademikNum,
         _hasData: jarakNum > 0 || nilaiNum > 0 || skorNum > 0,
       }
     })
