@@ -426,3 +426,27 @@ Stage Summary:
 - All portal paste, import, and sync APIs handle the new fields
 - Edit dialogs allow editing of all new fields
 - Verified working via agent-browser on both Lembar Verifikasi and Ranking Preview Dialog
+---
+Task ID: 1
+Agent: Main
+Task: Fix 8 console errors (all 401 Unauthorized on /api/manifest and /api/auth/me)
+
+Work Log:
+- Investigated all 8 errors - all were 401 status codes from /api/manifest and /api/auth/me
+- Changed /api/auth/me to return HTTP 200 with {authenticated: false} instead of 401 when no session exists
+- Changed manifest link from /api/manifest to static /manifest.json to avoid Vercel Deployment Protection blocking
+- Updated icon links to use static /icon-192.png instead of /api/app-icon on unauthenticated pages
+- Added graceful error handling for PWA manifest and service worker registration
+- Removed verbose console.log from service worker registration
+- Manifest link update now checks if /api/manifest is accessible before switching
+- Verified all 3 portal paste save buttons work (Simpan, Terima & Simpan, Tolak & Simpan)
+- Browser verification confirmed zero console errors
+- Pushed fixes to both GitHub repos
+
+Stage Summary:
+- All 8 console 401 errors eliminated
+- /api/auth/me now returns 200 with {authenticated: false} instead of 401
+- Static manifest.json and icon files used as default (no auth needed)
+- Dynamic /api/manifest still available for authenticated users via graceful fallback
+- Portal paste save functionality verified working for all 3 save actions
+- Changes pushed to both spmb2026 (private) and spmb-2026 (public/Vercel) repos
