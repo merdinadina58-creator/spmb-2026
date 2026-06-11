@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getAuthUser } from '@/lib/auth';
+import { getAuthUser, unauthenticatedResponse } from '@/lib/auth';
 
 // PATCH: Update single registration's statusLulus
 export async function PATCH(request: NextRequest) {
   try {
     const user = await getAuthUser(request)
     if (!user) {
-      return NextResponse.json({ error: 'Tidak terautentikasi' }, { status: 401 })
+      return unauthenticatedResponse()
     }
 
     const body = await request.json();
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getAuthUser(request)
     if (!user) {
-      return NextResponse.json({ error: 'Tidak terautentikasi' }, { status: 401 })
+      return unauthenticatedResponse()
     }
 
     const body = await request.json();

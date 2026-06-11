@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getAuthUser } from '@/lib/auth'
+import { getAuthUser, unauthenticatedResponse } from '@/lib/auth'
 import { withRetry } from '@/lib/retry'
 import { neon } from '@neondatabase/serverless'
 import dotenv from 'dotenv'
@@ -199,7 +199,7 @@ export async function PUT(request: NextRequest) {
   try {
     const user = await getAuthUser(request)
     if (!user) {
-      return NextResponse.json({ error: 'Tidak terautentikasi' }, { status: 401 })
+      return unauthenticatedResponse()
     }
     if (user.role !== 'admin') {
       return NextResponse.json({ error: 'Akses ditolak. Hanya admin.' }, { status: 403 })

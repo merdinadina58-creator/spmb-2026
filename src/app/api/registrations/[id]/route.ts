@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getAuthUser } from '@/lib/auth';
+import { getAuthUser, unauthenticatedResponse } from '@/lib/auth';
 
 // Hitung Lama KK dari tanggal Terbit KK
 function hitungLamaKK(terbitKK: string): string {
@@ -35,7 +35,7 @@ export async function PATCH(
   try {
     const user = await getAuthUser(request)
     if (!user) {
-      return NextResponse.json({ error: 'Tidak terautentikasi' }, { status: 401 })
+      return unauthenticatedResponse()
     }
 
     const { id } = await params;
@@ -163,7 +163,7 @@ export async function DELETE(
   try {
     const user = await getAuthUser(request)
     if (!user) {
-      return NextResponse.json({ error: 'Tidak terautentikasi' }, { status: 401 })
+      return unauthenticatedResponse()
     }
 
     const { id } = await params;

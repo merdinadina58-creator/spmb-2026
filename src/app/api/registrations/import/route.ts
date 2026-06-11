@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getAuthUser } from '@/lib/auth';
+import { getAuthUser, unauthenticatedResponse } from '@/lib/auth';
 
 interface CSVPayload {
   noRegistrasi: string;
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     // Auth required — admin only for import
     const user = await getAuthUser(request)
     if (!user) {
-      return NextResponse.json({ error: 'Tidak terautentikasi' }, { status: 401 })
+      return unauthenticatedResponse()
     }
     if (user.role !== 'admin') {
       return NextResponse.json({ error: 'Akses ditolak. Hanya admin yang dapat import.' }, { status: 403 })

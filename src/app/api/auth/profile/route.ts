@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getAuthUser, hashPassword } from '@/lib/auth'
+import { getAuthUser, hashPassword, unauthenticatedResponse } from '@/lib/auth'
 
 // PUT - Update own profile
 export async function PUT(request: NextRequest) {
   try {
     const currentUser = await getAuthUser(request)
     if (!currentUser) {
-      return NextResponse.json({ success: false, error: 'Tidak terautentikasi' }, { status: 401 })
+      return unauthenticatedResponse()
     }
 
     const body = await request.json()

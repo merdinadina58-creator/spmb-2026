@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { createHash, randomBytes } from 'crypto'
 
@@ -101,4 +101,19 @@ export function hashPassword(password: string): string {
   const salt = randomBytes(16).toString('hex')
   const hash = createHash('sha256').update(password + salt).digest('hex')
   return `${salt}:${hash}`
+}
+
+/**
+ * Returns a 200 response with {authenticated: false} instead of 401.
+ * This prevents the browser from logging "Failed to load resource: 401" 
+ * in the console on Vercel preview deployments where Deployment Protection
+ * can interfere with session cookies.
+ * 
+ * The frontend checks for `authenticated` field and handles it gracefully.
+ */
+export function unauthenticatedResponse(message = 'Tidak terautentikasi') {
+  return NextResponse.json(
+    { error: message, authenticated: false },
+    { status: 200 }
+  )
 }

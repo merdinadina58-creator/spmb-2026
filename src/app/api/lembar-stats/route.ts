@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getAuthUser } from '@/lib/auth';
+import { getAuthUser, unauthenticatedResponse } from '@/lib/auth';
 import { withRetry } from '@/lib/retry';
 
 // Lightweight stats endpoint for Lembar Verifikasi
@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     // Auth required
     const user = await getAuthUser(request)
     if (!user) {
-      return NextResponse.json({ error: 'Tidak terautentikasi' }, { status: 401 })
+      return unauthenticatedResponse()
     }
 
     // Only the 3 groupBy queries that Lembar Verifikasi needs

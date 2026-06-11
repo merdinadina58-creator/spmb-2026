@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getAdminUser } from '@/lib/auth';
+import { getAdminUser, unauthenticatedResponse } from '@/lib/auth';
 import { execFileSync } from 'child_process';
 import path from 'path';
 
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
         const parsed = JSON.parse(line);
         if (parsed.step === 'error' && parsed.error) {
           loginFailed = true;
-          return NextResponse.json({ error: parsed.message }, { status: 401 });
+          return unauthenticatedResponse(parsed.message);
         }
         if (parsed.step === 'done') {
           fetchedData = parsed.data || [];

@@ -119,6 +119,10 @@ export default function Home() {
         if (meRes.ok) {
           const meData = await meRes.json()
           if (meData.authenticated && !cancelled) {
+            // Set sessionStorage IMMEDIATELY to prevent auto-logout race condition
+            // The auto-logout effect checks sessionStorage, so it must be set
+            // BEFORE effects fire (setting it here in the handler, not in an effect)
+            sessionStorage.setItem('spmb_session_active', 'true')
             setIsAuthenticated(true)
             setAuthUser(meData.user)
           }
@@ -688,11 +692,11 @@ export default function Home() {
 
       const res = await fetch(`/api/registrations?${params}`)
       if (!res.ok) {
-        if (res.status === 401 || res.status === 403) return
         toast({ title: 'Error', description: 'Gagal memuat data pendaftar', variant: 'destructive' })
         return
       }
       const data = await res.json()
+      if (data.authenticated === false) return // Not authenticated — silently ignore
       setRegistrations(dedupById(data.data || []))
       if (data.pagination) setPagination(prev => ({ ...prev, ...data.pagination }))
     } catch {
@@ -706,11 +710,11 @@ export default function Home() {
     try {
       const res = await fetch(`/api/dashboard?tahap=${tahap}`)
       if (!res.ok) {
-        if (res.status === 401 || res.status === 403) return
         toast({ title: 'Error', description: 'Gagal memuat statistik', variant: 'destructive' })
         return
       }
       const data = await res.json()
+      if (data.authenticated === false) return // Not authenticated — silently ignore
       if (data.error) {
         toast({ title: 'Error', description: data.error, variant: 'destructive' })
         return
@@ -783,11 +787,15 @@ export default function Home() {
     }
   }, [activeTab, authUser?.role])
 
-  // Auto-logout on refresh
+  // Auto-logout: only if isAuthenticated becomes true but sessionStorage was never set
+  // (e.g. React DevTools or HMR sets state without proper auth flow)
+  // The main session flag is set directly in the auth check handler (not an effect),
+  // so this effect won't falsely trigger on page refresh anymore.
   useEffect(() => {
     if (isAuthenticated) {
       const sessionFlag = sessionStorage.getItem('spmb_session_active')
       if (!sessionFlag) {
+        // Session flag missing — force logout
         fetch('/api/auth/logout', { method: 'POST' })
         setIsAuthenticated(false)
         setAuthUser(null)
@@ -859,14 +867,14 @@ export default function Home() {
     }
   }, [appIcon])
 
-  // Clear session flag on beforeunload
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      sessionStorage.removeItem('spmb_session_active')
-    }
-    window.addEventListener('beforeunload', handleBeforeUnload)
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
-  }, [])
+  // NOTE: We do NOT clear sessionStorage on beforeunload anymore.
+  // Previously, clearing it on beforeunload caused a race condition:
+  // 1. beforeunload clears sessionStorage
+  // 2. On reload, auth check succeeds and sets isAuthenticated=true
+  // 3. But the auto-logout effect fires BEFORE the session-flag effect
+  // 4. Auto-logout sees empty sessionStorage → deletes the session → 401 errors
+  // Now, sessionStorage is set directly in the auth check handler (not an effect),
+  // so it's already available when the auto-logout effect runs.
 
   // Fetch ranking data
   const fetchRanking = useCallback(async () => {
@@ -882,7 +890,6 @@ export default function Home() {
 
       const res = await fetch(`/api/ranking?${params}`)
       if (!res.ok) {
-        if (res.status === 401 || res.status === 403) return
         toast({ title: 'Error', description: 'Gagal memuat data perangkingan', variant: 'destructive' })
         return
       }
@@ -1023,15 +1030,16 @@ export default function Home() {
         body: JSON.stringify(saveData),
       })
 
-      // Handle auth errors explicitly
-      if (res.status === 401 || res.status === 403) {
+      const data = await res.json()
+
+      // Handle auth errors — API returns 200 with {authenticated: false} instead of 401
+      if (data.authenticated === false) {
         toast({ title: 'Sesi Berakhir', description: 'Sesi login Anda telah habis. Silakan login ulang.', variant: 'destructive' })
         setIsAuthenticated(false)
         setAuthUser(null)
         return
       }
 
-      const data = await res.json()
       if (data.success) {
         const nisnLabel = portalParsedData.nisn ? ` (NISN: ${portalParsedData.nisn})` : ''
         const savedRegId = data.data?.id || null
