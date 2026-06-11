@@ -890,8 +890,8 @@ export default function Home() {
   }, [rankingJalur, rankingSekolah, rankingJurusan, rankingTampilan, rankingStatus, tahap, toast])
 
   useEffect(() => {
-    if (isAuthenticated) fetchRanking()
-  }, [fetchRanking, isAuthenticated])
+    if (isAuthenticated && authUser?.role === 'admin') fetchRanking()
+  }, [fetchRanking, isAuthenticated, authUser?.role])
 
   // ==================== CONDITIONAL RENDERS ====================
   // Auth screens
@@ -1485,7 +1485,7 @@ export default function Home() {
           />
 
           {/* ==================== RANKING PREVIEW DIALOG ==================== */}
-          <RankingPreviewDialog
+          {authUser?.role === 'admin' && <RankingPreviewDialog
             open={rankingPreviewOpen}
             onOpenChange={setRankingPreviewOpen}
             rankingPreviewType={rankingPreviewType}
@@ -1504,7 +1504,7 @@ export default function Home() {
             appSubtitle={appSubtitle}
             onPrintPDF={handleRankingPrintPDF}
             onExportExcel={_handleRankingExportExcel}
-          />
+          />}
 
           {/* ==================== PORTAL PASTE DIALOG ==================== */}
           <PortalPasteDialog
@@ -1753,7 +1753,7 @@ export default function Home() {
       </TabsContent>
 
       {/* ==================== RANKING TAB ==================== */}
-      <TabsContent value="ranking" className="space-y-6">
+      {authUser?.role === 'admin' && <TabsContent value="ranking" className="space-y-6">
         <RankingTab
           rankingJalur={rankingJalur} setRankingJalur={setRankingJalur}
           rankingSekolah={rankingSekolah} setRankingSekolah={setRankingSekolah}
@@ -1769,7 +1769,7 @@ export default function Home() {
           fetchRanking={fetchRanking}
           handleRankingPreview={handleRankingPreview}
         />
-      </TabsContent>
+      </TabsContent>}
 
       {/* ==================== DITERIMA TAB ==================== */}
       <TabsContent value="diterima" className="space-y-6">

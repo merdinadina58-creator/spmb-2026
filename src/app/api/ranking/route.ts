@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getAuthUser } from '@/lib/auth'
+import { getAdminUser } from '@/lib/auth'
 
 // Parse Indonesian number format: "1.383,854" -> 1383.854
 function parseIndonesianNumber(val: string | null | undefined): number {
@@ -95,10 +95,10 @@ function parseDistance(val: string | null | undefined): number {
 
 export async function GET(request: NextRequest) {
   try {
-    // Auth required
-    const user = await getAuthUser(request)
+    // Admin only
+    const user = await getAdminUser(request)
     if (!user) {
-      return NextResponse.json({ error: 'Tidak terautentikasi' }, { status: 401 })
+      return NextResponse.json({ error: 'Akses ditolak. Hanya admin yang dapat mengakses perangkingan.' }, { status: 403 })
     }
 
     const { searchParams } = new URL(request.url)
