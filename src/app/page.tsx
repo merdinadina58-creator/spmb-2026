@@ -761,6 +761,28 @@ export default function Home() {
     if (isAuthenticated) fetchSettings()
   }, [fetchSettings, isAuthenticated])
 
+  // Register PWA (manifest + service worker) ONLY after authentication
+  // This avoids 401 errors from Vercel Deployment Protection on preview deployments
+  useEffect(() => {
+    if (!isAuthenticated) return
+
+    // Add manifest link dynamically (after auth, so Vercel Deployment Protection won't block)
+    const existingManifest = document.querySelector("link[rel='manifest']")
+    if (!existingManifest) {
+      const link = document.createElement('link')
+      link.rel = 'manifest'
+      link.href = '/manifest.json'
+      document.head.appendChild(link)
+    }
+
+    // Register service worker (after auth, to avoid 401 on sw.js fetch)
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {
+        // PWA is optional — silently fail
+      })
+    }
+  }, [isAuthenticated])
+
   // Load users when Pengaturan tab is active
   useEffect(() => {
     if (activeTab === 'pengaturan' && authUser?.role === 'admin') {
@@ -826,7 +848,7 @@ export default function Home() {
 
   useEffect(() => {
     if (appIcon) {
-      // Update favicon dynamically — use the dynamic API endpoint for consistency
+      // Update favicon dynamically — try the dynamic API endpoint first, fallback to static
       // This ensures both the browser tab icon AND PWA install icon use the admin-uploaded icon
       let link = document.querySelector<HTMLLinkElement>("link[rel~='icon']")
       if (!link) {
@@ -834,28 +856,37 @@ export default function Home() {
         link.rel = 'icon'
         document.head.appendChild(link)
       }
-      // Use the dynamic icon endpoint with cache-busting so the browser fetches the latest icon
-      link.href = `/api/app-icon?size=192&t=${Date.now()}`
+      // Try dynamic icon endpoint; fallback to static if it fails (e.g. Vercel Deployment Protection)
+      const dynamicIconUrl = `/api/app-icon?size=192&t=${Date.now()}`
+      fetch(dynamicIconUrl, { method: 'HEAD' }).then(res => {
+        link!.href = res.ok ? dynamicIconUrl : '/icon-192.png'
+      }).catch(() => {
+        link!.href = '/icon-192.png'
+      })
 
       // Update all apple-touch-icon links (for iOS home screen)
       const appleLinks = document.querySelectorAll<HTMLLinkElement>("link[rel='apple-touch-icon']")
       appleLinks.forEach((appleLink, idx) => {
         const size = idx === 0 ? '192' : '512'
-        appleLink.href = `/api/app-icon?size=${size}&t=${Date.now()}`
+        const dynamicUrl = `/api/app-icon?size=${size}&t=${Date.now()}`
+        fetch(dynamicUrl, { method: 'HEAD' }).then(res => {
+          appleLink.href = res.ok ? dynamicUrl : `/icon-${size}.png`
+        }).catch(() => {
+          appleLink.href = `/icon-${size}.png`
+        })
       })
 
-      // Also update the manifest link with cache-busting to trigger PWA icon refresh
-      // Use /api/manifest for dynamic icons, but fallback gracefully if it fails (e.g. Vercel Deployment Protection)
+      // Update manifest link if it exists (added after auth)
       const manifestLink = document.querySelector<HTMLLinkElement>("link[rel='manifest']")
       if (manifestLink) {
         const dynamicManifestUrl = `/api/manifest?t=${Date.now()}`
-        // Try fetching the dynamic manifest; if it fails (401), keep the static one
         fetch(dynamicManifestUrl, { method: 'HEAD' }).then(res => {
           if (res.ok) {
             manifestLink.href = dynamicManifestUrl
           }
+          // If not ok, keep static /manifest.json — don't change
         }).catch(() => {
-          // Keep static manifest — /manifest.json
+          // Keep static manifest — no 401 error
         })
       }
     }

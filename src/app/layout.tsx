@@ -9,10 +9,12 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
+// NOTE: manifest is NOT included here because Vercel Deployment Protection
+// blocks the manifest fetch on preview deployments, causing 401 console errors.
+// The manifest link is added dynamically after authentication succeeds (see page.tsx).
 export const metadata: Metadata = {
   title: "SPMB 2026 - Sistem Verifikasi Pendaftaran",
   description: "Sistem Verifikasi Penerimaan Murid Baru Tahun 2026",
-  manifest: "/manifest.json",
   icons: {
     icon: "/icon-192.png",
     apple: "/icon-192.png",
@@ -44,24 +46,11 @@ export default function RootLayout({
           {children}
         </ErrorBoundary>
         <Toaster />
-        {/* Service Worker Registration — with silent error handling to avoid console 401s */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js', { scope: '/' })
-                    .then(function(reg) {
-                      reg.update().catch(function() {});
-                    })
-                    .catch(function() {
-                      // Silently fail — PWA is optional
-                    });
-                });
-              }
-            `,
-          }}
-        />
+        {/*
+          Service Worker and manifest are NOT registered here.
+          They are added dynamically after authentication succeeds (see page.tsx)
+          to avoid 401 errors from Vercel Deployment Protection on preview deployments.
+        */}
       </body>
     </html>
   );
