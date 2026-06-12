@@ -121,11 +121,12 @@ export default function RankingTab(props: RankingTabProps) {
             <Filter className="w-4 h-4 text-gray-500" />
             <h3 className="font-semibold text-sm text-gray-700">Filter & Urutan</h3>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-            <div className="space-y-1">
+          {/* Row 1: Urutkan Berdasarkan — full width */}
+          <div className="mb-3">
+            <div className="space-y-1.5">
               <label className="text-xs font-medium text-gray-500">Urutkan Berdasarkan</label>
               <Select value={rankingTampilan} onValueChange={setRankingTampilan}>
-                <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-9 text-xs w-full sm:w-72"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="jarak">📏 Jarak (Terdekat → Terjauh)</SelectItem>
                   <SelectItem value="nilai">📝 Nilai (Tertinggi → Terendah)</SelectItem>
@@ -133,7 +134,10 @@ export default function RankingTab(props: RankingTabProps) {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1">
+          </div>
+          {/* Row 2: Filter dropdowns — responsive grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="space-y-1.5">
               <label className="text-xs font-medium text-gray-500">Jalur</label>
               <Select value={rankingJalur} onValueChange={setRankingJalur}>
                 <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
@@ -145,7 +149,7 @@ export default function RankingTab(props: RankingTabProps) {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <label className="text-xs font-medium text-gray-500">Sekolah Asal</label>
               <Select value={rankingSekolah} onValueChange={setRankingSekolah}>
                 <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
@@ -157,7 +161,7 @@ export default function RankingTab(props: RankingTabProps) {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <label className="text-xs font-medium text-gray-500">Jurusan</label>
               <Select value={rankingJurusan} onValueChange={setRankingJurusan}>
                 <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
@@ -169,7 +173,7 @@ export default function RankingTab(props: RankingTabProps) {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <label className="text-xs font-medium text-gray-500">Status Verifikasi</label>
               <Select value={rankingStatus} onValueChange={setRankingStatus}>
                 <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
