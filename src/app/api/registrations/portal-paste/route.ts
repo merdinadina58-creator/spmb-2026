@@ -32,6 +32,7 @@ interface PortalPastePayload {
   skorLomba?: string;
   nilaiRataRataTKA?: string;
   skorPrestasiAkademik?: string;
+  sertifikatPrestasi?: string;
   skor?: string;
   nilaiRapor?: string;
   kekuranganVerifikasi?: string;
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
       'nik', 'tanggalLahir', 'alamat', 'alamatLengkap',
       'noTelpSiswa', 'noTelpOrangtua', 'latitude', 'longitude',
       'lokasiJarak', 'nilaiRataRata', 'skorJarak', 'skorNilaiRaport',
-      'skorLomba', 'nilaiRataRataTKA', 'skorPrestasiAkademik',
+      'skorLomba', 'nilaiRataRataTKA', 'skorPrestasiAkademik', 'sertifikatPrestasi',
       'skor', 'nilaiRapor',
       'kekuranganVerifikasi', 'tanggalVerif', 'jamVerif',
       'terbitKK', 'lamaKK', 'dokumen',

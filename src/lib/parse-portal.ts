@@ -322,17 +322,61 @@ export function parsePortalText(
     result['nilaiRataRataTKA'] = match ? match[1] : nilaiRataRataTKA
   }
 
-  // Skor Prestasi Akademik - from "Skor Prestasi Akademik" label
-  const skorPrestasiAkademik = findNextLine('Skor Prestasi Akademik')
-  if (skorPrestasiAkademik) {
-    const match = skorPrestasiAkademik.match(/([\d]+[\.,]?[\d]*)/)
-    result['skorPrestasiAkademik'] = match ? match[1] : skorPrestasiAkademik
+  // Skor Prestasi - handles both Akademik and Non-Akademik variants
+  // Both are stored in skorPrestasiAkademik field since RankingTab uses it for all Prestasi jalur
+  // IMPORTANT: Use exact line matching to avoid "Akademik" matching "Non Akademik"
+  const skorPrestasiLabels = [
+    'Skor Prestasi Non Akademik',
+    'Skor Prestasi Non-Akademik',
+    'Skor Prestasi Nonakademik',
+    'Skor Prestasi NonAkademik',
+    'Skor Prestasi Akademik',
+  ]
+  for (const label of skorPrestasiLabels) {
+    for (let i = 0; i < lines.length; i++) {
+      // Exact match: the line must start with the label (possibly followed by ":" and value)
+      // This prevents "Skor Prestasi Akademik" from matching "Skor Prestasi Non Akademik"
+      if (lines[i].toLowerCase().startsWith(label.toLowerCase())) {
+        const colonIdx = lines[i].indexOf(':')
+        if (colonIdx !== -1 && lines[i].length > colonIdx + 1) {
+          const value = lines[i].substring(colonIdx + 1).trim()
+          const match = value.match(/([\d]+[\.,]?[\d]*)/)
+          if (match) {
+            result['skorPrestasiAkademik'] = match[1]
+            break
+          }
+        } else if (i + 1 < lines.length) {
+          const match = lines[i + 1].trim().match(/([\d]+[\.,]?[\d]*)/)
+          if (match) {
+            result['skorPrestasiAkademik'] = match[1]
+            break
+          }
+        }
+      }
+    }
+    // If we found a match, stop checking other labels
+    if (result['skorPrestasiAkademik']) break
   }
 
   // Dokumen - parse from "Dokumen" section
   const dokumenSection = findNextLine('Dokumen')
   if (dokumenSection) {
     result['dokumen'] = dokumenSection
+  }
+
+  // Sertifikat Prestasi - parse from "Dokumen Sertifikat Prestasi" section
+  // Handles both "Dokumen Sertifikat Prestasi Akademik" and "Dokumen Sertifikat Prestasi Non-Akademik"
+  const sertifikatPatterns = [
+    /Dokumen\s+Sertifikat\s+Prestasi\s+Non[\s-]?Akademik[^:\n]*\n([\s\S]*?)(?=\n\n|\n[A-Z][a-z]|$)/i,
+    /Dokumen\s+Sertifikat\s+Prestasi\s+Akademik[^:\n]*\n([\s\S]*?)(?=\n\n|\n[A-Z][a-z]|$)/i,
+    /Dokumen\s+Sertifikat\s+Prestasi[^:\n]*\n([\s\S]*?)(?=\n\n|\n[A-Z][a-z]|$)/i,
+  ]
+  for (const pattern of sertifikatPatterns) {
+    const match = text.match(pattern)
+    if (match && match[1].trim()) {
+      result['sertifikatPrestasi'] = match[1].trim().split('\n').map(l => l.trim()).filter(Boolean).join('; ')
+      break
+    }
   }
 
   // Status detection - try to detect from portal text
