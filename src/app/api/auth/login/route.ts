@@ -92,7 +92,8 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Set session cookie (7 days expiry)
+    // Set session cookie — no maxAge makes it a browser-session cookie
+    // (auto-deleted when browser closes, persists during refresh within same session)
     const response = NextResponse.json({
       success: true,
       user: {
@@ -107,7 +108,6 @@ export async function POST(request: NextRequest) {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
       path: '/',
     })
 

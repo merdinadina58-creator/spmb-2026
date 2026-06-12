@@ -787,16 +787,13 @@ export default function Home() {
     }
   }, [activeTab, authUser?.role])
 
-  // Auto-logout: only if isAuthenticated becomes true but sessionStorage was never set
-  // (e.g. React DevTools or HMR sets state without proper auth flow)
-  // The main session flag is set directly in the auth check handler (not an effect),
-  // so this effect won't falsely trigger on page refresh anymore.
+  // Auto-logout safety net: if isAuthenticated is true but no valid session
+  // (e.g. React HMR, DevTools state injection), force logout.
+  // This is a safety net — the main session cleanup happens in beforeunload via sendBeacon.
   useEffect(() => {
     if (isAuthenticated) {
       const sessionFlag = sessionStorage.getItem('spmb_session_active')
       if (!sessionFlag) {
-        // Session flag missing — force logout
-        fetch('/api/auth/logout', { method: 'POST' })
         setIsAuthenticated(false)
         setAuthUser(null)
       }
@@ -867,14 +864,18 @@ export default function Home() {
     }
   }, [appIcon])
 
-  // NOTE: We do NOT clear sessionStorage on beforeunload anymore.
-  // Previously, clearing it on beforeunload caused a race condition:
-  // 1. beforeunload clears sessionStorage
-  // 2. On reload, auth check succeeds and sets isAuthenticated=true
-  // 3. But the auto-logout effect fires BEFORE the session-flag effect
-  // 4. Auto-logout sees empty sessionStorage → deletes the session → 401 errors
-  // Now, sessionStorage is set directly in the auth check handler (not an effect),
-  // so it's already available when the auto-logout effect runs.
+  // On page close/navigate away: call logout API to delete the server-side session.
+  // This ensures the user must re-login when they revisit the app.
+  // Using sendBeacon for reliable delivery during page unload.
+  useEffect(() => {
+    const handleUnload = () => {
+      if (isAuthenticated) {
+        navigator.sendBeacon('/api/auth/logout')
+      }
+    }
+    window.addEventListener('beforeunload', handleUnload)
+    return () => window.removeEventListener('beforeunload', handleUnload)
+  }, [isAuthenticated])
 
   // Fetch ranking data
   const fetchRanking = useCallback(async () => {
