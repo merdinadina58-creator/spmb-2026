@@ -1,0 +1,512 @@
+     1→'use client'
+     2→
+     3→import { useState, useEffect, useCallback } from 'react'
+     4→import { Button } from '@/components/ui/button'
+     5→import { Badge } from '@/components/ui/badge'
+     6→import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+     7→import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
+     8→import {
+     9→  ShieldCheck,
+    10→  Upload,
+    11→  ClipboardPaste,
+    12→  Lock,
+    13→  Eye,
+    14→  GraduationCap,
+    15→  School,
+    16→  ClipboardCheck,
+    17→  Trophy,
+    18→  ThumbsUp,
+    19→  ThumbsDown,
+    20→  Settings,
+    21→  Users,
+    22→  ArrowLeftRight,
+    23→  PanelLeftClose,
+    24→  PanelLeftOpen,
+    25→  ChevronsLeft,
+    26→  ChevronsRight,
+    27→} from 'lucide-react'
+    28→import type { DashboardStats, LembarVerifikasiData } from '@/lib/types'
+    29→
+    30→interface AppLayoutProps {
+    31→  appName: string
+    32→  schoolName: string
+    33→  appIcon: string
+    34→  appSubtitle: string
+    35→  authUser: { id: string; username: string; namaLengkap: string; role: string } | null
+    36→  activeTab: string
+    37→  setActiveTab: (tab: string) => void
+    38→  setLembarTab: (tab: string) => void
+    39→  stats: DashboardStats | null
+    40→  setPortalPasteOpen: (v: boolean) => void
+    41→  setImportDialogOpen: (v: boolean) => void
+    42→  setChangePasswordOpen: (v: boolean) => void
+    43→  handleLogout: () => void
+    44→  lembarVerifikasi: LembarVerifikasiData[]
+    45→  getPendingForLembar: (subJalurFilter: string) => number
+    46→  children: React.ReactNode
+    47→  dialogs?: React.ReactNode
+    48→  tahap?: number
+    49→}
+    50→
+    51→// Sidebar nav item component for cleaner code
+    52→function SidebarNavItem({
+    53→  tab,
+    54→  activeTab,
+    55→  setActiveTab,
+    56→  icon: Icon,
+    57→  label,
+    58→  badge,
+    59→  colorScheme = 'emerald',
+    60→  collapsed,
+    61→}: {
+    62→  tab: string
+    63→  activeTab: string
+    64→  setActiveTab: (tab: string) => void
+    65→  icon: React.ComponentType<{ className?: string }>
+    66→  label: string
+    67→  badge?: React.ReactNode
+    68→  colorScheme?: 'emerald' | 'amber' | 'red' | 'sky' | 'gray'
+    69→  collapsed: boolean
+    70→}) {
+    71→  const colorClasses = {
+    72→    emerald: {
+    73→      active: 'bg-emerald-50 text-emerald-700 shadow-sm shadow-emerald-100/50',
+    74→      activeIcon: 'text-emerald-600',
+    75→      activeBar: 'before:bg-emerald-500',
+    76→    },
+    77→    amber: {
+    78→      active: 'bg-amber-50 text-amber-700 shadow-sm shadow-amber-100/50',
+    79→      activeIcon: 'text-amber-600',
+    80→      activeBar: 'before:bg-amber-500',
+    81→    },
+    82→    red: {
+    83→      active: 'bg-red-50 text-red-700 shadow-sm shadow-red-100/50',
+    84→      activeIcon: 'text-red-600',
+    85→      activeBar: 'before:bg-red-500',
+    86→    },
+    87→    sky: {
+    88→      active: 'bg-sky-50 text-sky-700 shadow-sm shadow-sky-100/50',
+    89→      activeIcon: 'text-sky-600',
+    90→      activeBar: 'before:bg-sky-500',
+    91→    },
+    92→    gray: {
+    93→      active: 'bg-gray-100 text-gray-700 shadow-sm',
+    94→      activeIcon: 'text-gray-600',
+    95→      activeBar: 'before:bg-gray-500',
+    96→    },
+    97→  }
+    98→
+    99→  const isActive = activeTab === tab
+   100→  const colors = colorClasses[colorScheme]
+   101→
+   102→  const button = (
+   103→    <button
+   104→      onClick={() => setActiveTab(tab)}
+   105→      className={`w-full flex items-center gap-3 rounded-lg text-sm transition-all duration-200 relative group
+   106→        ${collapsed ? 'px-2 py-2.5 justify-center' : 'px-3 py-2.5'}
+   107→        ${isActive
+   108→          ? `${colors.active} font-medium before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-[3px] before:h-5 before:rounded-full ${colors.activeBar} ${collapsed ? 'before:-ml-2' : 'before:-ml-3'}`
+   109→          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+   110→        }`}
+   111→    >
+   112→      <Icon className={`w-4 h-4 shrink-0 ${isActive ? colors.activeIcon : 'text-gray-400 group-hover:text-gray-600'}`} />
+   113→      {!collapsed && (
+   114→        <>
+   115→          <span className="flex-1 text-left">{label}</span>
+   116→          {badge}
+   117→        </>
+   118→      )}
+   119→    </button>
+   120→  )
+   121→
+   122→  if (collapsed) {
+   123→    return (
+   124→      <Tooltip delayDuration={0}>
+   125→        <TooltipTrigger asChild>
+   126→          {button}
+   127→        </TooltipTrigger>
+   128→        <TooltipContent side="right" sideOffset={8} className="flex items-center gap-2">
+   129→          {label}
+   130→          {badge}
+   131→        </TooltipContent>
+   132→      </Tooltip>
+   133→    )
+   134→  }
+   135→
+   136→  return button
+   137→}
+   138→
+   139→export default function AppLayout(props: AppLayoutProps) {
+   140→  const {
+   141→    appName, schoolName, appIcon, appSubtitle, authUser, activeTab, setActiveTab,
+   142→    setLembarTab, stats,
+   143→    setPortalPasteOpen, setImportDialogOpen, setChangePasswordOpen,
+   144→    handleLogout, lembarVerifikasi, getPendingForLembar,
+   145→    children, dialogs,
+   146→    tahap,
+   147→  } = props
+   148→
+   149→  // Sidebar collapse state - persisted in localStorage
+   150→  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+   151→    if (typeof window !== 'undefined') {
+   152→      const saved = localStorage.getItem('spmb-sidebar-collapsed')
+   153→      return saved === 'true'
+   154→    }
+   155→    return false
+   156→  })
+   157→
+   158→  const toggleSidebar = useCallback(() => {
+   159→    setSidebarCollapsed(prev => {
+   160→      const next = !prev
+   161→      localStorage.setItem('spmb-sidebar-collapsed', String(next))
+   162→      return next
+   163→    })
+   164→  }, [])
+   165→
+   166→  return (
+   167→    <TooltipProvider delayDuration={0}>
+   168→      <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-gray-50 to-emerald-50/30">
+   169→        {/* Header */}
+   170→        <header className="sticky top-0 z-40 bg-gradient-to-r from-slate-900 via-emerald-900 to-slate-900 border-b border-emerald-400/20 shadow-lg">
+   171→          <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+   172→            <div className="flex items-center justify-between h-14 sm:h-18">
+   173→              <div className="flex items-center gap-2 sm:gap-3">
+   174→                <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-emerald-600 text-white ring-2 ring-emerald-400/30 shadow-lg shadow-emerald-500/20 overflow-hidden">
+   175→                  {appIcon ? (
+   176→                    <img src={appIcon} alt="Ikon" className="w-full h-full object-cover" />
+   177→                  ) : (
+   178→                    <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6" />
+   179→                  )}
+   180→                </div>
+   181→                <div>
+   182→                  <h1 className="text-base sm:text-xl font-bold text-white tracking-tight">{appName}</h1>
+   183→                  {schoolName && <p className="text-[10px] sm:text-xs text-emerald-200 font-medium">{schoolName}</p>}
+   184→                  {appSubtitle.split('\n').map((line, i) => <p key={i} className="text-[10px] sm:text-xs text-emerald-200/60 hidden xs:block">{line}</p>)}
+   185→                </div>
+   186→              </div>
+   187→              <div className="flex items-center gap-1.5 sm:gap-2">
+   188→                {/* Tahap Indicator */}
+   189→                {tahap && (
+   190→                  <Badge className={`h-8 sm:h-9 px-2.5 sm:px-3 text-xs sm:text-sm font-semibold gap-1.5 ${tahap === 1 ? 'bg-amber-500/90 text-white border-amber-400/50' : 'bg-emerald-500/90 text-white border-emerald-400/50'} shadow-sm`}>
+   191→                    <ArrowLeftRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+   192→                    Tahap {tahap}
+   193→                  </Badge>
+   194→                )}
+   195→                <Button onClick={() => setPortalPasteOpen(true)} variant="outline" size="sm" className="bg-white/10 hover:bg-white/20 text-white border-white/20 h-8 sm:h-9 px-2 sm:px-3">
+   196→                  <ClipboardPaste className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+   197→                  <span className="hidden sm:inline">Paste Portal</span>
+   198→                </Button>
+   199→                {authUser?.role === 'admin' && (
+   200→                  <Button onClick={() => setImportDialogOpen(true)} size="sm" className="bg-white/10 hover:bg-white/20 text-white border border-white/20 h-8 sm:h-9 px-2 sm:px-3">
+   201→                    <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+   202→                    <span className="hidden sm:inline">Import CSV</span>
+   203→                  </Button>
+   204→                )}
+   205→                <div className="hidden sm:flex items-center gap-2 ml-1 pl-2 border-l border-white/20">
+   206→                  <div className="flex items-center gap-1.5">
+   207→                    <div className="w-7 h-7 rounded-full bg-emerald-600/40 flex items-center justify-center">
+   208→                      <span className="text-xs font-bold text-white">{authUser?.namaLengkap?.charAt(0) || 'U'}</span>
+   209→                    </div>
+   210→                    <div className="hidden md:block">
+   211→                      <p className="text-xs font-medium text-white leading-tight">{authUser?.namaLengkap}</p>
+   212→                      <p className="text-[10px] text-emerald-200/60 leading-tight">{authUser?.role === 'admin' ? 'Administrator' : 'Verifikator'}</p>
+   213→                    </div>
+   214→                  </div>
+   215→                </div>
+   216→                <Button onClick={() => setChangePasswordOpen(true)} variant="outline" size="sm" className="bg-white/5 hover:bg-white/20 text-white/70 hover:text-white border-white/10 h-8 sm:h-9 px-2" title="Ganti Password">
+   217→                  <Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+   218→                  <span className="hidden sm:inline ml-1">Ganti Password</span>
+   219→                </Button>
+   220→                <Button onClick={handleLogout} variant="outline" size="sm" className="bg-white/5 hover:bg-red-500/20 text-white/70 hover:text-red-300 border-white/10 hover:border-red-400/30 h-8 sm:h-9 px-2" title="Keluar">
+   221→                  <Lock className="w-3.5 h-3.5" />
+   222→                  <span className="hidden lg:inline ml-1">Keluar</span>
+   223→                </Button>
+   224→              </div>
+   225→            </div>
+   226→          </div>
+   227→        </header>
+   228→
+   229→        {/* Main Content */}
+   230→        <main className="flex-1 flex">
+   231→          {/* Desktop Sidebar */}
+   232→          <aside
+   233→            className={`hidden lg:flex flex-col border-r border-gray-200/60 bg-gradient-to-b from-white via-gray-50/30 to-white shrink-0 sticky top-[4.5rem] h-[calc(100vh-4.5rem)] transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'w-16' : 'w-64'}`}
+   234→          >
+   235→            {/* Sidebar Header */}
+   236→            <div className={`border-b border-gray-100/80 transition-all duration-300 ${sidebarCollapsed ? 'p-2' : 'p-4'}`}>
+   237→              {sidebarCollapsed ? (
+   238→                <div className="flex flex-col items-center gap-1">
+   239→                  <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-200/50 overflow-hidden">
+   240→                    {appIcon ? (
+   241→                      <img src={appIcon} alt="Ikon" className="w-full h-full object-cover" />
+   242→                    ) : (
+   243→                      <ShieldCheck className="w-5 h-5" />
+   244→                    )}
+   245→                  </div>
+   246→                </div>
+   247→              ) : (
+   248→                <div className="flex items-center gap-2.5">
+   249→                  <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-200/50 overflow-hidden">
+   250→                    {appIcon ? (
+   251→                      <img src={appIcon} alt="Ikon" className="w-full h-full object-cover" />
+   252→                    ) : (
+   253→                      <ShieldCheck className="w-5 h-5" />
+   254→                    )}
+   255→                  </div>
+   256→                  <div>
+   257→                    <h2 className="text-sm font-bold text-gray-900 tracking-tight">{appName}</h2>
+   258→                    {schoolName && <p className="text-[10px] text-gray-500 font-medium leading-tight">{schoolName}</p>}
+   259→                    <p className="text-[10px] text-gray-400 font-medium">Menu Navigasi</p>
+   260→                  </div>
+   261→                </div>
+   262→              )}
+   263→            </div>
+   264→
+   265→            {/* Navigation */}
+   266→            <nav className={`flex-1 overflow-y-auto py-3 space-y-0.5 transition-all duration-300 ${sidebarCollapsed ? 'px-2' : 'px-3'}`}>
+   267→              {/* UMUM Section */}
+   268→              {!sidebarCollapsed ? (
+   269→                <div className="pt-1 pb-2 px-3"><span className="text-[10px] font-semibold tracking-widest text-gray-400 uppercase">Umum</span></div>
+   270→              ) : (
+   271→                <div className="pt-1 pb-2 flex justify-center">
+   272→                  <div className="w-5 h-px bg-gray-200/80" />
+   273→                </div>
+   274→              )}
+   275→              <SidebarNavItem
+   276→                tab="dashboard"
+   277→                activeTab={activeTab}
+   278→                setActiveTab={setActiveTab}
+   279→                icon={Eye}
+   280→                label="Dashboard"
+   281→                colorScheme="emerald"
+   282→                collapsed={sidebarCollapsed}
+   283→              />
+   284→
+   285→              {/* VERIFIKASI Section */}
+   286→              {!sidebarCollapsed ? (
+   287→                <div className="pt-5 pb-2 px-3 flex items-center gap-2">
+   288→                  <div className="h-px bg-gray-200/80 flex-1" />
+   289→                  <span className="text-[10px] font-semibold tracking-widest text-gray-400 uppercase shrink-0">Verifikasi</span>
+   290→                  <div className="h-px bg-gray-200/80 flex-1" />
+   291→                </div>
+   292→              ) : (
+   293→                <div className="pt-5 pb-2 flex justify-center">
+   294→                  <div className="w-5 h-px bg-gray-200/80" />
+   295→                </div>
+   296→              )}
+   297→              <SidebarNavItem
+   298→                tab="lembar-verifikasi"
+   299→                activeTab={activeTab}
+   300→                setActiveTab={setActiveTab}
+   301→                icon={ClipboardCheck}
+   302→                label="Lembar Verifikasi"
+   303→                colorScheme="amber"
+   304→                badge={stats && stats.pending > 0 ? <Badge className="bg-amber-500 text-white text-[10px] px-1.5 py-0 min-w-[20px] h-5 flex items-center justify-center rounded-full shadow-sm">{stats.pending}</Badge> : undefined}
+   305→                collapsed={sidebarCollapsed}
+   306→              />
+   307→              <SidebarNavItem
+   308→                tab="data"
+   309→                activeTab={activeTab}
+   310→                setActiveTab={setActiveTab}
+   311→                icon={School}
+   312→                label="Data Pendaftar"
+   313→                colorScheme="emerald"
+   314→                collapsed={sidebarCollapsed}
+   315→              />
+   316→
+   317→              {/* HASIL Section */}
+   318→              {!sidebarCollapsed ? (
+   319→                <div className="pt-5 pb-2 px-3 flex items-center gap-2">
+   320→                  <div className="h-px bg-gray-200/80 flex-1" />
+   321→                  <span className="text-[10px] font-semibold tracking-widest text-gray-400 uppercase shrink-0">Hasil</span>
+   322→                  <div className="h-px bg-gray-200/80 flex-1" />
+   323→                </div>
+   324→              ) : (
+   325→                <div className="pt-5 pb-2 flex justify-center">
+   326→                  <div className="w-5 h-px bg-gray-200/80" />
+   327→                </div>
+   328→              )}
+   329→              {authUser?.role === 'admin' && (
+   330→                <SidebarNavItem
+   331→                  tab="ranking"
+   332→                  activeTab={activeTab}
+   333→                  setActiveTab={setActiveTab}
+   334→                  icon={Trophy}
+   335→                  label="Perangkingan"
+   336→                  colorScheme="amber"
+   337→                  collapsed={sidebarCollapsed}
+   338→                />
+   339→              )}
+   340→              <SidebarNavItem
+   341→                tab="diterima"
+   342→                activeTab={activeTab}
+   343→                setActiveTab={setActiveTab}
+   344→                icon={ThumbsUp}
+   345→                label="Diterima"
+   346→                colorScheme="emerald"
+   347→                badge={stats && stats.verified > 0 ? <Badge className="bg-emerald-600 text-white text-[10px] px-1.5 py-0 min-w-[20px] h-5 flex items-center justify-center rounded-full shadow-sm">{stats.verified}</Badge> : undefined}
+   348→                collapsed={sidebarCollapsed}
+   349→              />
+   350→              <SidebarNavItem
+   351→                tab="ditolak"
+   352→                activeTab={activeTab}
+   353→                setActiveTab={setActiveTab}
+   354→                icon={ThumbsDown}
+   355→                label="Ditolak"
+   356→                colorScheme="red"
+   357→                badge={stats && stats.rejected > 0 ? <Badge className="bg-red-600 text-white text-[10px] px-1.5 py-0 min-w-[20px] h-5 flex items-center justify-center rounded-full shadow-sm">{stats.rejected}</Badge> : undefined}
+   358→                collapsed={sidebarCollapsed}
+   359→              />
+   360→
+   361→              {/* KEPUTUSAN Section */}
+   362→              {!sidebarCollapsed ? (
+   363→                <div className="pt-5 pb-2 px-3 flex items-center gap-2">
+   364→                  <div className="h-px bg-gray-200/80 flex-1" />
+   365→                  <span className="text-[10px] font-semibold tracking-widest text-gray-400 uppercase shrink-0">Keputusan</span>
+   366→                  <div className="h-px bg-gray-200/80 flex-1" />
+   367→                </div>
+   368→              ) : (
+   369→                <div className="pt-5 pb-2 flex justify-center">
+   370→                  <div className="w-5 h-px bg-gray-200/80" />
+   371→                </div>
+   372→              )}
+   373→              <SidebarNavItem
+   374→                tab="kelulusan"
+   375→                activeTab={activeTab}
+   376→                setActiveTab={setActiveTab}
+   377→                icon={GraduationCap}
+   378→                label="Kelulusan"
+   379→                colorScheme="emerald"
+   380→                badge={stats && stats.lulus > 0 ? <Badge className="bg-emerald-600 text-white text-[10px] px-1.5 py-0 min-w-[20px] h-5 flex items-center justify-center rounded-full shadow-sm">{stats.lulus}</Badge> : undefined}
+   381→                collapsed={sidebarCollapsed}
+   382→              />
+   383→              <SidebarNavItem
+   384→                tab="daftar-ulang"
+   385→                activeTab={activeTab}
+   386→                setActiveTab={setActiveTab}
+   387→                icon={ClipboardCheck}
+   388→                label="Daftar Ulang"
+   389→                colorScheme="sky"
+   390→                badge={stats && stats.daftarUlang > 0 ? <Badge className="bg-sky-600 text-white text-[10px] px-1.5 py-0 min-w-[20px] h-5 flex items-center justify-center rounded-full shadow-sm">{stats.daftarUlang}</Badge> : undefined}
+   391→                collapsed={sidebarCollapsed}
+   392→              />
+   393→
+   394→              {/* SISTEM Section */}
+   395→              {!sidebarCollapsed ? (
+   396→                <div className="pt-5 pb-2 px-3 flex items-center gap-2">
+   397→                  <div className="h-px bg-gray-200/80 flex-1" />
+   398→                  <span className="text-[10px] font-semibold tracking-widest text-gray-400 uppercase shrink-0">Sistem</span>
+   399→                  <div className="h-px bg-gray-200/80 flex-1" />
+   400→                </div>
+   401→              ) : (
+   402→                <div className="pt-5 pb-2 flex justify-center">
+   403→                  <div className="w-5 h-px bg-gray-200/80" />
+   404→                </div>
+   405→              )}
+   406→              {authUser?.role === 'admin' && (
+   407→                <SidebarNavItem
+   408→                  tab="pengaturan"
+   409→                  activeTab={activeTab}
+   410→                  setActiveTab={setActiveTab}
+   411→                  icon={Settings}
+   412→                  label="Pengaturan"
+   413→                  colorScheme="gray"
+   414→                  collapsed={sidebarCollapsed}
+   415→                />
+   416→              )}
+   417→            </nav>
+   418→
+   419→            {/* Sidebar Footer - Collapse toggle + user info */}
+   420→            <div className={`border-t border-gray-100/80 transition-all duration-300 ${sidebarCollapsed ? 'p-2' : 'p-3'}`}>
+   421→              {sidebarCollapsed ? (
+   422→                <div className="flex flex-col items-center gap-2">
+   423→                  {/* User avatar */}
+   424→                  <Tooltip delayDuration={0}>
+   425→                    <TooltipTrigger asChild>
+   426→                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-sm cursor-default">
+   427→                        <span className="text-xs font-bold text-white">{authUser?.namaLengkap?.charAt(0) || 'U'}</span>
+   428→                      </div>
+   429→                    </TooltipTrigger>
+   430→                    <TooltipContent side="right" sideOffset={8}>
+   431→                      <div className="text-left">
+   432→                        <p className="font-medium">{authUser?.namaLengkap}</p>
+   433→                        <p className="text-[10px] opacity-80">{authUser?.role === 'admin' ? 'Administrator' : 'Verifikator'}</p>
+   434→                      </div>
+   435→                    </TooltipContent>
+   436→                  </Tooltip>
+   437→                  {/* Expand toggle */}
+   438→                  <button
+   439→                    onClick={toggleSidebar}
+   440→                    title="Expand Sidebar"
+   441→                    className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors"
+   442→                  >
+   443→                    <ChevronsRight className="w-4 h-4" />
+   444→                  </button>
+   445→                </div>
+   446→              ) : (
+   447→                <>
+   448→                  <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg bg-gray-50/80">
+   449→                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-sm">
+   450→                      <span className="text-xs font-bold text-white">{authUser?.namaLengkap?.charAt(0) || 'U'}</span>
+   451→                    </div>
+   452→                    <div className="flex-1 min-w-0">
+   453→                      <p className="text-xs font-medium text-gray-900 truncate">{authUser?.namaLengkap}</p>
+   454→                      <p className="text-[10px] text-gray-400">{authUser?.role === 'admin' ? 'Administrator' : 'Verifikator'}</p>
+   455→                    </div>
+   456→                  </div>
+   457→                  {/* Collapse toggle */}
+   458→                  <button
+   459→                    onClick={toggleSidebar}
+   460→                    className="w-full mt-2 flex items-center gap-2 px-2 py-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors text-xs"
+   461→                  >
+   462→                    <ChevronsLeft className="w-4 h-4 shrink-0" />
+   463→                    <span>Minimize</span>
+   464→                  </button>
+   465→                </>
+   466→              )}
+   467→            </div>
+   468→          </aside>
+   469→
+   470→          {/* Content Area */}
+   471→          <div className="flex-1 min-w-0 px-3 sm:px-6 lg:px-8 py-4 sm:py-6 max-w-7xl mx-auto w-full">
+   472→            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+   473→              {/* Mobile: scrollable horizontal pill tabs */}
+   474→              <div className="lg:hidden overflow-x-auto -mx-3 px-3 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 scrollbar-hide">
+   475→                <TabsList className="flex-nowrap bg-white/90 backdrop-blur-md border border-gray-200/50 rounded-2xl p-1.5 shadow-sm shadow-gray-200/50 w-max sm:w-auto gap-0.5">
+   476→                  <TabsTrigger value="dashboard" className="gap-1.5 rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm transition-all duration-300 data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-emerald-200/50 whitespace-nowrap"><Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />Dashboard</TabsTrigger>
+   477→                  <TabsTrigger value="lembar-verifikasi" className="gap-1.5 rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm transition-all duration-300 data-[state=active]:bg-amber-500 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-amber-200/50 whitespace-nowrap"><ClipboardCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" /><span className="hidden sm:inline">Lembar Verifikasi</span><span className="sm:hidden">Verifikasi</span>{stats && stats.pending > 0 && <Badge className="ml-0.5 sm:ml-1 bg-amber-500 text-white text-[10px] sm:text-xs px-1 sm:px-1.5 py-0 min-w-[16px] sm:min-w-[20px] h-4 sm:h-5 flex items-center justify-center rounded-full">{stats.pending}</Badge>}</TabsTrigger>
+   478→                  <TabsTrigger value="data" className="gap-1.5 rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm transition-all duration-300 data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-emerald-200/50 whitespace-nowrap"><School className="w-3.5 h-3.5 sm:w-4 sm:h-4" /><span className="hidden sm:inline">Data Pendaftar</span><span className="sm:hidden">Pendaftar</span></TabsTrigger>
+   479→                  {authUser?.role === 'admin' && <TabsTrigger value="ranking" className="gap-1.5 rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm transition-all duration-300 data-[state=active]:bg-amber-500 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-amber-200/50 whitespace-nowrap"><Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4" /><span className="hidden sm:inline">Perangkingan</span><span className="sm:hidden">Rangking</span></TabsTrigger>}
+   480→                  <TabsTrigger value="diterima" className="gap-1.5 rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm transition-all duration-300 data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-emerald-200/50 whitespace-nowrap"><ThumbsUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />Diterima{stats && stats.verified > 0 && <Badge className="ml-0.5 sm:ml-1 bg-emerald-600 text-white text-[10px] sm:text-xs px-1 sm:px-1.5 py-0 min-w-[16px] sm:min-w-[20px] h-4 sm:h-5 flex items-center justify-center rounded-full">{stats.verified}</Badge>}</TabsTrigger>
+   481→                  <TabsTrigger value="ditolak" className="gap-1.5 rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm transition-all duration-300 data-[state=active]:bg-red-500 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-red-200/50 whitespace-nowrap"><ThumbsDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" />Ditolak{stats && stats.rejected > 0 && <Badge className="ml-0.5 sm:ml-1 bg-red-600 text-white text-[10px] sm:text-xs px-1 sm:px-1.5 py-0 min-w-[16px] sm:min-w-[20px] h-4 sm:h-5 flex items-center justify-center rounded-full">{stats.rejected}</Badge>}</TabsTrigger>
+   482→                  <TabsTrigger value="kelulusan" className="gap-1.5 rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm transition-all duration-300 data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-emerald-200/50 whitespace-nowrap"><GraduationCap className="w-3.5 h-3.5 sm:w-4 sm:h-4" /><span className="hidden sm:inline">Kelulusan</span><span className="sm:hidden">Lulus</span>{stats && stats.lulus > 0 && <Badge className="ml-0.5 sm:ml-1 bg-emerald-600 text-white text-[10px] sm:text-xs px-1 sm:px-1.5 py-0 min-w-[16px] sm:min-w-[20px] h-4 sm:h-5 flex items-center justify-center rounded-full">{stats.lulus}</Badge>}</TabsTrigger>
+   483→                  <TabsTrigger value="daftar-ulang" className="gap-1.5 rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm transition-all duration-300 data-[state=active]:bg-sky-500 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-sky-200/50 whitespace-nowrap"><ClipboardCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" /><span className="hidden sm:inline">Daftar Ulang</span><span className="sm:hidden">Dft.Ulang</span>{stats && stats.daftarUlang > 0 && <Badge className="ml-0.5 sm:ml-1 bg-sky-600 text-white text-[10px] sm:text-xs px-1 sm:px-1.5 py-0 min-w-[16px] sm:min-w-[20px] h-4 sm:h-5 flex items-center justify-center rounded-full">{stats.daftarUlang}</Badge>}</TabsTrigger>
+   484→                  {authUser?.role === 'admin' && <TabsTrigger value="pengaturan" className="gap-1.5 rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm transition-all duration-300 data-[state=active]:bg-gray-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-gray-200/50 whitespace-nowrap"><Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" /><span className="hidden sm:inline">Pengaturan</span><span className="sm:hidden">Setting</span></TabsTrigger>}
+   485→                </TabsList>
+   486→              </div>
+   487→
+   488→              {children}
+   489→            </Tabs>
+   490→          </div>
+   491→        </main>
+   492→
+   493→        {/* Footer */}
+   494→        <footer className="border-t bg-gradient-to-r from-slate-900 via-emerald-900 to-slate-900 mt-auto">
+   495→          <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
+   496→            <div className="flex flex-col sm:flex-row items-center justify-between gap-1 sm:gap-2">
+   497→              <div className="flex items-center gap-2">
+   498→                <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" />
+   499→                <p className="text-xs sm:text-sm text-emerald-100 font-medium">&copy; 2026 {appName}{schoolName ? ` — ${schoolName}` : ''}</p>
+   500→              </div>
+   501→              {appSubtitle.split('\n').map((line, i) => <p key={i} className="text-[10px] sm:text-xs text-emerald-200/60">{line}</p>)}
+   502→            </div>
+   503→          </div>
+   504→        </footer>
+   505→
+   506→        {/* Dialogs */}
+   507→        {dialogs}
+   508→      </div>
+   509→    </TooltipProvider>
+   510→  )
+   511→}
+   512→

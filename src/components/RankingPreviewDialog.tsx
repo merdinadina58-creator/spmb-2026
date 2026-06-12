@@ -27,6 +27,53 @@ function v(r: Record<string, unknown>, key: string): string {
   return String(val) || '-'
 }
 
+// Helper: check if a jalur name is Non-Akademik variant
+function isNonAkademikJalur(subJalur: string): boolean {
+  const lower = subJalur.toLowerCase().replace(/[^a-z0-9]/g, '')
+  return lower.includes('nonakademik')
+}
+
+// Helper: check if a jalur name is Akademik variant (includes "Prestasi" without "Nonakademik")
+function isAkademikJalur(subJalur: string): boolean {
+  const lower = subJalur.toLowerCase().replace(/[^a-z0-9]/g, '')
+  return (lower.includes('akademik') || lower === 'prestasi') && !lower.includes('nonakademik')
+}
+
+// Helper: check if a jalur is a prestasi type (either Akademik or Non-Akademik)
+function isPrestasiJalur(subJalur: string): boolean {
+  const lower = subJalur.toLowerCase().replace(/[^a-z0-9]/g, '')
+  return lower.includes('prestasi') || lower.includes('akademik')
+}
+
+// Re-sort data by the appropriate prestasi score based on jalur
+function reSortByPrestasiJalur(data: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
+  return [...data].sort((a, b) => {
+    const subJalurA = (a.subJalur as string) || ''
+    const subJalurB = (b.subJalur as string) || ''
+
+    const getScore = (r: Record<string, unknown>, subJalur: string): number => {
+      if (isNonAkademikJalur(subJalur)) {
+        return (r._skorPrestasiNonAkademikNum as number) || -1
+      }
+      if (isAkademikJalur(subJalur)) {
+        return (r._skorPrestasiAkademikNum as number) || -1
+      }
+      // Fallback
+      const akdNum = (r._skorPrestasiAkademikNum as number) || -1
+      const nonAkdNum = (r._skorPrestasiNonAkademikNum as number) || -1
+      return akdNum > 0 ? akdNum : nonAkdNum
+    }
+
+    const scoreA = getScore(a, subJalurA)
+    const scoreB = getScore(b, subJalurB)
+
+    if (scoreA > 0 && scoreB > 0) return scoreB - scoreA
+    if (scoreA > 0) return -1
+    if (scoreB > 0) return 1
+    return 0
+  })
+}
+
 interface RankingPreviewDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -74,15 +121,20 @@ export default function RankingPreviewDialog({
       : rankingData.filter((r: Record<string, unknown>) => (r.subJalur as string) === rankingPreviewJalur).length
   }
 
-  const filteredPreviewData = (rankingPreviewJalur === 'all'
+  // Filter and optionally re-sort by prestasi score based on jalur
+  const baseFiltered = rankingPreviewJalur === 'all'
     ? rankingData
     : rankingData.filter((r: Record<string, unknown>) => (r.subJalur as string) === rankingPreviewJalur)
-  ).slice(0, 15)
+
+  // When a prestasi jalur is selected, always sort by the appropriate prestasi score
+  const sortedFiltered = isPrestasiJalur(rankingPreviewJalur)
+    ? reSortByPrestasiJalur(baseFiltered)
+    : baseFiltered
+
+  const filteredPreviewData = sortedFiltered.slice(0, 15)
 
   // Stats
-  const allFiltered = rankingPreviewJalur === 'all'
-    ? rankingData
-    : rankingData.filter((r: Record<string, unknown>) => (r.subJalur as string) === rankingPreviewJalur)
+  const allFiltered = sortedFiltered
   const totalVerified = allFiltered.filter(r => r.verificationStatus === 'VERIFIED').length
   const totalRejected = allFiltered.filter(r => r.verificationStatus === 'REJECTED').length
   const totalPending = allFiltered.length - totalVerified - totalRejected
@@ -149,7 +201,7 @@ export default function RankingPreviewDialog({
               <h2 className="text-lg font-bold tracking-wider">LAPORAN PERANGKINGAN PESERTA SPMB</h2>
               <p className="text-sm text-gray-500">{appName}{schoolName ? ` — ${schoolName}` : ''} — {appSubtitle.split('\n')[0]}</p>
               <p className="text-xs text-gray-400 mt-1">
-                Diurutkan berdasarkan: <strong>{rankingTampilan === 'jarak' ? 'Jarak Terdekat' : rankingTampilan === 'nilai' ? 'Nilai Tertinggi' : 'Skor Komposit'}</strong>
+                Diurutkan berdasarkan: <strong>{rankingTampilan === 'jarak' ? 'Jarak Terdekat' : rankingTampilan === 'nilai' ? 'Nilai Tertinggi' : rankingTampilan === 'komposit' ? 'Skor Komposit' : rankingTampilan === 'prestasi' ? 'Skor Prestasi' : 'Jarak Terdekat'}{isPrestasiJalur(rankingPreviewJalur) ? ' (otomatis diurutkan ulang berdasarkan Skor Prestasi sesuai jalur)' : ''}</strong>
                 {' · '}Dicetak pada: {new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
               </p>
             </div>

@@ -1,0 +1,1097 @@
+     1→'use client'
+     2→
+     3→import { useState, useEffect, useCallback } from 'react'
+     4→import * as XLSX from 'xlsx'
+     5→import { saveAs } from 'file-saver'
+     6→import {
+     7→  Card,
+     8→  CardContent,
+     9→  CardDescription,
+    10→  CardHeader,
+    11→  CardTitle,
+    12→} from '@/components/ui/card'
+    13→import { Button } from '@/components/ui/button'
+    14→import { Badge } from '@/components/ui/badge'
+    15→import {
+    16→  Table,
+    17→  TableBody,
+    18→  TableCell,
+    19→  TableHead,
+    20→  TableHeader,
+    21→  TableRow,
+    22→} from '@/components/ui/table'
+    23→import {
+    24→  Dialog,
+    25→  DialogContent,
+    26→  DialogDescription,
+    27→  DialogFooter,
+    28→  DialogHeader,
+    29→  DialogTitle,
+    30→} from '@/components/ui/dialog'
+    31→import {
+    32→  Select,
+    33→  SelectContent,
+    34→  SelectItem,
+    35→  SelectTrigger,
+    36→  SelectValue,
+    37→} from '@/components/ui/select'
+    38→import {
+    39→  Trophy,
+    40→  Award,
+    41→  Filter,
+    42→  MapPinned,
+    43→  RefreshCw,
+    44→  Loader2,
+    45→  Printer,
+    46→  FileSpreadsheet,
+    47→  ArrowUpDown,
+    48→  ArrowUpAZ,
+    49→  ArrowDownAZ,
+    50→  FileDown,
+    51→} from 'lucide-react'
+    52→import { STATUS_COLORS, SUB_JALUR_COLORS } from '@/lib/constants'
+    53→import { ErrorBoundary } from '@/components/ErrorBoundary'
+    54→
+    55→interface RankingTabProps {
+    56→  authUser: { id: string; username: string; namaLengkap: string; role: string } | null
+    57→  toast: any
+    58→  subJalurOptions: Array<{ label: string; value: string }>
+    59→  rankingTampilan?: string
+    60→}
+    61→
+    62→// Helper: check if a jalur name is Non-Akademik variant
+    63→function isNonAkademikJalur(subJalur: string): boolean {
+    64→  const lower = subJalur.toLowerCase().replace(/[^a-z0-9]/g, '')
+    65→  return lower.includes('nonakademik')
+    66→}
+    67→
+    68→// Helper: check if a jalur name is Prestasi Akademik variant
+    69→function isAkademikJalur(subJalur: string): boolean {
+    70→  const lower = subJalur.toLowerCase()
+    71→  return lower.includes('prestasi') && !lower.includes('non')
+    72→}
+    73→
+    74→// Helper: get the display label for the prestasi score column
+    75→function getPrestasiScoreLabel(subJalur: string): string {
+    76→  if (isNonAkademikJalur(subJalur)) return 'Skor Pres. Non-Akd'
+    77→  if (isAkademikJalur(subJalur)) return 'Skor Pres. Akd'
+    78→  return 'Skor Prestasi'
+    79→}
+    80→
+    81→// Helper: get the prestasi score for display from a record
+    82→function getPrestasiDisplayValue(r: Record<string, unknown>): string {
+    83→  const subJalur = (r.subJalur as string) || ''
+    84→  if (isNonAkademikJalur(subJalur)) {
+    85→    return (r.skorPrestasiNonAkademik as string) || (r.skorPrestasiAkademik as string) || '-'
+    86→  }
+    87→  return (r.skorPrestasiAkademik as string) || (r.skorPrestasiNonAkademik as string) || '-'
+    88→}
+    89→
+    90→// Helper: get the numeric prestasi score for sorting
+    91→function getPrestasiNumValue(r: Record<string, unknown>): number {
+    92→  const subJalur = (r.subJalur as string) || ''
+    93→  const akdNum = (r._skorPrestasiAkademikNum as number) || -1
+    94→  const nonAkdNum = (r._skorPrestasiNonAkademikNum as number) || -1
+    95→
+    96→  if (isNonAkademikJalur(subJalur)) {
+    97→    return nonAkdNum > 0 ? nonAkdNum : akdNum
+    98→  }
+    99→  return akdNum > 0 ? akdNum : nonAkdNum
+   100→}
+   101→
+   102→export default function RankingTab({ authUser, toast, subJalurOptions, rankingTampilan: initialTampilan }: RankingTabProps) {
+   103→  // Ranking state
+   104→  const [rankingJalur, setRankingJalur] = useState('all')
+   105→  const [rankingSekolah, setRankingSekolah] = useState('all')
+   106→  const [rankingJurusan, setRankingJurusan] = useState('all')
+   107→  const [rankingTampilan, setRankingTampilan] = useState(initialTampilan || 'jarak') // jarak | nilai | komposit | prestasi
+   108→  const [rankingStatus, setRankingStatus] = useState('all')
+   109→  const [rankingData, setRankingData] = useState<Array<Record<string, unknown>>>([])
+   110→  const [rankingFilters, setRankingFilters] = useState<{ jalurOptions: string[]; sekolahOptions: string[]; jurusanOptions: string[] }>({ jalurOptions: [], sekolahOptions: [], jurusanOptions: [] })
+   111→  const [rankingKuota, setRankingKuota] = useState(0)
+   112→  const [rankingKuotaPerJalur, setRankingKuotaPerJalur] = useState<Array<{ nama: string; persentase: number; kuota: number }>>([])
+   113→  const [rankingLoading, setRankingLoading] = useState(false)
+   114→  const [namaSortRanking, setNamaSortRanking] = useState<'none' | 'asc' | 'desc'>('none')
+   115→
+   116→  // Ranking print/preview state
+   117→  const [rankingPreviewOpen, setRankingPreviewOpen] = useState(false)
+   118→  const [rankingPreviewType, setRankingPreviewType] = useState<'pdf' | 'excel'>('pdf')
+   119→  const [rankingPreviewJalur, setRankingPreviewJalur] = useState<string>('all') // 'all' or specific jalur name
+   120→
+   121→  // ==================== RANKING FUNCTIONS ====================
+   122→
+   123→  const fetchRanking = useCallback(async () => {
+   124→    setRankingLoading(true)
+   125→    try {
+   126→      const params = new URLSearchParams()
+   127→      if (rankingJalur !== 'all') params.set('jalur', rankingJalur)
+   128→      if (rankingSekolah !== 'all') params.set('sekolah', rankingSekolah)
+   129→      if (rankingJurusan !== 'all') params.set('jurusan', rankingJurusan)
+   130→      params.set('tampilan', rankingTampilan)
+   131→      if (rankingStatus !== 'all') params.set('status', rankingStatus)
+   132→
+   133→      const res = await fetch(`/api/ranking?${params}`)
+   134→      const data = await res.json()
+   135→      if (data.success) {
+   136→        setRankingData(data.data || [])
+   137→        setRankingFilters(data.filters || { jalurOptions: [], sekolahOptions: [], jurusanOptions: [] })
+   138→        setRankingKuota(data.kuota || 0)
+   139→        setRankingKuotaPerJalur(data.kuotaPerJalur || [])
+   140→      }
+   141→    } catch {
+   142→      toast({ title: 'Error', description: 'Gagal memuat data perangkingan', variant: 'destructive' })
+   143→    } finally {
+   144→      setRankingLoading(false)
+   145→    }
+   146→  }, [rankingJalur, rankingSekolah, rankingJurusan, rankingTampilan, rankingStatus, toast])
+   147→
+   148→  useEffect(() => {
+   149→    fetchRanking()
+   150→  }, [fetchRanking])
+   151→
+   152→  // Sort label helper
+   153→  const getSortLabel = (tampilan: string) => {
+   154→    switch (tampilan) {
+   155→      case 'jarak': return 'Jarak Terdekat'
+   156→      case 'nilai': return 'Nilai Tertinggi'
+   157→      case 'komposit': return 'Skor Komposit'
+   158→      case 'prestasi': return 'Skor Prestasi'
+   159→      default: return 'Jarak Terdekat'
+   160→    }
+   161→  }
+   162→
+   163→  const getRankingPrintHTML = (selectedJalur: string = 'all') => {
+   164→    const sortLabel = getSortLabel(rankingTampilan)
+   165→    const jalurLabel = selectedJalur !== 'all' ? selectedJalur : 'Semua Jalur'
+   166→    const sekolahLabel = rankingSekolah !== 'all' ? rankingSekolah : 'Semua Sekolah'
+   167→    const jurusanLabel = rankingJurusan !== 'all' ? rankingJurusan : 'Semua Jurusan'
+   168→    const statusLabel = rankingStatus !== 'all' ? (rankingStatus === 'VERIFIED' ? 'Diterima' : rankingStatus === 'REJECTED' ? 'Ditolak' : 'Menunggu') : 'Semua Status'
+   169→
+   170→    // Filter data by selected jalur
+   171→    const filteredData = selectedJalur === 'all'
+   172→      ? rankingData
+   173→      : rankingData.filter((r: Record<string, unknown>) => (r.subJalur as string) === selectedJalur)
+   174→
+   175→    // Re-rank within selected jalur
+   176→    const jalurRankCounters: Record<string, number> = {}
+   177→    const reRanked = filteredData.map((r: Record<string, unknown>, idx: number) => {
+   178→      const jalur = r.subJalur as string
+   179→      if (!jalurRankCounters[jalur]) jalurRankCounters[jalur] = 0
+   180→      jalurRankCounters[jalur]++
+   181→      return { ...r, _newRank: idx + 1, _newJalurRank: jalurRankCounters[jalur] }
+   182→    })
+   183→
+   184→    const rows = reRanked.map((r: Record<string, unknown> & { _newRank: number; _newJalurRank: number }, idx: number) => {
+   185→      const rankNum = r._newRank
+   186→      const jalurRank = r._newJalurRank
+   187→      const jarakNum = r._jarakNum as number
+   188→      const nilaiNum = r._nilaiNum as number
+   189→      const skorNum = r._skorNum as number
+   190→      const skorPrestasiNum = getPrestasiNumValue(r)
+   191→
+   192→      // Determine kuota cutoff
+   193→      const currentKuota = rankingKuotaPerJalur.find(k => {
+   194→        const jalurName = (r.subJalur as string || '').toLowerCase()
+   195→        return k.nama.toLowerCase().includes(jalurName) || jalurName.includes(k.nama.toLowerCase())
+   196→          || (k.nama.toLowerCase().includes('prestasi') && jalurName.includes('prestasi'))
+   197→          || (k.nama.toLowerCase().includes('domisili') && jalurName.includes('domisili'))
+   198→          || (k.nama.toLowerCase().includes('mutasi') && jalurName.includes('mutasi'))
+   199→          || (k.nama.toLowerCase().includes('afirmasi') && (jalurName.includes('keluarga') || jalurName.includes('ktm')))
+   200→      })?.kuota || 0
+   201→
+   202→      const sameJalurAbove = reRanked
+   203→        .filter((other: Record<string, unknown> & { _newRank: number; _newJalurRank: number }) =>
+   204→          (other.subJalur as string) === (r.subJalur as string) &&
+   205→          other._newJalurRank < jalurRank
+   206→        ).length
+   207→
+   208→      const withinKuota = currentKuota > 0 && sameJalurAbove < currentKuota
+   209→      const isVerified = r.verificationStatus === 'VERIFIED'
+   210→
+   211→      const rowBg = withinKuota && !isVerified ? '#f0fdf4' : isVerified ? '#f0fdf4' : ''
+   212→      const rankBg = rankNum === 1 ? '#fbbf24' : rankNum === 2 ? '#d1d5db' : rankNum === 3 ? '#b45309' : withinKuota ? '#d1fae5' : '#f3f4f6'
+   213→      const rankColor = rankNum <= 3 ? '#fff' : withinKuota ? '#047857' : '#6b7280'
+   214→
+   215→      // Get prestasi display value
+   216→      const prestasiDisplay = getPrestasiDisplayValue(r)
+   217→
+   218→      return `<tr style="background:${rowBg}">
+   219→        <td style="padding:6px 8px;border:1px solid #ddd;text-align:center"><span style="display:inline-block;width:26px;height:26px;line-height:26px;border-radius:50%;background:${rankBg};color:${rankColor};font-size:11px;font-weight:bold">${rankNum}</span></td>
+   220→        <td style="padding:6px 8px;border:1px solid #ddd;text-align:center;font-size:11px">${r.subJalur as string}${jalurRank > 0 ? `<br><span style="font-size:9px;color:#0369a1">#${jalurRank}</span>` : ''}</td>
+   221→        <td style="padding:6px 8px;border:1px solid #ddd;font-size:12px"><strong>${r.nama as string}</strong><br><span style="font-size:9px;color:#999">NISN: ${r.nisn as string}</span></td>
+   222→        <td style="padding:6px 8px;border:1px solid #ddd;font-size:11px">${r.namaSekolahPilihan as string}</td>
+   223→        <td style="padding:6px 8px;border:1px solid #ddd;font-size:11px">${r.jurusan as string}</td>
+   224→        <td style="padding:6px 8px;border:1px solid #ddd;text-align:right;font-size:11px;font-weight:${rankingTampilan === 'jarak' ? 'bold' : 'normal'};color:${jarakNum > 0 ? '#0369a1' : '#ccc'}">${r.jarakKeSekolah as string || r.lokasiJarak as string || '-'}</td>
+   225→        <td style="padding:6px 8px;border:1px solid #ddd;text-align:right;font-size:11px;font-weight:${rankingTampilan === 'nilai' ? 'bold' : 'normal'};color:${nilaiNum > 0 ? '#047857' : '#ccc'}">${r.totalNilai as string || r.nilaiRataRata as string || r.skorNilaiRaport as string || '-'}</td>
+   226→        <td style="padding:6px 8px;border:1px solid #ddd;text-align:right;font-size:11px;font-weight:${rankingTampilan === 'komposit' ? 'bold' : 'normal'};color:${skorNum > 0 ? '#b45309' : '#ccc'}">${r.totalNilai as string || r.skor as string || '-'}</td>
+   227→        <td style="padding:6px 8px;border:1px solid #ddd;text-align:right;font-size:11px;font-weight:${rankingTampilan === 'prestasi' ? 'bold' : 'normal'};color:${skorPrestasiNum > 0 ? '#0d9488' : '#ccc'}">${prestasiDisplay}</td>
+   228→        <td style="padding:6px 8px;border:1px solid #ddd;text-align:center;font-size:10px">${r.verificationStatus === 'VERIFIED' ? '<span style="background:#d1fae5;color:#047857;padding:2px 8px;border-radius:10px">Diterima</span>' : r.verificationStatus === 'REJECTED' ? '<span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:10px">Ditolak</span>' : '<span style="background:#fef3c7;color:#b45309;padding:2px 8px;border-radius:10px">Menunggu</span>'}</td>
+   229→      </tr>`
+   230→    }).join('')
+   231→
+   232→    return `<!DOCTYPE html><html><head><title>Perangkingan SPMB 2026 - ${sortLabel}</title>
+   233→      <style>
+   234→        @page { size: A4 landscape; margin: 15mm; }
+   235→        body { font-family: Arial, sans-serif; margin: 0; padding: 15px; font-size: 12px; }
+   236→        .header { text-align: center; margin-bottom: 15px; border-bottom: 3px double #333; padding-bottom: 10px; }
+   237→        .header h1 { font-size: 18px; margin: 0 0 4px 0; letter-spacing: 2px; }
+   238→        .header h2 { font-size: 14px; margin: 0 0 4px 0; color: #555; }
+   239→        .header p { font-size: 10px; color: #888; margin: 2px 0; }
+   240→        .filters { display: flex; gap: 15px; justify-content: center; margin-bottom: 10px; font-size: 10px; color: #666; }
+   241→        .filters span { background: #f5f5f5; padding: 2px 8px; border-radius: 4px; border: 1px solid #ddd; }
+   242→        .kuota-info { text-align: center; margin-bottom: 10px; font-size: 11px; }
+   243→        .kuota-info span { background: #dbeafe; color: #1e40af; padding: 3px 10px; border-radius: 4px; margin: 0 4px; }
+   244→        table { width: 100%; border-collapse: collapse; font-size: 11px; }
+   245→        th { background: #f5f5f5; padding: 8px; border: 1px solid #ddd; text-align: center; font-size: 11px; font-weight: 600; }
+   246→        th.active { background: #fef3c7; }
+   247→        .legend { margin-top: 10px; font-size: 10px; color: #888; text-align: center; }
+   248→        .legend span { margin: 0 8px; }
+   249→        @media print { body { padding: 0; } }
+   250→      </style>
+   251→    </head>
+   252→    <body>
+   253→      <div class="header">
+   254→        <h1>LAPORAN PERANGKINGAN</h1>
+   255→        <h2>SPMB 2026 — Sistem Penerimaan Madrasah</h2>
+   256→        <p>Diurutkan berdasarkan: <strong>${sortLabel}</strong> · Dicetak pada: ${new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+   257→      </div>
+   258→      <div class="filters">
+   259→        <span>Jalur: ${jalurLabel}</span>
+   260→        <span>Sekolah: ${sekolahLabel}</span>
+   261→        <span>Jurusan: ${jurusanLabel}</span>
+   262→        <span>Status: ${statusLabel}</span>
+   263→      </div>
+   264→      ${rankingKuota > 0 ? `<div class="kuota-info">Total Kuota: <span>${rankingKuota}</span> ${rankingKuotaPerJalur.map(kj => `<span>${kj.nama}: ${kj.kuota} (${kj.persentase}%)</span>`).join('')}</div>` : ''}
+   265→      <table>
+   266→        <thead>
+   267→          <tr>
+   268→            <th style="width:40px">No</th>
+   269→            <th style="width:90px">Jalur</th>
+   270→            <th>Nama Pendaftar</th>
+   271→            <th>Sekolah Pilihan</th>
+   272→            <th>Jurusan</th>
+   273→            <th class="${rankingTampilan === 'jarak' ? 'active' : ''}" style="width:80px">Jarak</th>
+   274→            <th class="${rankingTampilan === 'nilai' ? 'active' : ''}" style="width:70px">Nilai</th>
+   275→            <th class="${rankingTampilan === 'komposit' ? 'active' : ''}" style="width:60px">Skor</th>
+   276→            <th class="${rankingTampilan === 'prestasi' ? 'active' : ''}" style="width:80px">Skor Prestasi</th>
+   277→            <th style="width:75px">Status</th>
+   278→          </tr>
+   279→        </thead>
+   280→        <tbody>${rows}</tbody>
+   281→      </table>
+   282→      <div class="legend">
+   283→        <span>🟡 Rangking 1</span> <span>⚪ Rangking 2</span> <span>🟤 Rangking 3</span> <span>🟢 Masuk Kuota</span>
+   284→        <span>Total: ${reRanked.length} pendaftar</span>
+   285→      </div>
+   286→    </body></html>`
+   287→  }
+   288→
+   289→  // Ranking: open preview dialog
+   290→  const handleRankingPreview = (type: 'pdf' | 'excel') => {
+   291→    setRankingPreviewType(type)
+   292→    setRankingPreviewJalur('all') // reset to all jalur
+   293→    setRankingPreviewOpen(true)
+   294→  }
+   295→
+   296→  // Ranking: print to PDF via print dialog
+   297→  const handleRankingPrintPDF = () => {
+   298→    const html = getRankingPrintHTML(rankingPreviewJalur)
+   299→    const printWindow = window.open('', '_blank')
+   300→    if (!printWindow) return
+   301→    printWindow.document.write(html)
+   302→    printWindow.document.close()
+   303→    setTimeout(() => { printWindow.print() }, 500)
+   304→  }
+   305→
+   306→  // Ranking: export to Excel
+   307→  const handleRankingExportExcel = () => {
+   308→    const sortLabel = getSortLabel(rankingTampilan)
+   309→    const selectedJalur = rankingPreviewJalur
+   310→    const jalurLabel = selectedJalur !== 'all' ? selectedJalur : 'Semua Jalur'
+   311→
+   312→    // Filter data by selected jalur
+   313→    const filteredData = selectedJalur === 'all'
+   314→      ? rankingData
+   315→      : rankingData.filter((r: Record<string, unknown>) => (r.subJalur as string) === selectedJalur)
+   316→
+   317→    // Re-rank
+   318→    const jalurRankCounters: Record<string, number> = {}
+   319→    const reRanked = filteredData.map((r: Record<string, unknown>, idx: number) => {
+   320→      const jalur = r.subJalur as string
+   321→      if (!jalurRankCounters[jalur]) jalurRankCounters[jalur] = 0
+   322→      jalurRankCounters[jalur]++
+   323→      return { ...r, _newRank: idx + 1, _newJalurRank: jalurRankCounters[jalur] }
+   324→    })
+   325→
+   326→    const excelData = reRanked.map((r: Record<string, unknown> & { _newRank: number; _newJalurRank: number }) => {
+   327→      const rankNum = r._newRank
+   328→      const jalurRank = r._newJalurRank
+   329→
+   330→      const currentKuota = rankingKuotaPerJalur.find(k => {
+   331→        const jalurName = (r.subJalur as string || '').toLowerCase()
+   332→        return k.nama.toLowerCase().includes(jalurName) || jalurName.includes(k.nama.toLowerCase())
+   333→          || (k.nama.toLowerCase().includes('prestasi') && jalurName.includes('prestasi'))
+   334→          || (k.nama.toLowerCase().includes('domisili') && jalurName.includes('domisili'))
+   335→          || (k.nama.toLowerCase().includes('mutasi') && jalurName.includes('mutasi'))
+   336→          || (k.nama.toLowerCase().includes('afirmasi') && (jalurName.includes('keluarga') || jalurName.includes('ktm')))
+   337→      })?.kuota || 0
+   338→
+   339→      const sameJalurAbove = reRanked
+   340→        .filter((other: Record<string, unknown> & { _newRank: number; _newJalurRank: number }) =>
+   341→          (other.subJalur as string) === (r.subJalur as string) &&
+   342→          other._newJalurRank < jalurRank
+   343→        ).length
+   344→
+   345→      const withinKuota = currentKuota > 0 && sameJalurAbove < currentKuota
+   346→
+   347→      return {
+   348→        'Rangking': rankNum,
+   349→        'Rangking Jalur': jalurRank > 0 ? jalurRank : '-',
+   350→        'Jalur': r.subJalur as string,
+   351→        'No. Registrasi': r.noRegistrasi as string,
+   352→        'Nama': r.nama as string,
+   353→        'NISN': r.nisn as string,
+   354→        'Sekolah Pilihan': r.namaSekolahPilihan as string,
+   355→        'Jurusan': r.jurusan as string,
+   356→        'Sekolah Asal': r.namaSekolahAsal as string,
+   357→        'Jarak': r.jarakKeSekolah as string || r.lokasiJarak as string || '-',
+   358→        'Skor Jarak': r.skorJarak as string || '-',
+   359→        'Nilai Rata-Rata': r.nilaiRataRata as string || '-',
+   360→        'Skor Nilai Raport': r.skorNilaiRaport as string || '-',
+   361→        'Skor Komposit': r.skor as string || '-',
+   362→        'Skor Prestasi Akademik': r.skorPrestasiAkademik as string || '-',
+   363→        'Skor Prestasi Non Akademik': r.skorPrestasiNonAkademik as string || '-',
+   364→        'Status Verifikasi': r.verificationStatus === 'VERIFIED' ? 'Diterima' : r.verificationStatus === 'REJECTED' ? 'Ditolak' : 'Menunggu',
+   365→        'Masuk Kuota': withinKuota ? 'Ya' : 'Tidak',
+   366→      }
+   367→    })
+   368→
+   369→    const ws = XLSX.utils.json_to_sheet(excelData)
+   370→
+   371→    // Set column widths
+   372→    ws['!cols'] = [
+   373→      { wch: 10 }, { wch: 14 }, { wch: 20 }, { wch: 18 }, { wch: 25 },
+   374→      { wch: 16 }, { wch: 22 }, { wch: 14 }, { wch: 22 }, { wch: 14 },
+   375→      { wch: 12 }, { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 16 },
+   376→      { wch: 20 }, { wch: 24 }, { wch: 16 }, { wch: 12 },
+   377→    ]
+   378→
+   379→    const wb = XLSX.utils.book_new()
+   380→    XLSX.utils.book_append_sheet(wb, ws, 'Perangkingan')
+   381→
+   382→    // Add a summary sheet
+   383→    const summaryData = [
+   384→      { 'Keterangan': 'LAPORAN PERANGKINGAN SPMB 2026', 'Nilai': '' },
+   385→      { 'Keterangan': 'Diurutkan Berdasarkan', 'Nilai': sortLabel },
+   386→      { 'Keterangan': 'Jalur', 'Nilai': jalurLabel },
+   387→      { 'Keterangan': 'Sekolah Pilihan', 'Nilai': rankingSekolah !== 'all' ? rankingSekolah : 'Semua Sekolah' },
+   388→      { 'Keterangan': 'Jurusan', 'Nilai': rankingJurusan !== 'all' ? rankingJurusan : 'Semua Jurusan' },
+   389→      { 'Keterangan': 'Status Verifikasi', 'Nilai': rankingStatus !== 'all' ? (rankingStatus === 'VERIFIED' ? 'Diterima' : rankingStatus === 'REJECTED' ? 'Ditolak' : 'Menunggu') : 'Semua Status' },
+   390→      { 'Keterangan': 'Total Pendaftar', 'Nilai': reRanked.length.toString() },
+   391→      { 'Keterangan': 'Total Kuota', 'Nilai': rankingKuota.toString() },
+   392→      { 'Keterangan': '', 'Nilai': '' },
+   393→      { 'Keterangan': 'Kuota Per Jalur', 'Nilai': '' },
+   394→      ...rankingKuotaPerJalur.map(kj => ({ 'Keterangan': `  ${kj.nama}`, 'Nilai': `${kj.kuota} (${kj.persentase}%)` })),
+   395→      { 'Keterangan': '', 'Nilai': '' },
+   396→      { 'Keterangan': 'Dicetak pada', 'Nilai': new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) },
+   397→    ]
+   398→    const ws2 = XLSX.utils.json_to_sheet(summaryData)
+   399→    ws2['!cols'] = [{ wch: 30 }, { wch: 25 }]
+   400→    XLSX.utils.book_append_sheet(wb, ws2, 'Ringkasan')
+   401→
+   402→    const jalurSuffix = selectedJalur !== 'all' ? `_${selectedJalur.replace(/\s+/g, '_')}` : '_Semua_Jalur'
+   403→    const fileName = `Perangkingan_SPMB2026${jalurSuffix}_${sortLabel.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`
+   404→    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+   405→    const blob = new Blob([wbout], { type: 'application/octet-stream' })
+   406→    saveAs(blob, fileName)
+   407→
+   408→    toast({ title: 'Berhasil', description: `File Excel berhasil diunduh: ${fileName}` })
+   409→  }
+   410→
+   411→  return (
+   412→    <>
+   413→      {/* ==================== RANKING TAB ==================== */}
+   414→      {/* Header */}
+   415→      <Card className="overflow-hidden border-0 shadow-lg">
+   416→        <div className="bg-gradient-to-r from-amber-600 via-orange-600 to-yellow-600 p-4 sm:p-6 text-white">
+   417→          <div className="flex items-center gap-3 sm:gap-4">
+   418→            <div className="p-2 sm:p-3 bg-white/20 rounded-xl">
+   419→              <Trophy className="w-6 h-6 sm:w-8 sm:h-8" />
+   420→            </div>
+   421→            <div>
+   422→              <h2 className="text-xl sm:text-2xl font-bold">Perangkingan</h2>
+   423→              <p className="text-amber-100 text-xs sm:text-sm mt-1">Rangking pendaftar berdasarkan jarak, nilai, skor komposit, dan skor prestasi</p>
+   424→            </div>
+   425→          </div>
+   426→        </div>
+   427→      </Card>
+   428→
+   429→      {/* Kuota Info */}
+   430→      {rankingKuota > 0 && (
+   431→        <Card className="bg-gradient-to-r from-sky-50 to-cyan-50 border-sky-200">
+   432→          <CardContent className="p-4">
+   433→            <div className="flex items-center gap-2 mb-3">
+   434→              <Award className="w-5 h-5 text-sky-600" />
+   435→              <h3 className="font-semibold text-sky-900">Kuota Per Jalur</h3>
+   436→              <span className="text-sm text-sky-600 ml-auto">Total Kuota: <strong>{rankingKuota}</strong></span>
+   437→            </div>
+   438→            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+   439→              {rankingKuotaPerJalur.map((kj) => (
+   440→                <div key={kj.nama} className="bg-white rounded-lg p-2.5 border border-sky-100 shadow-sm">
+   441→                  <p className="text-[10px] sm:text-xs text-gray-500 truncate">{kj.nama}</p>
+   442→                  <p className="text-lg sm:text-xl font-bold text-sky-700">{kj.kuota}</p>
+   443→                  <p className="text-[10px] text-gray-400">{kj.persentase}%</p>
+   444→                </div>
+   445→              ))}
+   446→            </div>
+   447→          </CardContent>
+   448→        </Card>
+   449→      )}
+   450→
+   451→      {/* Filters */}
+   452→      <Card className="shadow-sm">
+   453→        <CardContent className="p-4">
+   454→          <div className="flex items-center gap-2 mb-3">
+   455→            <Filter className="w-4 h-4 text-gray-500" />
+   456→            <h3 className="font-semibold text-sm text-gray-700">Filter & Urutan</h3>
+   457→          </div>
+   458→          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+   459→            {/* Tampilan / Sort */}
+   460→            <div className="space-y-1">
+   461→              <label className="text-xs font-medium text-gray-500">Urutkan Berdasarkan</label>
+   462→              <Select value={rankingTampilan} onValueChange={setRankingTampilan}>
+   463→                <SelectTrigger className="h-9 text-xs">
+   464→                  <SelectValue />
+   465→                </SelectTrigger>
+   466→                <SelectContent>
+   467→                  <SelectItem value="jarak">📏 Jarak (Terdekat → Terjauh)</SelectItem>
+   468→                  <SelectItem value="nilai">📝 Nilai (Tertinggi → Terendah)</SelectItem>
+   469→                  <SelectItem value="komposit">🏆 Skor Komposit (Tertinggi → Terendah)</SelectItem>
+   470→                  <SelectItem value="prestasi">🎖️ Skor Prestasi (Tertinggi → Terendah)</SelectItem>
+   471→                </SelectContent>
+   472→              </Select>
+   473→            </div>
+   474→            {/* Jalur Filter */}
+   475→            <div className="space-y-1">
+   476→              <label className="text-xs font-medium text-gray-500">Jalur</label>
+   477→              <Select value={rankingJalur} onValueChange={setRankingJalur}>
+   478→                <SelectTrigger className="h-9 text-xs">
+   479→                  <SelectValue />
+   480→                </SelectTrigger>
+   481→                <SelectContent>
+   482→                  <SelectItem value="all">Semua Jalur</SelectItem>
+   483→                  {rankingFilters.jalurOptions.filter((j: string) => j && j.trim() !== '').map((j: string) => (
+   484→                    <SelectItem key={j} value={j}>{j}</SelectItem>
+   485→                  ))}
+   486→                </SelectContent>
+   487→              </Select>
+   488→            </div>
+   489→            {/* Sekolah Filter */}
+   490→            <div className="space-y-1">
+   491→              <label className="text-xs font-medium text-gray-500">Sekolah Asal</label>
+   492→              <Select value={rankingSekolah} onValueChange={setRankingSekolah}>
+   493→                <SelectTrigger className="h-9 text-xs">
+   494→                  <SelectValue />
+   495→                </SelectTrigger>
+   496→                <SelectContent>
+   497→                  <SelectItem value="all">Semua Sekolah</SelectItem>
+   498→                  {rankingFilters.sekolahOptions.map((s: string) => (
+   499→                    <SelectItem key={s} value={s}>{s}</SelectItem>
+   500→                  ))}
+   501→                </SelectContent>
+   502→              </Select>
+   503→            </div>
+   504→            {/* Status Filter */}
+   505→            <div className="space-y-1">
+   506→              <label className="text-xs font-medium text-gray-500">Status Verifikasi</label>
+   507→              <Select value={rankingStatus} onValueChange={setRankingStatus}>
+   508→                <SelectTrigger className="h-9 text-xs">
+   509→                  <SelectValue />
+   510→                </SelectTrigger>
+   511→                <SelectContent>
+   512→                  <SelectItem value="all">Semua Status</SelectItem>
+   513→                  <SelectItem value="PENDING">Menunggu</SelectItem>
+   514→                  <SelectItem value="VERIFIED">Diterima</SelectItem>
+   515→                  <SelectItem value="REJECTED">Ditolak</SelectItem>
+   516→                </SelectContent>
+   517→              </Select>
+   518→            </div>
+   519→          </div>
+   520→        </CardContent>
+   521→      </Card>
+   522→
+   523→      {/* Quick View Cards: Domisili & Prestasi Ranking Summary */}
+   524→      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+   525→        {/* Domisili: Jarak Terdekat */}
+   526→        <Card className="border-sky-200 shadow-sm">
+   527→          <CardContent className="p-4">
+   528→            <div className="flex items-center gap-2 mb-3">
+   529→              <div className="p-1.5 bg-sky-100 rounded-lg">
+   530→                <MapPinned className="w-4 h-4 text-sky-600" />
+   531→              </div>
+   532→              <h4 className="font-semibold text-sm text-sky-900">Domisili — Jarak Terdekat</h4>
+   533→            </div>
+   534→            {(() => {
+   535→              const domisiliData = rankingData
+   536→                .filter((r: Record<string, unknown>) => (r.subJalur as string) === 'Domisili' && r._jarakNum as number > 0)
+   537→                .sort((a: Record<string, unknown>, b: Record<string, unknown>) => (a._jarakNum as number) - (b._jarakNum as number))
+   538→                .slice(0, 5)
+   539→              if (domisiliData.length === 0) return <p className="text-xs text-gray-400 text-center py-3">Belum ada data jarak untuk Domisili</p>
+   540→              const domKuota = rankingKuotaPerJalur.find(k => k.nama === 'Domisili')?.kuota || 0
+   541→              return (
+   542→                <div className="space-y-1.5">
+   543→                  {domisiliData.map((r: Record<string, unknown>, idx: number) => (
+   544→                    <div key={r.id as string} className={`flex items-center gap-2 p-2 rounded-lg ${idx < domKuota && domKuota > 0 ? 'bg-emerald-50 border border-emerald-200' : 'bg-gray-50 border border-gray-100'}`}>
+   545→                      <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${idx < domKuota && domKuota > 0 ? 'bg-emerald-500 text-white' : 'bg-gray-300 text-white'}`}>
+   546→                        {idx + 1}
+   547→                      </span>
+   548→                      <div className="flex-1 min-w-0">
+   549→                        <p className="text-xs font-medium text-gray-900 truncate">{r.nama as string}</p>
+   550→                        <p className="text-[10px] text-gray-500">{r.namaSekolahAsal as string}</p>
+   551→                      </div>
+   552→                      <div className="text-right shrink-0">
+   553→                        <p className="text-xs font-bold text-sky-700">{r.jarakKeSekolah as string || r.lokasiJarak as string || '-'}</p>
+   554→                        <p className="text-[10px] text-gray-400">jarak</p>
+   555→                      </div>
+   556→                    </div>
+   557→                  ))}
+   558→                  {domKuota > 0 && <p className="text-[10px] text-emerald-600 text-center mt-1">🟢 Hijau = masuk kuota ({domKuota})</p>}
+   559→                </div>
+   560→              )
+   561→            })()}
+   562→          </CardContent>
+   563→        </Card>
+   564→
+   565→        {/* Prestasi: Skor Tertinggi - split by Akademik and Non Akademik */}
+   566→        <Card className="border-teal-200 shadow-sm">
+   567→          <CardContent className="p-4">
+   568→            <div className="flex items-center gap-2 mb-3">
+   569→              <div className="p-1.5 bg-teal-100 rounded-lg">
+   570→                <Award className="w-4 h-4 text-teal-600" />
+   571→              </div>
+   572→              <h4 className="font-semibold text-sm text-teal-900">Prestasi — Skor Tertinggi</h4>
+   573→            </div>
+   574→            {(() => {
+   575→              // Collect all prestasi records with their appropriate score
+   576→              const prestasiData = rankingData
+   577→                .filter((r: Record<string, unknown>) => {
+   578→                  const sj = (r.subJalur as string || '').toLowerCase()
+   579→                  const prestasiNum = getPrestasiNumValue(r)
+   580→                  return (sj.includes('prestasi')) && prestasiNum > 0
+   581→                })
+   582→                .sort((a: Record<string, unknown>, b: Record<string, unknown>) => getPrestasiNumValue(b) - getPrestasiNumValue(a))
+   583→                .slice(0, 5)
+   584→              if (prestasiData.length === 0) return <p className="text-xs text-gray-400 text-center py-3">Belum ada data skor prestasi</p>
+   585→              const presKuota = rankingKuotaPerJalur.find(k => k.nama.toLowerCase().includes('prestasi'))?.kuota || 0
+   586→              return (
+   587→                <div className="space-y-1.5">
+   588→                  {prestasiData.map((r: Record<string, unknown>, idx: number) => {
+   589→                    const subJalur = (r.subJalur as string) || ''
+   590→                    const isNonAkd = isNonAkademikJalur(subJalur)
+   591→                    const prestasiNum = getPrestasiNumValue(r)
+   592→                    const prestasiDisplay = getPrestasiDisplayValue(r)
+   593→                    return (
+   594→                      <div key={r.id as string} className={`flex items-center gap-2 p-2 rounded-lg ${idx < presKuota && presKuota > 0 ? 'bg-emerald-50 border border-emerald-200' : 'bg-gray-50 border border-gray-100'}`}>
+   595→                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${idx < presKuota && presKuota > 0 ? 'bg-emerald-500 text-white' : isNonAkd ? 'bg-teal-400 text-white' : 'bg-emerald-400 text-white'}`}>
+   596→                          {idx + 1}
+   597→                        </span>
+   598→                        <div className="flex-1 min-w-0">
+   599→                          <p className="text-xs font-medium text-gray-900 truncate">{r.nama as string}</p>
+   600→                          <p className="text-[10px] text-gray-500">{isNonAkd ? 'Non-Akademik' : 'Akademik'} · {r.namaSekolahAsal as string}</p>
+   601→                        </div>
+   602→                        <div className="text-right shrink-0">
+   603→                          <p className="text-xs font-bold text-teal-700">{prestasiDisplay}</p>
+   604→                          <p className="text-[10px] text-gray-400">skor</p>
+   605→                        </div>
+   606→                      </div>
+   607→                    )
+   608→                  })}
+   609→                  {presKuota > 0 && <p className="text-[10px] text-emerald-600 text-center mt-1">🟢 Hijau = masuk kuota ({presKuota})</p>}
+   610→                </div>
+   611→              )
+   612→            })()}
+   613→          </CardContent>
+   614→        </Card>
+   615→      </div>
+   616→
+   617→      {/* Full Ranking Table */}
+   618→      <Card className="shadow-sm">
+   619→        <CardHeader className="pb-3">
+   620→          <div className="flex items-center justify-between">
+   621→            <div>
+   622→              <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+   623→                <Trophy className="w-5 h-5 text-amber-500" />
+   624→                Tabel Perangkingan
+   625→                {rankingTampilan === 'jarak' && <Badge className="bg-sky-100 text-sky-700 border-sky-200">Jarak Terdekat</Badge>}
+   626→                {rankingTampilan === 'nilai' && <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">Nilai Tertinggi</Badge>}
+   627→                {rankingTampilan === 'komposit' && <Badge className="bg-amber-100 text-amber-700 border-amber-200">Skor Komposit</Badge>}
+   628→                {rankingTampilan === 'prestasi' && <Badge className="bg-teal-100 text-teal-700 border-teal-200">Skor Prestasi</Badge>}
+   629→              </CardTitle>
+   630→              <CardDescription className="text-xs mt-1">
+   631→                {rankingData.length} pendaftar
+   632→                {rankingKuota > 0 && ` · Kuota: ${rankingKuota}`}
+   633→                {rankingJalur !== 'all' && ` · Jalur: ${rankingJalur}`}
+   634→              </CardDescription>
+   635→            </div>
+   636→            <div className="flex items-center gap-2">
+   637→              <Button
+   638→                variant="outline"
+   639→                size="sm"
+   640→                className="text-xs gap-1 border-red-200 text-red-700 hover:bg-red-50"
+   641→                onClick={() => handleRankingPreview('pdf')}
+   642→                disabled={rankingData.length === 0}
+   643→              >
+   644→                <Printer className="w-3 h-3" />
+   645→                <span className="hidden sm:inline">Cetak PDF</span>
+   646→              </Button>
+   647→              <Button
+   648→                variant="outline"
+   649→                size="sm"
+   650→                className="text-xs gap-1 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+   651→                onClick={() => handleRankingPreview('excel')}
+   652→                disabled={rankingData.length === 0}
+   653→              >
+   654→                <FileSpreadsheet className="w-3 h-3" />
+   655→                <span className="hidden sm:inline">Excel</span>
+   656→              </Button>
+   657→              <Button
+   658→                variant="outline"
+   659→                size="sm"
+   660→                className="text-xs gap-1"
+   661→                onClick={fetchRanking}
+   662→                disabled={rankingLoading}
+   663→              >
+   664→                <RefreshCw className={`w-3 h-3 ${rankingLoading ? 'animate-spin' : ''}`} />
+   665→              </Button>
+   666→            </div>
+   667→          </div>
+   668→        </CardHeader>
+   669→        <CardContent>
+   670→          {rankingLoading ? (
+   671→            <div className="flex items-center justify-center py-12">
+   672→              <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+   673→              <span className="ml-3 text-gray-500 text-sm">Memuat data perangkingan...</span>
+   674→            </div>
+   675→          ) : rankingData.length === 0 ? (
+   676→            <div className="text-center py-12">
+   677→              <Trophy className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+   678→              <p className="text-gray-500 text-sm">Belum ada data perangkingan</p>
+   679→              <p className="text-gray-400 text-xs mt-1">Import data pendaftar terlebih dahulu</p>
+   680→            </div>
+   681→          ) : (
+   682→            <div className="overflow-x-auto">
+   683→              <Table>
+   684→                <TableHeader>
+   685→                  <TableRow className="bg-gray-50/80">
+   686→                    <TableHead className="w-10 text-center font-semibold text-xs">No</TableHead>
+   687→                    <TableHead className="w-10 text-center font-semibold text-xs">Jalur</TableHead>
+   688→                    <TableHead className="font-semibold text-xs">Nama Pendaftar
+   689→                      <span className="ml-1 cursor-pointer inline-flex align-middle" onClick={() => setNamaSortRanking(namaSortRanking === 'none' ? 'asc' : namaSortRanking === 'asc' ? 'desc' : 'none')}>
+   690→                        {namaSortRanking === 'none' ? <ArrowUpDown className="w-3 h-3 text-gray-400" /> : namaSortRanking === 'asc' ? <ArrowUpAZ className="w-3 h-3 text-amber-600" /> : <ArrowDownAZ className="w-3 h-3 text-amber-600" />}
+   691→                      </span>
+   692→                    </TableHead>
+   693→                    <TableHead className="font-semibold text-xs">Sekolah Asal</TableHead>
+   694→                    <TableHead className="text-right font-semibold text-xs cursor-pointer select-none group" onClick={() => setRankingTampilan('jarak')}>
+   695→                      <span className="inline-flex items-center gap-1">
+   696→                        Jarak
+   697→                        {rankingTampilan === 'jarak' ? (
+   698→                          <span className="text-sky-600" title="Diurutkan berdasarkan jarak">📍</span>
+   699→                        ) : (
+   700→                          <ArrowUpDown className="w-3 h-3 text-gray-300 group-hover:text-sky-500 transition-colors" />
+   701→                        )}
+   702→                      </span>
+   703→                    </TableHead>
+   704→                    <TableHead className="text-right font-semibold text-xs cursor-pointer select-none group" onClick={() => setRankingTampilan('nilai')}>
+   705→                      <span className="inline-flex items-center gap-1">
+   706→                        Nilai
+   707→                        {rankingTampilan === 'nilai' ? (
+   708→                          <span className="text-emerald-600" title="Diurutkan berdasarkan nilai">📍</span>
+   709→                        ) : (
+   710→                          <ArrowUpDown className="w-3 h-3 text-gray-300 group-hover:text-emerald-500 transition-colors" />
+   711→                        )}
+   712→                      </span>
+   713→                    </TableHead>
+   714→                    <TableHead className="text-right font-semibold text-xs cursor-pointer select-none group" onClick={() => setRankingTampilan('komposit')}>
+   715→                      <span className="inline-flex items-center gap-1">
+   716→                        Skor
+   717→                        {rankingTampilan === 'komposit' ? (
+   718→                          <span className="text-amber-600" title="Diurutkan berdasarkan skor komposit">📍</span>
+   719→                        ) : (
+   720→                          <ArrowUpDown className="w-3 h-3 text-gray-300 group-hover:text-amber-500 transition-colors" />
+   721→                        )}
+   722→                      </span>
+   723→                    </TableHead>
+   724→                    <TableHead className="text-right font-semibold text-xs cursor-pointer select-none group" onClick={() => setRankingTampilan('prestasi')}>
+   725→                      <span className="inline-flex items-center gap-1">
+   726→                        Prestasi
+   727→                        {rankingTampilan === 'prestasi' ? (
+   728→                          <span className="text-teal-600" title="Diurutkan berdasarkan skor prestasi">📍</span>
+   729→                        ) : (
+   730→                          <ArrowUpDown className="w-3 h-3 text-gray-300 group-hover:text-teal-500 transition-colors" />
+   731→                        )}
+   732→                      </span>
+   733→                    </TableHead>
+   734→                    <TableHead className="text-center font-semibold text-xs">Status</TableHead>
+   735→                  </TableRow>
+   736→                </TableHeader>
+   737→                <TableBody>
+   738→                  {[...rankingData].sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
+   739→                    if (namaSortRanking === 'asc') return String(a.nama || '').localeCompare(String(b.nama || ''))
+   740→                    if (namaSortRanking === 'desc') return String(b.nama || '').localeCompare(String(a.nama || ''))
+   741→                    return 0
+   742→                  }).map((r: Record<string, unknown>, idx: number) => {
+   743→                    const rankNum = (r._ranking as number) || (idx + 1)
+   744→                    const jalurRank = (r._jalurRank as number) || -1
+   745→                    const jarakNum = r._jarakNum as number
+   746→                    const nilaiNum = r._nilaiNum as number
+   747→                    const skorNum = r._skorNum as number
+   748→                    const skorPrestasiNum = getPrestasiNumValue(r)
+   749→                    const prestasiDisplay = getPrestasiDisplayValue(r)
+   750→                    const isVerified = r.verificationStatus === 'VERIFIED'
+   751→
+   752→                    // Determine kuota cutoff for current jalur
+   753→                    const currentKuota = rankingKuotaPerJalur.find(k => {
+   754→                      const jalurName = (r.subJalur as string || '').toLowerCase()
+   755→                      return k.nama.toLowerCase().includes(jalurName) || jalurName.includes(k.nama.toLowerCase())
+   756→                        || (k.nama.toLowerCase().includes('prestasi') && jalurName.includes('prestasi'))
+   757→                        || (k.nama.toLowerCase().includes('domisili') && jalurName.includes('domisili'))
+   758→                        || (k.nama.toLowerCase().includes('mutasi') && jalurName.includes('mutasi'))
+   759→                        || (k.nama.toLowerCase().includes('afirmasi') && (jalurName.includes('keluarga') || jalurName.includes('ktm')))
+   760→                    })?.kuota || 0
+   761→
+   762→                    // Count how many of the same jalur are above this rank
+   763→                    const sameJalurAbove = rankingData
+   764→                      .filter((other: Record<string, unknown>) =>
+   765→                        (other.subJalur as string) === (r.subJalur as string) &&
+   766→                        ((other._ranking as number) || 0) < rankNum
+   767→                        ).length
+   768→
+   769→                    const withinKuota = currentKuota > 0 && sameJalurAbove < currentKuota
+   770→
+   771→                    return (
+   772→                      <TableRow key={r.id as string} className={`${withinKuota && !isVerified ? 'bg-emerald-50/50' : ''} ${isVerified ? 'bg-emerald-50' : ''} hover:bg-gray-50/80 transition-colors`}>
+   773→                        <TableCell className="text-center">
+   774→                          <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${
+   775→                            rankNum === 1 ? 'bg-amber-400 text-white' :
+   776→                            rankNum === 2 ? 'bg-gray-300 text-gray-700' :
+   777→                            rankNum === 3 ? 'bg-amber-700 text-white' :
+   778→                            withinKuota ? 'bg-emerald-100 text-emerald-700' :
+   779→                            'bg-gray-100 text-gray-500'
+   780→                          }`}>
+   781→                            {rankNum}
+   782→                          </span>
+   783→                        </TableCell>
+   784→                        <TableCell className="text-center">
+   785→                          <div className="flex flex-col items-center gap-0.5">
+   786→                            <Badge variant="outline" className={`text-[10px] ${SUB_JALUR_COLORS[r.subJalur as string] || 'bg-gray-100 text-gray-700 border-gray-200'}`}>
+   787→                              {r.subJalur as string}
+   788→                            </Badge>
+   789→                            {jalurRank > 0 && (
+   790→                              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-[9px] font-bold bg-sky-100 text-sky-700">
+   791→                                #{jalurRank}
+   792→                              </span>
+   793→                            )}
+   794→                          </div>
+   795→                        </TableCell>
+   796→                        <TableCell>
+   797→                          <div>
+   798→                            <p className="text-xs font-medium text-gray-900">{r.nama as string}</p>
+   799→                            <p className="text-[10px] text-gray-400">NISN: {r.nisn as string}</p>
+   800→                          </div>
+   801→                        </TableCell>
+   802→                        <TableCell className="text-xs text-gray-700">{r.namaSekolahAsal as string}</TableCell>
+   803→                        <TableCell className="text-right" style={rankingTampilan === 'jarak' ? { backgroundColor: 'rgba(186, 230, 253, 0.3)' } : undefined}>
+   804→                          <span className={`text-xs font-semibold ${jarakNum > 0 ? 'text-sky-700' : 'text-gray-300'}`}>
+   805→                            {r.jarakKeSekolah as string || r.lokasiJarak as string || '-'}
+   806→                          </span>
+   807→                        </TableCell>
+   808→                        <TableCell className="text-right" style={rankingTampilan === 'nilai' ? { backgroundColor: 'rgba(209, 250, 229, 0.3)' } : undefined}>
+   809→                          <span className={`text-xs font-semibold ${nilaiNum > 0 ? 'text-emerald-700' : 'text-gray-300'}`}>
+   810→                            {r.totalNilai as string || r.nilaiRataRata as string || r.skorNilaiRaport as string || '-'}
+   811→                          </span>
+   812→                        </TableCell>
+   813→                        <TableCell className="text-right" style={rankingTampilan === 'komposit' ? { backgroundColor: 'rgba(254, 243, 199, 0.4)' } : undefined}>
+   814→                          <span className={`text-xs font-semibold ${skorNum > 0 ? 'text-amber-700' : 'text-gray-300'}`}>
+   815→                            {r.totalNilai as string || r.skor as string || '-'}
+   816→                          </span>
+   817→                        </TableCell>
+   818→                        <TableCell className="text-right" style={rankingTampilan === 'prestasi' ? { backgroundColor: 'rgba(204, 251, 241, 0.4)' } : undefined}>
+   819→                          <span className={`text-xs font-semibold ${skorPrestasiNum > 0 ? 'text-teal-700' : 'text-gray-300'}`}>
+   820→                            {prestasiDisplay}
+   821→                          </span>
+   822→                        </TableCell>
+   823→                        <TableCell className="text-center">
+   824→                          <Badge className={`text-[10px] ${STATUS_COLORS[r.verificationStatus as string] || 'bg-gray-100 text-gray-700'}`}>
+   825→                            {r.verificationStatus === 'VERIFIED' ? 'Diterima' : r.verificationStatus === 'REJECTED' ? 'Ditolak' : 'Menunggu'}
+   826→                          </Badge>
+   827→                        </TableCell>
+   828→                      </TableRow>
+   829→                    )
+   830→                  })}
+   831→                </TableBody>
+   832→              </Table>
+   833→            </div>
+   834→          )}
+   835→        </CardContent>
+   836→      </Card>
+   837→
+   838→      {/* ==================== RANKING PREVIEW DIALOG ==================== */}
+   839→      <Dialog open={rankingPreviewOpen} onOpenChange={setRankingPreviewOpen}>
+   840→        <DialogContent className="sm:max-w-6xl max-h-[90vh] flex flex-col">
+   841→          <DialogHeader>
+   842→            <DialogTitle className="flex items-center gap-2">
+   843→              {rankingPreviewType === 'pdf' ? (
+   844→                <><Printer className="w-5 h-5 text-red-600" /> Preview Cetak PDF</>
+   845→              ) : (
+   846→                <><FileSpreadsheet className="w-5 h-5 text-emerald-600" /> Preview Cetak Excel</>
+   847→              )}
+   848→            </DialogTitle>
+   849→            <DialogDescription>
+   850→              {rankingPreviewType === 'pdf'
+   851→                ? 'Pratinjau hasil cetak perangkingan. Klik "Cetak PDF" untuk membuka dialog cetak.'
+   852→                : 'Pratinjau data yang akan diekspor ke Excel. Klik "Unduh Excel" untuk mengunduh file.'}
+   853→            </DialogDescription>
+   854→          </DialogHeader>
+   855→
+   856→          {/* Jalur Selector */}
+   857→          <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg p-3 border border-amber-200">
+   858→            <div className="flex items-center gap-2 mb-2">
+   859→              <Filter className="w-4 h-4 text-amber-600" />
+   860→              <span className="text-sm font-semibold text-amber-800">Pilih Jalur untuk Dicetak</span>
+   861→            </div>
+   862→            <div className="flex flex-wrap gap-2">
+   863→              <button
+   864→                className={`px-3 py-1.5 rounded-lg text-xs font-medium border-2 transition-all ${
+   865→                  rankingPreviewJalur === 'all'
+   866→                    ? 'bg-amber-600 text-white border-amber-600 shadow-md'
+   867→                    : 'bg-white text-amber-700 border-amber-300 hover:border-amber-500 hover:bg-amber-50'
+   868→                }`}
+   869→                onClick={() => setRankingPreviewJalur('all')}
+   870→              >
+   871→                🏆 Semua Jalur ({rankingData.length})
+   872→              </button>
+   873→              {rankingFilters.jalurOptions.filter((j: string) => j && j.trim() !== '').map((j: string) => {
+   874→                const count = rankingData.filter((r: Record<string, unknown>) => (r.subJalur as string) === j).length
+   875→                return (
+   876→                  <button
+   877→                    key={j}
+   878→                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border-2 transition-all ${
+   879→                      rankingPreviewJalur === j
+   880→                        ? 'bg-amber-600 text-white border-amber-600 shadow-md'
+   881→                        : 'bg-white text-gray-700 border-gray-200 hover:border-amber-400 hover:bg-amber-50'
+   882→                    }`}
+   883→                    onClick={() => setRankingPreviewJalur(j)}
+   884→                  >
+   885→                    {j} ({count})
+   886→                  </button>
+   887→                )
+   888→              })}
+   889→            </div>
+   890→          </div>
+   891→
+   892→          {/* Preview Content */}
+   893→          <div className="flex-1 min-h-0 overflow-auto border rounded-lg bg-white">
+   894→            <div className="p-4">
+   895→              {/* Header Preview */}
+   896→              <div className="text-center mb-4 pb-3 border-b-4 border-double border-gray-300">
+   897→                <h2 className="text-lg font-bold tracking-wider">LAPORAN PERANGKINGAN</h2>
+   898→                <p className="text-sm text-gray-500">SPMB 2026 — Sistem Penerimaan Madrasah</p>
+   899→                <p className="text-xs text-gray-400 mt-1">
+   900→                  Diurutkan berdasarkan: <strong>{getSortLabel(rankingTampilan)}</strong>
+   901→                  {' · '}Dicetak pada: {new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+   902→                </p>
+   903→              </div>
+   904→
+   905→              {/* Filters Preview */}
+   906→              <div className="flex flex-wrap gap-2 justify-center mb-3">
+   907→                <span className="text-xs bg-gray-100 px-2 py-1 rounded border">Jalur: {rankingPreviewJalur !== 'all' ? rankingPreviewJalur : 'Semua'}</span>
+   908→                <span className="text-xs bg-gray-100 px-2 py-1 rounded border">Sekolah Asal: {rankingSekolah !== 'all' ? rankingSekolah : 'Semua'}</span>
+   909→                <span className="text-xs bg-gray-100 px-2 py-1 rounded border">Status: {rankingStatus !== 'all' ? (rankingStatus === 'VERIFIED' ? 'Diterima' : rankingStatus === 'REJECTED' ? 'Ditolak' : 'Menunggu') : 'Semua'}</span>
+   910→              </div>
+   911→
+   912→              {/* Kuota Preview */}
+   913→              {rankingKuota > 0 && (
+   914→                <div className="text-center mb-3 text-xs">
+   915→                  <span className="bg-sky-100 text-sky-700 px-3 py-1 rounded mr-2">Total Kuota: <strong>{rankingKuota}</strong></span>
+   916→                  {rankingKuotaPerJalur.map(kj => (
+   917→                    <span key={kj.nama} className="bg-sky-50 text-sky-600 px-2 py-1 rounded mr-1">{kj.nama}: {kj.kuota} ({kj.persentase}%)</span>
+   918→                  ))}
+   919→                </div>
+   920→              )}
+   921→
+   922→              {/* Table Preview */}
+   923→              <div className="overflow-x-auto border rounded">
+   924→                <Table className="text-xs">
+   925→                  <TableHeader>
+   926→                    <TableRow className="bg-gray-50">
+   927→                      <TableHead className="w-10 text-center font-semibold">No</TableHead>
+   928→                      <TableHead className="w-20 text-center font-semibold">Jalur</TableHead>
+   929→                      <TableHead className="font-semibold">Nama Pendaftar</TableHead>
+   930→                      <TableHead className="font-semibold">Sekolah Asal</TableHead>
+   931→                      <TableHead className={`text-right font-semibold ${rankingTampilan === 'jarak' ? 'bg-amber-50' : ''}`}>Jarak</TableHead>
+   932→                      <TableHead className={`text-right font-semibold ${rankingTampilan === 'nilai' ? 'bg-amber-50' : ''}`}>Nilai</TableHead>
+   933→                      <TableHead className={`text-right font-semibold ${rankingTampilan === 'komposit' ? 'bg-amber-50' : ''}`}>Skor</TableHead>
+   934→                      <TableHead className={`text-right font-semibold ${rankingTampilan === 'prestasi' ? 'bg-amber-50' : ''}`}>Prestasi</TableHead>
+   935→                      <TableHead className="text-center font-semibold">Status</TableHead>
+   936→                    </TableRow>
+   937→                  </TableHeader>
+   938→                  <TableBody>
+   939→                    {(rankingPreviewJalur === 'all'
+   940→                      ? rankingData
+   941→                      : rankingData.filter((r: Record<string, unknown>) => (r.subJalur as string) === rankingPreviewJalur)
+   942→                    ).slice(0, 20).map((r: Record<string, unknown>, idx: number) => {
+   943→                      const rankNum = idx + 1
+   944→                      const jalurRank = (r._jalurRank as number) || -1
+   945→                      const jarakNum = r._jarakNum as number
+   946→                      const nilaiNum = r._nilaiNum as number
+   947→                      const skorNum = r._skorNum as number
+   948→                      const skorPrestasiNum = getPrestasiNumValue(r)
+   949→                      const prestasiDisplay = getPrestasiDisplayValue(r)
+   950→
+   951→                      const currentKuota = rankingKuotaPerJalur.find(k => {
+   952→                        const jalurName = (r.subJalur as string || '').toLowerCase()
+   953→                        return k.nama.toLowerCase().includes(jalurName) || jalurName.includes(k.nama.toLowerCase())
+   954→                          || (k.nama.toLowerCase().includes('prestasi') && jalurName.includes('prestasi'))
+   955→                          || (k.nama.toLowerCase().includes('domisili') && jalurName.includes('domisili'))
+   956→                          || (k.nama.toLowerCase().includes('mutasi') && jalurName.includes('mutasi'))
+   957→                          || (k.nama.toLowerCase().includes('afirmasi') && (jalurName.includes('keluarga') || jalurName.includes('ktm')))
+   958→                      })?.kuota || 0
+   959→
+   960→                      const sameJalurAbove = rankingData
+   961→                        .filter((other: Record<string, unknown>) =>
+   962→                          (other.subJalur as string) === (r.subJalur as string) &&
+   963→                          ((other._ranking as number) || 0) < rankNum
+   964→                        ).length
+   965→
+   966→                      const withinKuota = currentKuota > 0 && sameJalurAbove < currentKuota
+   967→                      const isVerified = r.verificationStatus === 'VERIFIED'
+   968→
+   969→                      return (
+   970→                        <TableRow key={r.id as string} className={`${withinKuota && !isVerified ? 'bg-emerald-50/50' : ''} ${isVerified ? 'bg-emerald-50' : ''}`}>
+   971→                          <TableCell className="text-center p-1">
+   972→                            <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold ${
+   973→                              rankNum === 1 ? 'bg-amber-400 text-white' :
+   974→                              rankNum === 2 ? 'bg-gray-300 text-gray-700' :
+   975→                              rankNum === 3 ? 'bg-amber-700 text-white' :
+   976→                              withinKuota ? 'bg-emerald-100 text-emerald-700' :
+   977→                              'bg-gray-100 text-gray-500'
+   978→                            }`}>{rankNum}</span>
+   979→                          </TableCell>
+   980→                          <TableCell className="text-center p-1">
+   981→                            <Badge variant="outline" className={`text-[9px] ${SUB_JALUR_COLORS[r.subJalur as string] || 'bg-gray-100 text-gray-700 border-gray-200'}`}>
+   982→                              {r.subJalur as string}
+   983→                            </Badge>
+   984→                            {jalurRank > 0 && <span className="block text-[8px] text-sky-600">#{jalurRank}</span>}
+   985→                          </TableCell>
+   986→                          <TableCell className="p-1">
+   987→                            <p className="text-xs font-medium">{r.nama as string}</p>
+   988→                            <p className="text-[9px] text-gray-400">NISN: {r.nisn as string}</p>
+   989→                          </TableCell>
+   990→                          <TableCell className="text-xs p-1">{r.namaSekolahAsal as string}</TableCell>
+   991→                          <TableCell className={`text-right p-1 ${rankingTampilan === 'jarak' ? 'bg-sky-50/50 font-bold' : ''}`}>
+   992→                            <span className={`text-xs ${jarakNum > 0 ? 'text-sky-700' : 'text-gray-300'}`}>{r.lokasiJarak as string || '-'}</span>
+   993→                          </TableCell>
+   994→                          <TableCell className={`text-right p-1 ${rankingTampilan === 'nilai' ? 'bg-emerald-50/50 font-bold' : ''}`}>
+   995→                            <span className={`text-xs ${nilaiNum > 0 ? 'text-emerald-700' : 'text-gray-300'}`}>{r.nilaiRataRata as string || r.skorNilaiRaport as string || '-'}</span>
+   996→                          </TableCell>
+   997→                          <TableCell className={`text-right p-1 ${rankingTampilan === 'komposit' ? 'bg-amber-50/50 font-bold' : ''}`}>
+   998→                            <span className={`text-xs ${skorNum > 0 ? 'text-amber-700' : 'text-gray-300'}`}>{r.skor as string || '-'}</span>
+   999→                          </TableCell>
+  1000→                          <TableCell className={`text-right p-1 ${rankingTampilan === 'prestasi' ? 'bg-teal-50/50 font-bold' : ''}`}>
+  1001→                            <span className={`text-xs ${skorPrestasiNum > 0 ? 'text-teal-700' : 'text-gray-300'}`}>{prestasiDisplay}</span>
+  1002→                          </TableCell>
+  1003→                          <TableCell className="text-center p-1">
+  1004→                            <Badge className={`text-[9px] ${STATUS_COLORS[r.verificationStatus as string] || 'bg-gray-100 text-gray-700'}`}>
+  1005→                              {r.verificationStatus === 'VERIFIED' ? 'Diterima' : r.verificationStatus === 'REJECTED' ? 'Ditolak' : 'Menunggu'}
+  1006→                            </Badge>
+  1007→                          </TableCell>
+  1008→                        </TableRow>
+  1009→                      )
+  1010→                    })}
+  1011→                  </TableBody>
+  1012→                </Table>
+  1013→                {(() => {
+  1014→                  const filteredCount = rankingPreviewJalur === 'all'
+  1015→                    ? rankingData.length
+  1016→                    : rankingData.filter((r: Record<string, unknown>) => (r.subJalur as string) === rankingPreviewJalur).length
+  1017→                  return filteredCount > 20 ? (
+  1018→                    <div className="text-center py-2 text-xs text-gray-400 border-t">
+  1019→                      {'... dan '}{filteredCount - 20}{' data lainnya (total: '}{filteredCount}{' pendaftar)'}
+  1020→                    </div>
+  1021→                  ) : null
+  1022→                })()}
+  1023→              </div>
+  1024→
+  1025→              {/* Legend */}
+  1026→              <div className="text-center mt-3 text-xs text-gray-400">
+  1027→                🟡 Rangking 1 · ⚪ Rangking 2 · 🟤 Rangking 3 · 🟢 Masuk Kuota · Total: {(() => {
+  1028→                  const fc = rankingPreviewJalur === 'all'
+  1029→                    ? rankingData.length
+  1030→                    : rankingData.filter((r: Record<string, unknown>) => (r.subJalur as string) === rankingPreviewJalur).length
+  1031→                  return fc
+  1032→                })()} pendaftar
+  1033→              </div>
+  1034→
+  1035→              {/* Excel Data Preview */}
+  1036→              {rankingPreviewType === 'excel' && (
+  1037→                <div className="mt-4 p-3 bg-emerald-50 rounded-lg border border-emerald-200">
+  1038→                  <h4 className="text-xs font-semibold text-emerald-800 mb-2">📋 Data yang akan diekspor ke Excel:</h4>
+  1039→                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px]">
+  1040→                    <div className="bg-white rounded p-2 border">
+  1041→                      <span className="text-gray-500">Kolom Data</span>
+  1042→                      <p className="font-bold text-gray-800">19 kolom</p>
+  1043→                    </div>
+  1044→                    <div className="bg-white rounded p-2 border">
+  1045→                      <span className="text-gray-500">Baris Data</span>
+  1046→                      <p className="font-bold text-gray-800">{(() => {
+  1047→                        const fc = rankingPreviewJalur === 'all'
+  1048→                          ? rankingData.length
+  1049→                          : rankingData.filter((r: Record<string, unknown>) => (r.subJalur as string) === rankingPreviewJalur).length
+  1050→                        return fc
+  1051→                      })()} baris</p>
+  1052→                    </div>
+  1053→                    <div className="bg-white rounded p-2 border">
+  1054→                      <span className="text-gray-500">Sheet</span>
+  1055→                      <p className="font-bold text-gray-800">2 sheet</p>
+  1056→                    </div>
+  1057→                    <div className="bg-white rounded p-2 border">
+  1058→                      <span className="text-gray-500">Format</span>
+  1059→                      <p className="font-bold text-gray-800">.xlsx</p>
+  1060→                    </div>
+  1061→                  </div>
+  1062→                  <p className="text-[10px] text-emerald-600 mt-2">
+  1063→                    Sheet 1: Perangkingan (data lengkap termasuk Skor Prestasi Akademik & Non Akademik) · Sheet 2: Ringkasan (filter & kuota)
+  1064→                  </p>
+  1065→                </div>
+  1066→              )}
+  1067→            </div>
+  1068→          </div>
+  1069→
+  1070→          <DialogFooter className="flex-row gap-2 sm:justify-end">
+  1071→            <Button variant="outline" onClick={() => setRankingPreviewOpen(false)}>
+  1072→              Batal
+  1073→            </Button>
+  1074→            <Button
+  1075→              onClick={() => {
+  1076→                if (rankingPreviewType === 'pdf') {
+  1077→                  handleRankingPrintPDF()
+  1078→                } else {
+  1079→                  handleRankingExportExcel()
+  1080→                }
+  1081→                setRankingPreviewOpen(false)
+  1082→              }}
+  1083→              className={rankingPreviewType === 'pdf' ? 'bg-red-600 hover:bg-red-700' : 'bg-emerald-600 hover:bg-emerald-700'}
+  1084→            >
+  1085→              {rankingPreviewType === 'pdf' ? (
+  1086→                <><Printer className="w-4 h-4 mr-2" /> Cetak PDF</>
+  1087→              ) : (
+  1088→                <><FileDown className="w-4 h-4 mr-2" /> Unduh Excel</>
+  1089→              )}
+  1090→            </Button>
+  1091→          </DialogFooter>
+  1092→        </DialogContent>
+  1093→      </Dialog>
+  1094→    </>
+  1095→  )
+  1096→}
+  1097→

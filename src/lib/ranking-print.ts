@@ -16,6 +16,50 @@ function isNonAkademikJalur(subJalur: string): boolean {
   return lower.includes('nonakademik')
 }
 
+// Helper: check if a jalur name is Akademik variant (includes "Prestasi" without "Nonakademik")
+function isAkademikJalur(subJalur: string): boolean {
+  const lower = subJalur.toLowerCase().replace(/[^a-z0-9]/g, '')
+  return (lower.includes('akademik') || lower === 'prestasi') && !lower.includes('nonakademik')
+}
+
+// Helper: check if a jalur is a prestasi type (either Akademik or Non-Akademik)
+function isPrestasiJalur(subJalur: string): boolean {
+  const lower = subJalur.toLowerCase().replace(/[^a-z0-9]/g, '')
+  return lower.includes('prestasi') || lower.includes('akademik')
+}
+
+// Re-sort data by the appropriate prestasi score based on jalur
+// Prestasi Akademik → sort by _skorPrestasiAkademikNum (desc)
+// Prestasi Non Akademik → sort by _skorPrestasiNonAkademikNum (desc)
+function reSortByPrestasiJalur(data: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
+  return [...data].sort((a, b) => {
+    const subJalurA = (a.subJalur as string) || ''
+    const subJalurB = (b.subJalur as string) || ''
+
+    // Get the appropriate score for each record based on its jalur
+    const getScore = (r: Record<string, unknown>, subJalur: string): number => {
+      if (isNonAkademikJalur(subJalur)) {
+        return (r._skorPrestasiNonAkademikNum as number) || -1
+      }
+      if (isAkademikJalur(subJalur)) {
+        return (r._skorPrestasiAkademikNum as number) || -1
+      }
+      // Fallback for other jalur: use the jalur-aware prestasi score
+      return getPrestasiNumValue(r)
+    }
+
+    const scoreA = getScore(a, subJalurA)
+    const scoreB = getScore(b, subJalurB)
+
+    // Both have data: sort descending (highest first)
+    if (scoreA > 0 && scoreB > 0) return scoreB - scoreA
+    // Only one has data: data comes first
+    if (scoreA > 0) return -1
+    if (scoreB > 0) return 1
+    return 0
+  })
+}
+
 // Helper: get prestasi score for display from a record
 function getPrestasiDisplayValue(r: Record<string, unknown>): string {
   const subJalur = (r.subJalur as string) || ''
@@ -66,6 +110,7 @@ export function getRankingPrintHTML(params: {
   } = params
 
   const sortLabel = rankingTampilan === 'jarak' ? 'Jarak Terdekat' : rankingTampilan === 'nilai' ? 'Nilai Tertinggi' : rankingTampilan === 'komposit' ? 'Skor Komposit' : 'Skor Prestasi'
+  const prestasiNote = isPrestasiJalur(selectedJalur) ? ' (diurutkan berdasarkan Skor Prestasi sesuai jalur)' : ''
   const jalurLabel = selectedJalur !== 'all' ? selectedJalur : 'Semua Jalur'
   const sekolahLabel = rankingSekolah !== 'all' ? rankingSekolah : 'Semua Sekolah'
   const jurusanLabel = rankingJurusan !== 'all' ? rankingJurusan : 'Semua Jurusan'
@@ -76,9 +121,16 @@ export function getRankingPrintHTML(params: {
     ? rankingData
     : rankingData.filter((r: Record<string, unknown>) => (r.subJalur as string) === selectedJalur)
 
+  // Re-sort by appropriate prestasi score based on jalur for printing
+  // This ensures the print always ranks by the correct prestasi score
+  // regardless of the current tampilan mode
+  const sortedForPrint = isPrestasiJalur(selectedJalur)
+    ? reSortByPrestasiJalur(filteredData)
+    : filteredData
+
   // Re-rank within selected jalur
   const jalurRankCounters: Record<string, number> = {}
-  const reRanked = filteredData.map((r: Record<string, unknown>, idx: number) => {
+  const reRanked = sortedForPrint.map((r: Record<string, unknown>, idx: number) => {
     const jalur = r.subJalur as string
     if (!jalurRankCounters[jalur]) jalurRankCounters[jalur] = 0
     jalurRankCounters[jalur]++
@@ -235,7 +287,7 @@ export function getRankingPrintHTML(params: {
       <h1>LAPORAN PERANGKINGAN PESERTA SPMB</h1>
       <h2>${appName}</h2>
       ${schoolName ? `<h3>${schoolName}</h3>` : ''}
-      <p>Diurutkan berdasarkan: <strong>${sortLabel}</strong> &middot; Dicetak pada: ${new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+      <p>Diurutkan berdasarkan: <strong>${sortLabel}${prestasiNote}</strong> &middot; Dicetak pada: ${new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
     </div>
 
     <div class="filters">
@@ -381,6 +433,7 @@ export function handleRankingExportExcel(params: {
   } = params
 
   const sortLabel = rankingTampilan === 'jarak' ? 'Jarak Terdekat' : rankingTampilan === 'nilai' ? 'Nilai Tertinggi' : rankingTampilan === 'komposit' ? 'Skor Komposit' : 'Skor Prestasi'
+  const prestasiNote = isPrestasiJalur(selectedJalur) ? ' (diurutkan berdasarkan Skor Prestasi sesuai jalur)' : ''
   const jalurLabel = selectedJalur !== 'all' ? selectedJalur : 'Semua Jalur'
 
   // Filter data by selected jalur
@@ -388,9 +441,16 @@ export function handleRankingExportExcel(params: {
     ? rankingData
     : rankingData.filter((r: Record<string, unknown>) => (r.subJalur as string) === selectedJalur)
 
+  // Re-sort by appropriate prestasi score based on jalur for export
+  // This ensures the Excel export always ranks by the correct prestasi score
+  // regardless of the current tampilan mode
+  const sortedForExport = isPrestasiJalur(selectedJalur)
+    ? reSortByPrestasiJalur(filteredData)
+    : filteredData
+
   // Re-rank
   const jalurRankCounters: Record<string, number> = {}
-  const reRanked = filteredData.map((r: Record<string, unknown>, idx: number) => {
+  const reRanked = sortedForExport.map((r: Record<string, unknown>, idx: number) => {
     const jalur = r.subJalur as string
     if (!jalurRankCounters[jalur]) jalurRankCounters[jalur] = 0
     jalurRankCounters[jalur]++
@@ -491,7 +551,7 @@ export function handleRankingExportExcel(params: {
   // Add a summary sheet
   const summaryData = [
     { 'Keterangan': `LAPORAN PERANGKINGAN ${appName}${schoolName ? ' — ' + schoolName : ''}`, 'Nilai': '' },
-    { 'Keterangan': 'Diurutkan Berdasarkan', 'Nilai': sortLabel },
+    { 'Keterangan': 'Diurutkan Berdasarkan', 'Nilai': `${sortLabel}${prestasiNote}` },
     { 'Keterangan': 'Jalur', 'Nilai': jalurLabel },
     { 'Keterangan': 'Sekolah Asal', 'Nilai': rankingSekolah !== 'all' ? rankingSekolah : 'Semua Sekolah' },
     { 'Keterangan': 'Jurusan', 'Nilai': rankingJurusan !== 'all' ? rankingJurusan : 'Semua Jurusan' },

@@ -1,0 +1,1930 @@
+     1→'use client'
+     2→
+     3→import { useState, useEffect, useCallback } from 'react'
+     4→import * as XLSX from 'xlsx'
+     5→import { saveAs } from 'file-saver'
+     6→import {
+     7→  Card,
+     8→  CardContent,
+     9→} from '@/components/ui/card'
+    10→import { Button } from '@/components/ui/button'
+    11→import { Input } from '@/components/ui/input'
+    12→import { Badge } from '@/components/ui/badge'
+    13→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+    14→import {
+    15→  Dialog,
+    16→  DialogContent,
+    17→  DialogDescription,
+    18→  DialogFooter,
+    19→  DialogHeader,
+    20→  DialogTitle,
+    21→} from '@/components/ui/dialog'
+    22→import { useToast } from '@/hooks/use-toast'
+    23→import {
+    24→  ShieldCheck,
+    25→  CheckCircle2,
+    26→  AlertTriangle,
+    27→  Loader2,
+    28→  Trash2,
+    29→} from 'lucide-react'
+    30→
+    31→import type { Registration, DashboardStats, PaginationInfo, LembarVerifikasiData, LembarVerifikasiConfig } from '@/lib/types'
+    32→import { STATUS_COLORS, STATUS_LULUS_COLORS, STATUS_DAFTAR_ULANG_COLORS, DEFAULT_KEKURANGAN_OPTIONS, SUB_JALUR_COLORS } from '@/lib/constants'
+    33→import { hitungLamaKK, isKKKurangSetahun, dedupById, buildLembarVerifikasi, flattenLembarConfigs, getJalurIcon, getJalurColors, getJalurSubFilter, StatBar, JALUR_HIERARCHY } from '@/lib/utils-shared'
+    34→import { parsePortalText } from '@/lib/parse-portal'
+    35→
+    36→import { getRankingPrintHTML, handleRankingExportExcel } from '@/lib/ranking-print'
+    37→import LembarVerifikasiSheet from '@/components/LembarVerifikasiSheet'
+    38→import ImportDialog from '@/components/ImportDialog'
+    39→import ChangePasswordDialog from '@/components/ChangePasswordDialog'
+    40→import RankingPreviewDialog from '@/components/RankingPreviewDialog'
+    41→import PortalPasteDialog from '@/components/PortalPasteDialog'
+    42→import SumutBerkahDialog from '@/components/SumutBerkahDialog'
+    43→import { SingleVerifyDialog, BulkVerifyDialog, DeleteDialog } from '@/components/VerifyDialogs'
+    44→import DetailDialog from '@/components/DetailDialog'
+    45→import EditDialog from '@/components/EditDialog'
+    46→import DuplicateCheckDialog from '@/components/DuplicateCheckDialog'
+    47→
+    48→// Extracted tab components
+    49→import AuthScreens from '@/components/AuthScreens'
+    50→import DashboardTab from '@/components/DashboardTab'
+    51→import DataPendaftarTab from '@/components/DataPendaftarTab'
+    52→import RankingTab from '@/components/RankingTab'
+    53→import DiterimaTab from '@/components/DiterimaTab'
+    54→import DitolakTab from '@/components/DitolakTab'
+    55→import KelulusanTab from '@/components/KelulusanTab'
+    56→import DaftarUlangTab from '@/components/DaftarUlangTab'
+    57→import PengaturanTab from '@/components/PengaturanTab'
+    58→import AppLayout from '@/components/AppLayout'
+    59→
+    60→
+    61→export default function Home() {
+    62→  const { toast } = useToast()
+    63→
+    64→  // ==================== AUTH STATE ====================
+    65→  const [authLoading, setAuthLoading] = useState(true)
+    66→  const [isAuthenticated, setIsAuthenticated] = useState(false)
+    67→  const [authUser, setAuthUser] = useState<{ id: string; username: string; namaLengkap: string; role: string } | null>(null)
+    68→  const [needsSetup, setNeedsSetup] = useState(false)
+    69→
+    70→  // Login form state
+    71→  const [loginUsername, setLoginUsername] = useState('')
+    72→  const [loginPassword, setLoginPassword] = useState('')
+    73→  const [loginLoading, setLoginLoading] = useState(false)
+    74→  const [loginError, setLoginError] = useState('')
+    75→
+    76→  // Setup form state
+    77→  const [setupUsername, setSetupUsername] = useState('')
+    78→  const [setupPassword, setSetupPassword] = useState('')
+    79→  const [setupNamaLengkap, setSetupNamaLengkap] = useState('')
+    80→  const [setupLoading, setSetupLoading] = useState(false)
+    81→  const [setupError, setSetupError] = useState('')
+    82→
+    83→  // Login/Setup password visibility
+    84→  const [showLoginPassword, setShowLoginPassword] = useState(false)
+    85→  const [showSetupPassword, setShowSetupPassword] = useState(false)
+    86→
+    87→  // Change Password dialog state
+    88→  const [changePasswordOpen, setChangePasswordOpen] = useState(false)
+    89→  const [changePasswordCurrent, setChangePasswordCurrent] = useState('')
+    90→  const [changePasswordNew, setChangePasswordNew] = useState('')
+    91→  const [changePasswordConfirm, setChangePasswordConfirm] = useState('')
+    92→  const [changePasswordLoading, setChangePasswordLoading] = useState(false)
+    93→  const [changePasswordError, setChangePasswordError] = useState('')
+    94→  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
+    95→  const [showNewPassword, setShowNewPassword] = useState(false)
+    96→
+    97→  // Check auth on mount
+    98→  useEffect(() => {
+    99→    let cancelled = false
+   100→
+   101→    const checkAuth = async () => {
+   102→      try {
+   103→        const setupRes = await fetch('/api/auth/setup')
+   104→        if (setupRes.ok) {
+   105→          const setupData = await setupRes.json()
+   106→          if (setupData.needsSetup && !cancelled) {
+   107→            setNeedsSetup(true)
+   108→            setAuthLoading(false)
+   109→            return
+   110→          }
+   111→        }
+   112→
+   113→        const controller = new AbortController()
+   114→        const timeoutId = setTimeout(() => controller.abort(), 8000)
+   115→
+   116→        const meRes = await fetch('/api/auth/me', { signal: controller.signal })
+   117→        clearTimeout(timeoutId)
+   118→
+   119→        if (meRes.ok) {
+   120→          const meData = await meRes.json()
+   121→          if (meData.authenticated && !cancelled) {
+   122→            // Set sessionStorage IMMEDIATELY to prevent auto-logout race condition
+   123→            // The auto-logout effect checks sessionStorage, so it must be set
+   124→            // BEFORE effects fire (setting it here in the handler, not in an effect)
+   125→            sessionStorage.setItem('spmb_session_active', 'true')
+   126→            setIsAuthenticated(true)
+   127→            setAuthUser(meData.user)
+   128→          }
+   129→        }
+   130→      } catch {
+   131→        // If API fails, show login form
+   132→      } finally {
+   133→        if (!cancelled) setAuthLoading(false)
+   134→      }
+   135→    }
+   136→
+   137→    checkAuth()
+   138→
+   139→    const safetyTimeout = setTimeout(() => {
+   140→      if (!cancelled) setAuthLoading(false)
+   141→    }, 10000)
+   142→
+   143→    return () => {
+   144→      cancelled = true
+   145→      clearTimeout(safetyTimeout)
+   146→    }
+   147→  }, [])
+   148→
+   149→  // ==================== MAIN APP STATE (must be before conditional returns) ====================
+   150→  const [registrations, setRegistrations] = useState<Registration[]>([])
+   151→  const [stats, setStats] = useState<DashboardStats | null>(null)
+   152→  const [pagination, setPagination] = useState<PaginationInfo>({
+   153→    page: 1,
+   154→    limit: 50,
+   155→    total: 0,
+   156→    totalPages: 0,
+   157→  })
+   158→  const [dataLimit, setDataLimit] = useState(50)
+   159→
+   160→  // Filters
+   161→  const [search, setSearch] = useState('')
+   162→  const [subJalurFilter, setSubJalurFilter] = useState('all')
+   163→  const [verificationFilter, setVerificationFilter] = useState('all')
+   164→  const [jurusanFilter, setJurusanFilter] = useState('all')
+   165→
+   166→  // Sort by nama state for each tab
+   167→  const [namaSortData, setNamaSortData] = useState<'none' | 'asc' | 'desc'>('none')
+   168→  const [namaSortRanking, setNamaSortRanking] = useState<'none' | 'asc' | 'desc'>('none')
+   169→  const [namaSortDiterima, setNamaSortDiterima] = useState<'none' | 'asc' | 'desc'>('none')
+   170→  const [namaSortDitolak, setNamaSortDitolak] = useState<'none' | 'asc' | 'desc'>('none')
+   171→  const [groupBySekolah, setGroupBySekolah] = useState(false)
+   172→
+   173→  // Duplicate detection state
+   174→  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false)
+   175→  const [duplicateLoading, setDuplicateLoading] = useState(false)
+   176→  const [duplicateData, setDuplicateData] = useState<{
+   177→    summary: {
+   178→      totalChecked: number
+   179→      nisnDuplicateGroups: number
+   180→      nisnDuplicateCount: number
+   181→      nameDuplicateGroups: number
+   182→      nameDuplicateCount: number
+   183→    } | null
+   184→    duplicates: Array<{
+   185→      type: 'nisn' | 'nama'
+   186→      key: string
+   187→      label: string
+   188→      count: number
+   189→      registrations: Array<{
+   190→        id: string
+   191→        noRegistrasi: string
+   192→        nama: string
+   193→        nisn: string
+   194→        subJalur: string
+   195→        namaSekolahPilihan: string
+   196→        namaSekolahAsal: string
+   197→        verificationStatus: string
+   198→        statusLulus: string | null
+   199→        statusDaftarUlang: string | null
+   200→      }>
+   201→    }>
+   202→  }>({ summary: null, duplicates: [] })
+   203→
+   204→  // Selection
+   205→  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+   206→
+   207→  // Dialogs
+   208→  const [importDialogOpen, setImportDialogOpen] = useState(false)
+   209→  const [importStatus, setImportStatus] = useState('DITERIMA')
+   210→  const [useCsvStatus, setUseCsvStatus] = useState(false)
+   211→  const [csvRowCount, setCsvRowCount] = useState<number>(0)
+   212→  const [verifyDialogOpen, setVerifyDialogOpen] = useState(false)
+   213→  const [detailDialogOpen, setDetailDialogOpen] = useState(false)
+   214→  const [bulkVerifyDialogOpen, setBulkVerifyDialogOpen] = useState(false)
+   215→
+   216→  // Verify dialog state
+   217→  const [verifyAction, setVerifyAction] = useState<'VERIFIED' | 'REJECTED'>('VERIFIED')
+   218→  const [verifyNote, setVerifyNote] = useState('')
+   219→  const [verifyTargetId, setVerifyTargetId] = useState<string | null>(null)
+   220→
+   221→  // Detail dialog state
+   222→  const [detailTarget, setDetailTarget] = useState<Registration | null>(null)
+   223→
+   224→  // Loading states
+   225→  const [importing, setImporting] = useState(false)
+   226→  const [verifying, setVerifying] = useState(false)
+   227→  const [loading, setLoading] = useState(false)
+   228→
+   229→  // CSV file
+   230→  const [csvFile, setCsvFile] = useState<File | null>(null)
+   231→  const handleSetCsvFile = async (file: File | null) => {
+   232→    setCsvFile(file)
+   233→    if (file) {
+   234→      try {
+   235→        const text = await file.text()
+   236→        const rows = parseCSVClientSide(text)
+   237→        setCsvRowCount(rows.length)
+   238→      } catch {
+   239→        setCsvRowCount(0)
+   240→      }
+   241→    } else {
+   242→      setCsvRowCount(0)
+   243→    }
+   244→  }
+   245→
+   246→  // Active tab
+   247→  const [activeTab, setActiveTab] = useState('dashboard')
+   248→  const [moreMenuOpen, setMoreMenuOpen] = useState(false)
+   249→
+   250→  // Lembar verifikasi sub-tab
+   251→  const [lembarTab, setLembarTab] = useState('')
+   252→  const [lembarSubTab, setLembarSubTab] = useState('')
+   253→
+   254→  // Edit dialog state
+   255→  const [editDialogOpen, setEditDialogOpen] = useState(false)
+   256→  const [editTarget, setEditTarget] = useState<Registration | null>(null)
+   257→  const [editForm, setEditForm] = useState<Record<string, string>>({})
+   258→  const [saving, setSaving] = useState(false)
+   259→
+   260→  // Delete dialog state
+   261→  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+   262→  const [deleteTarget, setDeleteTarget] = useState<Registration | null>(null)
+   263→  const [deleting, setDeleting] = useState(false)
+   264→
+   265→  // Report filter state
+   266→  const [diterimaFilterJalur, setDiterimaFilterJalur] = useState('all')
+   267→  const [diterimaFilterSekolah, setDiterimaFilterSekolah] = useState('all')
+   268→  const [ditolakFilterJalur, setDitolakFilterJalur] = useState('all')
+   269→
+   270→  // Portal paste state
+   271→  const [portalPasteOpen, setPortalPasteOpen] = useState(false)
+   272→  const [portalRawText, setPortalRawText] = useState('')
+   273→  const [portalParsedData, setPortalParsedData] = useState<Record<string, string> | null>(null)
+   274→  const [portalParsing, setPortalParsing] = useState(false)
+   275→  const [portalSelectedJalur, setPortalSelectedJalur] = useState('')
+   276→  // Portal quick verification fields
+   277→  const [portalVerifStatus, setPortalVerifStatus] = useState<'VERIFIED' | 'REJECTED' | 'PENDING'>('VERIFIED')
+   278→  const [portalKekurangan, setPortalKekurangan] = useState('')
+   279→  const [portalVerifNote, setPortalVerifNote] = useState('')
+   280→  const [portalTanggalVerif, setPortalTanggalVerif] = useState('')
+   281→  const [portalJamVerif, setPortalJamVerif] = useState('')
+   282→  const [portalTerbitKK, setPortalTerbitKK] = useState('')
+   283→  // Highlight recently saved student in Lembar Verifikasi
+   284→  const [highlightRegId, setHighlightRegId] = useState<string | null>(null)
+   285→  // Refresh key to force LembarVerifikasiSheet to re-fetch data after portal paste
+   286→  const [lembarRefreshKey, setLembarRefreshKey] = useState(0)
+   287→  // Track which save button was clicked for correct loading spinner
+   288→  const [savingStatus, setSavingStatus] = useState<'VERIFIED' | 'REJECTED' | 'PENDING' | null>(null)
+   289→
+   290→  // Sumut Berkah paste state
+   291→  const [sumutBerkahOpen, setSumutBerkahOpen] = useState(false)
+   292→  const [sumutBerkahText, setSumutBerkahText] = useState('')
+   293→  const [sumutBerkahParsing, setSumutBerkahParsing] = useState(false)
+   294→  const [sumutBerkahResult, setSumutBerkahResult] = useState<{ matched: number; updated: number; notFound: string[] } | null>(null)
+   295→  const [sumutBerkahPreview, setSumutBerkahPreview] = useState<Array<{ nama: string; totalNilai: string; jarakKeSekolah: string }> | null>(null)
+   296→
+   297→  // Pengaturan state
+   298→  const [kuota, setKuota] = useState(0)
+   299→  const [appName, setAppName] = useState('SPMB 2026')
+   300→  const [schoolName, setSchoolName] = useState('')
+   301→  const [appIcon, setAppIcon] = useState('')
+   302→  const [appSubtitle, setAppSubtitle] = useState('Sistem Verifikasi Penerimaan Murid Baru')
+   303→  const [jalurConfigs, setJalurConfigs] = useState<Array<{ id: string; nama: string; persentase: number; urutan: number; aktif: boolean }>>([])
+   304→  const [settingsLoading, setSettingsLoading] = useState(false)
+   305→  const [settingsSaving, setSettingsSaving] = useState(false)
+   306→  const [newJalurNama, setNewJalurNama] = useState('')
+   307→  const [newJalurPersentase, setNewJalurPersentase] = useState(0)
+   308→  const [addJalurOpen, setAddJalurOpen] = useState(false)
+   309→
+   310→  // Tahap Pendaftaran state
+   311→  const [tahap, setTahap] = useState(1)
+   312→  const [jalurAktifPerTahap, setJalurAktifPerTahap] = useState<string>('')
+   313→
+   314→  // Ranking state
+   315→  const [rankingJalur, setRankingJalur] = useState('all')
+   316→  const [rankingSekolah, setRankingSekolah] = useState('all')
+   317→  const [rankingJurusan, setRankingJurusan] = useState('all')
+   318→  const [rankingTampilan, setRankingTampilan] = useState('jarak')
+   319→  const [rankingStatus, setRankingStatus] = useState('all')
+   320→  const [rankingData, setRankingData] = useState<Array<Record<string, unknown>>>([])
+   321→  const [rankingFilters, setRankingFilters] = useState<{ jalurOptions: string[]; sekolahOptions: string[]; jurusanOptions: string[] }>({ jalurOptions: [], sekolahOptions: [], jurusanOptions: [] })
+   322→  const [rankingKuota, setRankingKuota] = useState(0)
+   323→  const [rankingKuotaPerJalur, setRankingKuotaPerJalur] = useState<Array<{ nama: string; persentase: number; kuota: number }>>([])
+   324→  const [rankingLoading, setRankingLoading] = useState(false)
+   325→
+   326→  // Ranking print/preview state
+   327→  const [rankingPreviewOpen, setRankingPreviewOpen] = useState(false)
+   328→  const [rankingPreviewType, setRankingPreviewType] = useState<'pdf' | 'excel'>('pdf')
+   329→  const [rankingPreviewJalur, setRankingPreviewJalur] = useState<string>('all')
+   330→
+   331→  // Build lembar verifikasi from jalurConfigs
+   332→  const lembarVerifikasi = buildLembarVerifikasi(jalurConfigs)
+   333→
+   334→  // Available subJalur options for dropdowns (flattened from hierarchy)
+   335→  const subJalurOptions = flattenLembarConfigs(lembarVerifikasi)
+   336→    .map(cfg => ({ label: cfg.label, value: cfg.subJalurFilter }))
+   337→
+   338→  // Auto-set lembarTab to first tab when configs load
+   339→  useEffect(() => {
+   340→    if (jalurConfigs.length > 0 && !lembarTab) {
+   341→      const firstKey = lembarVerifikasi[0]?.key
+   342→      if (firstKey) setLembarTab(firstKey)
+   343→    }
+   344→  }, [jalurConfigs, lembarTab, lembarVerifikasi])
+   345→
+   346→  // When lembarTab changes, reset lembarSubTab
+   347→  useEffect(() => {
+   348→    setLembarSubTab('')
+   349→  }, [lembarTab])
+   350→
+   351→  // Portal Sync state
+   352→  const [portalSyncOpen, setPortalSyncOpen] = useState(false)
+   353→  const [portalSyncEmail, setPortalSyncEmail] = useState('')
+   354→  const [portalSyncPassword, setPortalSyncPassword] = useState('')
+   355→  const [portalSyncStatus, setPortalSyncStatus] = useState('accepted')
+   356→  const [portalSyncPages, setPortalSyncPages] = useState(10)
+   357→  const [portalSyncing, setPortalSyncing] = useState(false)
+   358→  const [portalSyncResult, setPortalSyncResult] = useState<{ success: boolean; message: string; created?: number; updated?: number; unchanged?: number; total?: number } | null>(null)
+   359→
+   360→  // User management state
+   361→  const [users, setUsers] = useState<Array<{ id: string; username: string; namaLengkap: string; role: string; aktif: boolean; lastLogin: string | null; createdAt: string }>>([])
+   362→  const [usersLoading, setUsersLoading] = useState(false)
+   363→  const [addUserOpen, setAddUserOpen] = useState(false)
+   364→  const [editUserOpen, setEditUserOpen] = useState(false)
+   365→  const [editUserData, setEditUserData] = useState<{ id: string; username: string; namaLengkap: string; role: string; aktif: boolean } | null>(null)
+   366→  const [addUserForm, setAddUserForm] = useState({ username: '', password: '', namaLengkap: '', role: 'verifikator' })
+   367→  const [editUserForm, setEditUserForm] = useState({ username: '', password: '', namaLengkap: '', role: 'verifikator', aktif: true })
+   368→  const [userSaving, setUserSaving] = useState(false)
+   369→  const [deleteUserOpen, setDeleteUserOpen] = useState(false)
+   370→  const [deleteUserTarget, setDeleteUserTarget] = useState<{ id: string; namaLengkap: string } | null>(null)
+   371→  const [deleteUserLoading, setDeleteUserLoading] = useState(false)
+   372→
+   373→  // Reset Password state
+   374→  const [resetPasswordOpen, setResetPasswordOpen] = useState(false)
+   375→  const [resetPasswordTarget, setResetPasswordTarget] = useState<{ id: string; username: string; namaLengkap: string } | null>(null)
+   376→  const [resetPasswordNew, setResetPasswordNew] = useState('')
+   377→  const [resetPasswordLoading, setResetPasswordLoading] = useState(false)
+   378→  const [showResetPassword, setShowResetPassword] = useState(false)
+   379→
+   380→  // Admin profile edit
+   381→  const [editProfileOpen, setEditProfileOpen] = useState(false)
+   382→  const [editProfileForm, setEditProfileForm] = useState({ username: '', password: '', namaLengkap: '' })
+   383→  const [editProfileSaving, setEditProfileSaving] = useState(false)
+   384→
+   385→  // ==================== AUTH HANDLERS ====================
+   386→  const handleLogin = async (e: React.FormEvent) => {
+   387→    e.preventDefault()
+   388→    setLoginLoading(true)
+   389→    setLoginError('')
+   390→    try {
+   391→      const res = await fetch('/api/auth/login', {
+   392→        method: 'POST',
+   393→        headers: { 'Content-Type': 'application/json' },
+   394→        body: JSON.stringify({ username: loginUsername, password: loginPassword }),
+   395→      })
+   396→      const data = await res.json()
+   397→      if (data.success) {
+   398→        sessionStorage.setItem('spmb_session_active', 'true')
+   399→        setIsAuthenticated(true)
+   400→        setAuthUser(data.user)
+   401→        setLoginUsername('')
+   402→        setLoginPassword('')
+   403→        toast({ title: 'Login Berhasil', description: `Selamat datang, ${data.user.namaLengkap}!` })
+   404→      } else {
+   405→        setLoginError(data.error || 'Login gagal')
+   406→      }
+   407→    } catch {
+   408→      setLoginError('Terjadi kesalahan koneksi')
+   409→    } finally {
+   410→      setLoginLoading(false)
+   411→    }
+   412→  }
+   413→
+   414→  const handleSetup = async (e: React.FormEvent) => {
+   415→    e.preventDefault()
+   416→    setSetupLoading(true)
+   417→    setSetupError('')
+   418→    try {
+   419→      const res = await fetch('/api/auth/setup', {
+   420→        method: 'POST',
+   421→        headers: { 'Content-Type': 'application/json' },
+   422→        body: JSON.stringify({ username: setupUsername, password: setupPassword, namaLengkap: setupNamaLengkap }),
+   423→      })
+   424→      const data = await res.json()
+   425→      if (data.success) {
+   426→        setNeedsSetup(false)
+   427→        const loginRes = await fetch('/api/auth/login', {
+   428→          method: 'POST',
+   429→          headers: { 'Content-Type': 'application/json' },
+   430→          body: JSON.stringify({ username: setupUsername, password: setupPassword }),
+   431→        })
+   432→        const loginData = await loginRes.json()
+   433→        if (loginData.success) {
+   434→          sessionStorage.setItem('spmb_session_active', 'true')
+   435→          setIsAuthenticated(true)
+   436→          setAuthUser(loginData.user)
+   437→          toast({ title: 'Setup Berhasil', description: `Akun admin berhasil dibuat. Selamat datang, ${loginData.user.namaLengkap}!` })
+   438→        }
+   439→        setSetupUsername('')
+   440→        setSetupPassword('')
+   441→        setSetupNamaLengkap('')
+   442→      } else {
+   443→        setSetupError(data.error || 'Setup gagal')
+   444→      }
+   445→    } catch {
+   446→      setSetupError('Terjadi kesalahan koneksi')
+   447→    } finally {
+   448→      setSetupLoading(false)
+   449→    }
+   450→  }
+   451→
+   452→  const handleLogout = async () => {
+   453→    try {
+   454→      await fetch('/api/auth/logout', { method: 'POST' })
+   455→      setIsAuthenticated(false)
+   456→      setAuthUser(null)
+   457→      toast({ title: 'Logout Berhasil', description: 'Anda telah keluar dari sistem' })
+   458→    } catch {
+   459→      toast({ title: 'Gagal Logout', description: 'Terjadi kesalahan', variant: 'destructive' })
+   460→    }
+   461→  }
+   462→
+   463→  const handleChangePassword = async (e: React.FormEvent) => {
+   464→    e.preventDefault()
+   465→    setChangePasswordError('')
+   466→    if (changePasswordNew !== changePasswordConfirm) {
+   467→      setChangePasswordError('Password baru tidak cocok')
+   468→      return
+   469→    }
+   470→    if (changePasswordNew.length < 6) {
+   471→      setChangePasswordError('Password baru minimal 6 karakter')
+   472→      return
+   473→    }
+   474→    setChangePasswordLoading(true)
+   475→    try {
+   476→      const res = await fetch('/api/auth/change-password', {
+   477→        method: 'POST',
+   478→        headers: { 'Content-Type': 'application/json' },
+   479→        body: JSON.stringify({ currentPassword: changePasswordCurrent, newPassword: changePasswordNew }),
+   480→      })
+   481→      const data = await res.json()
+   482→      if (data.success) {
+   483→        toast({ title: 'Berhasil', description: 'Password berhasil diubah' })
+   484→        setChangePasswordOpen(false)
+   485→        setChangePasswordCurrent('')
+   486→        setChangePasswordNew('')
+   487→        setChangePasswordConfirm('')
+   488→      } else {
+   489→        setChangePasswordError(data.error || 'Gagal mengubah password')
+   490→      }
+   491→    } catch {
+   492→      setChangePasswordError('Terjadi kesalahan koneksi')
+   493→    } finally {
+   494→      setChangePasswordLoading(false)
+   495→    }
+   496→  }
+   497→
+   498→  // Load users
+   499→  const loadUsers = async () => {
+   500→    setUsersLoading(true)
+   501→    try {
+   502→      const res = await fetch('/api/users')
+   503→      const data = await res.json()
+   504→      if (data.success) setUsers(data.users)
+   505→    } catch {
+   506→      toast({ title: 'Error', description: 'Gagal memuat data user', variant: 'destructive' })
+   507→    } finally {
+   508→      setUsersLoading(false)
+   509→    }
+   510→  }
+   511→
+   512→  // Add user
+   513→  const handleAddUser = async () => {
+   514→    if (!addUserForm.username || !addUserForm.password || !addUserForm.namaLengkap) {
+   515→      toast({ title: 'Error', description: 'Semua field harus diisi', variant: 'destructive' })
+   516→      return
+   517→    }
+   518→    setUserSaving(true)
+   519→    try {
+   520→      const res = await fetch('/api/users', {
+   521→        method: 'POST',
+   522→        headers: { 'Content-Type': 'application/json' },
+   523→        body: JSON.stringify(addUserForm),
+   524→      })
+   525→      const data = await res.json()
+   526→      if (data.success) {
+   527→        toast({ title: 'Berhasil', description: `User ${addUserForm.namaLengkap} berhasil ditambahkan` })
+   528→        setAddUserOpen(false)
+   529→        setAddUserForm({ username: '', password: '', namaLengkap: '', role: 'verifikator' })
+   530→        loadUsers()
+   531→      } else {
+   532→        toast({ title: 'Gagal', description: data.error, variant: 'destructive' })
+   533→      }
+   534→    } catch {
+   535→      toast({ title: 'Error', description: 'Terjadi kesalahan', variant: 'destructive' })
+   536→    } finally {
+   537→      setUserSaving(false)
+   538→    }
+   539→  }
+   540→
+   541→  // Edit user
+   542→  const handleEditUser = async () => {
+   543→    if (!editUserData) return
+   544→    if (!editUserForm.username || !editUserForm.namaLengkap) {
+   545→      toast({ title: 'Error', description: 'Username dan Nama Lengkap harus diisi', variant: 'destructive' })
+   546→      return
+   547→    }
+   548→    setUserSaving(true)
+   549→    try {
+   550→      const body: Record<string, unknown> = {
+   551→        id: editUserData.id,
+   552→        username: editUserForm.username,
+   553→        namaLengkap: editUserForm.namaLengkap,
+   554→        role: editUserForm.role,
+   555→        aktif: editUserForm.aktif,
+   556→      }
+   557→      if (editUserForm.password) body.password = editUserForm.password
+   558→
+   559→      const res = await fetch('/api/users', {
+   560→        method: 'PUT',
+   561→        headers: { 'Content-Type': 'application/json' },
+   562→        body: JSON.stringify(body),
+   563→      })
+   564→      const data = await res.json()
+   565→      if (data.success) {
+   566→        toast({ title: 'Berhasil', description: 'User berhasil diperbarui' })
+   567→        setEditUserOpen(false)
+   568→        loadUsers()
+   569→      } else {
+   570→        toast({ title: 'Gagal', description: data.error, variant: 'destructive' })
+   571→      }
+   572→    } catch {
+   573→      toast({ title: 'Error', description: 'Terjadi kesalahan', variant: 'destructive' })
+   574→    } finally {
+   575→      setUserSaving(false)
+   576→    }
+   577→  }
+   578→
+   579→  // Delete user
+   580→  const handleDeleteUser = async () => {
+   581→    if (!deleteUserTarget) return
+   582→    setDeleteUserLoading(true)
+   583→    try {
+   584→      const res = await fetch(`/api/users?id=${deleteUserTarget.id}`, { method: 'DELETE' })
+   585→      const data = await res.json()
+   586→      if (data.success) {
+   587→        toast({ title: 'Berhasil', description: 'User berhasil dihapus' })
+   588→        setDeleteUserOpen(false)
+   589→        setDeleteUserTarget(null)
+   590→        loadUsers()
+   591→      } else {
+   592→        toast({ title: 'Gagal', description: data.error, variant: 'destructive' })
+   593→      }
+   594→    } catch {
+   595→      toast({ title: 'Error', description: 'Terjadi kesalahan', variant: 'destructive' })
+   596→    } finally {
+   597→      setDeleteUserLoading(false)
+   598→    }
+   599→  }
+   600→
+   601→  // Reset password (admin)
+   602→  const handleResetPassword = async () => {
+   603→    if (!resetPasswordTarget || !resetPasswordNew || resetPasswordNew.length < 6) return
+   604→    setResetPasswordLoading(true)
+   605→    try {
+   606→      const res = await fetch('/api/users', {
+   607→        method: 'PUT',
+   608→        headers: { 'Content-Type': 'application/json' },
+   609→        body: JSON.stringify({ id: resetPasswordTarget.id, password: resetPasswordNew }),
+   610→      })
+   611→      const data = await res.json()
+   612→      if (data.success) {
+   613→        toast({ title: 'Password Direset', description: `Password @{resetPasswordTarget.username} berhasil diubah` })
+   614→        setResetPasswordOpen(false)
+   615→        setResetPasswordNew('')
+   616→        setResetPasswordTarget(null)
+   617→      } else {
+   618→        toast({ title: 'Gagal', description: data.error, variant: 'destructive' })
+   619→      }
+   620→    } catch {
+   621→      toast({ title: 'Error', description: 'Terjadi kesalahan', variant: 'destructive' })
+   622→    } finally {
+   623→      setResetPasswordLoading(false)
+   624→    }
+   625→  }
+   626→
+   627→  // Update own profile
+   628→  const handleUpdateProfile = async () => {
+   629→    if (!editProfileForm.username || !editProfileForm.namaLengkap) {
+   630→      toast({ title: 'Error', description: 'Username dan Nama Lengkap harus diisi', variant: 'destructive' })
+   631→      return
+   632→    }
+   633→    setEditProfileSaving(true)
+   634→    try {
+   635→      const body: Record<string, string> = {
+   636→        username: editProfileForm.username,
+   637→        namaLengkap: editProfileForm.namaLengkap,
+   638→      }
+   639→      if (editProfileForm.password) body.password = editProfileForm.password
+   640→
+   641→      const res = await fetch('/api/auth/profile', {
+   642→        method: 'PUT',
+   643→        headers: { 'Content-Type': 'application/json' },
+   644→        body: JSON.stringify(body),
+   645→      })
+   646→      const data = await res.json()
+   647→      if (data.success) {
+   648→        setAuthUser(data.user)
+   649→        setEditProfileOpen(false)
+   650→        toast({ title: 'Berhasil', description: 'Profil berhasil diperbarui' })
+   651→      } else {
+   652→        toast({ title: 'Gagal', description: data.error, variant: 'destructive' })
+   653→      }
+   654→    } catch {
+   655→      toast({ title: 'Error', description: 'Terjadi kesalahan', variant: 'destructive' })
+   656→    } finally {
+   657→      setEditProfileSaving(false)
+   658→    }
+   659→  }
+   660→
+   661→  // Check for duplicates
+   662→  const checkDuplicates = async () => {
+   663→    setDuplicateLoading(true)
+   664→    setDuplicateDialogOpen(true)
+   665→    try {
+   666→      const res = await fetch('/api/registrations/duplicates')
+   667→      const data = await res.json()
+   668→      if (data.success) {
+   669→        setDuplicateData({ summary: data.summary, duplicates: data.duplicates })
+   670→      } else {
+   671→        toast({ title: 'Gagal', description: data.error || 'Gagal memeriksa duplikat', variant: 'destructive' })
+   672→      }
+   673→    } catch {
+   674→      toast({ title: 'Error', description: 'Terjadi kesalahan saat memeriksa duplikat', variant: 'destructive' })
+   675→    } finally {
+   676→      setDuplicateLoading(false)
+   677→    }
+   678→  }
+   679→
+   680→  // ==================== DATA FETCHING HOOKS (must be before conditional returns) ====================
+   681→  const fetchRegistrations = useCallback(async () => {
+   682→    setLoading(true)
+   683→    try {
+   684→      const params = new URLSearchParams()
+   685→      params.set('page', pagination.page.toString())
+   686→      params.set('limit', pagination.limit.toString())
+   687→      if (search) params.set('search', search)
+   688→      if (subJalurFilter !== 'all') params.set('subJalur', subJalurFilter)
+   689→      if (verificationFilter !== 'all') params.set('verificationStatus', verificationFilter)
+   690→      if (jurusanFilter !== 'all') params.set('jurusan', jurusanFilter)
+   691→      if (tahap) params.set('tahap', tahap.toString())
+   692→
+   693→      const res = await fetch(`/api/registrations?${params}`)
+   694→      if (!res.ok) {
+   695→        toast({ title: 'Error', description: 'Gagal memuat data pendaftar', variant: 'destructive' })
+   696→        return
+   697→      }
+   698→      const data = await res.json()
+   699→      if (data.authenticated === false) return // Not authenticated — silently ignore
+   700→      setRegistrations(dedupById(data.data || []))
+   701→      if (data.pagination) setPagination(prev => ({ ...prev, ...data.pagination }))
+   702→    } catch {
+   703→      toast({ title: 'Error', description: 'Gagal memuat data pendaftar', variant: 'destructive' })
+   704→    } finally {
+   705→      setLoading(false)
+   706→    }
+   707→  }, [pagination.page, pagination.limit, search, subJalurFilter, verificationFilter, jurusanFilter, tahap, toast])
+   708→
+   709→  const fetchStats = useCallback(async () => {
+   710→    try {
+   711→      const res = await fetch(`/api/dashboard?tahap=${tahap}`)
+   712→      if (!res.ok) {
+   713→        toast({ title: 'Error', description: 'Gagal memuat statistik', variant: 'destructive' })
+   714→        return
+   715→      }
+   716→      const data = await res.json()
+   717→      if (data.authenticated === false) return // Not authenticated — silently ignore
+   718→      if (data.error) {
+   719→        toast({ title: 'Error', description: data.error, variant: 'destructive' })
+   720→        return
+   721→      }
+   722→      // Deduplicate all list data to prevent React key errors
+   723→      if (data.verifiedList) data.verifiedList = dedupById(data.verifiedList)
+   724→      if (data.rejectedList) data.rejectedList = dedupById(data.rejectedList)
+   725→      if (data.lulusList) data.lulusList = dedupById(data.lulusList)
+   726→      if (data.tidakLulusList) data.tidakLulusList = dedupById(data.tidakLulusList)
+   727→      if (data.daftarUlangList) data.daftarUlangList = dedupById(data.daftarUlangList)
+   728→      if (data.tidakDaftarUlangList) data.tidakDaftarUlangList = dedupById(data.tidakDaftarUlangList)
+   729→      setStats(data)
+   730→    } catch {
+   731→      // Silently fail - stats will show empty, no need to alarm the user
+   732→    }
+   733→  }, [tahap, toast])
+   734→
+   735→  const fetchSettings = useCallback(async () => {
+   736→    setSettingsLoading(true)
+   737→    try {
+   738→      const res = await fetch('/api/settings')
+   739→      const data = await res.json()
+   740→      setKuota(data.kuota || 0)
+   741→      setJalurConfigs(data.jalurConfigs || [])
+   742→      setAppName(data.appName || 'SPMB 2026')
+   743→      setSchoolName(data.schoolName || '')
+   744→      setAppIcon(data.appIcon || '')
+   745→      setAppSubtitle(data.appSubtitle || 'Sistem Verifikasi Penerimaan Murid Baru')
+   746→      // Load tahap from settings
+   747→      if (data.tahap) setTahap(data.tahap)
+   748→      if (data.jalurAktifPerTahap) setJalurAktifPerTahap(data.jalurAktifPerTahap)
+   749→    } catch {
+   750→      // Silently fail - settings will use defaults
+   751→    } finally {
+   752→      setSettingsLoading(false)
+   753→    }
+   754→  }, [])
+   755→
+   756→  useEffect(() => {
+   757→    if (isAuthenticated) fetchRegistrations()
+   758→  }, [fetchRegistrations, isAuthenticated])
+   759→
+   760→  useEffect(() => {
+   761→    if (isAuthenticated) fetchStats()
+   762→  }, [fetchStats, isAuthenticated])
+   763→
+   764→  useEffect(() => {
+   765→    if (isAuthenticated) fetchSettings()
+   766→  }, [fetchSettings, isAuthenticated])
+   767→
+   768→  // PWA (manifest + service worker) is DISABLED on Vercel preview deployments
+   769→  // because Vercel Deployment Protection blocks /api/manifest and /sw.js with 401,
+   770→  // which causes console errors. PWA is only useful on production (custom domain).
+   771→  // On production (no DP), the manifest link in layout.tsx and SW registration work fine.
+   772→  //
+   773→  // If you want to enable PWA on preview, remove Vercel Deployment Protection from
+   774→  // your project settings at: vercel.com → Settings → Deployment Protection
+   775→
+   776→  // Load users when Pengaturan tab is active
+   777→  useEffect(() => {
+   778→    if (activeTab === 'pengaturan' && authUser?.role === 'admin') {
+   779→      loadUsers()
+   780→    }
+   781→  }, [activeTab, authUser?.role])
+   782→
+   783→  // Redirect verifikator away from restricted tabs
+   784→  useEffect(() => {
+   785→    if (authUser?.role === 'verifikator' && (activeTab === 'pengaturan' || activeTab === 'ranking')) {
+   786→      setActiveTab('dashboard')
+   787→    }
+   788→  }, [activeTab, authUser?.role])
+   789→
+   790→  // Auto-logout safety net: if isAuthenticated is true but no valid session
+   791→  // (e.g. React HMR, DevTools state injection), force logout.
+   792→  // This is a safety net — the main session cleanup happens in beforeunload via sendBeacon.
+   793→  useEffect(() => {
+   794→    if (isAuthenticated) {
+   795→      const sessionFlag = sessionStorage.getItem('spmb_session_active')
+   796→      if (!sessionFlag) {
+   797→        setIsAuthenticated(false)
+   798→        setAuthUser(null)
+   799→      }
+   800→    }
+   801→  }, [isAuthenticated])
+   802→
+   803→  // Set session flag when logged in
+   804→  useEffect(() => {
+   805→    if (isAuthenticated) {
+   806→      sessionStorage.setItem('spmb_session_active', 'true')
+   807→    } else {
+   808→      sessionStorage.removeItem('spmb_session_active')
+   809→    }
+   810→  }, [isAuthenticated])
+   811→
+   812→  // Fetch app name early
+   813→  useEffect(() => {
+   814→    const fetchAppName = async () => {
+   815→      try {
+   816→        const res = await fetch('/api/settings')
+   817→        if (res.ok) {
+   818→          const data = await res.json()
+   819→          if (data.appName) setAppName(data.appName)
+   820→          if (data.schoolName) setSchoolName(data.schoolName)
+   821→          if (data.appIcon) setAppIcon(data.appIcon)
+   822→          if (data.appSubtitle) setAppSubtitle(data.appSubtitle)
+   823→        }
+   824→      } catch {
+   825→        // silently fail
+   826→      }
+   827→    }
+   828→    fetchAppName()
+   829→  }, [])
+   830→
+   831→  // Dynamically update document title and favicon
+   832→  useEffect(() => {
+   833→    if (appName) {
+   834→      // Use first line of subtitle for the tab title (or the whole subtitle if no newline)
+   835→      const subtitleFirstLine = appSubtitle.split('\n')[0] || appSubtitle
+   836→      document.title = `${appName}${schoolName ? ' — ' + schoolName : ''} — ${subtitleFirstLine}`
+   837→    }
+   838→  }, [appName, schoolName, appSubtitle])
+   839→
+   840→  useEffect(() => {
+   841→    if (appIcon) {
+   842→      // Update favicon dynamically using the admin-uploaded icon
+   843→      let link = document.querySelector<HTMLLinkElement>("link[rel~='icon']")
+   844→      if (!link) {
+   845→        link = document.createElement('link')
+   846→        link.rel = 'icon'
+   847→        document.head.appendChild(link)
+   848→      }
+   849→      // Use the dynamic icon endpoint with cache-busting for the admin-uploaded icon
+   850→      link.href = `/api/app-icon?size=192&t=${Date.now()}`
+   851→
+   852→      // Update all apple-touch-icon links (for iOS home screen)
+   853→      const appleLinks = document.querySelectorAll<HTMLLinkElement>("link[rel='apple-touch-icon']")
+   854→      appleLinks.forEach((appleLink, idx) => {
+   855→        const size = idx === 0 ? '192' : '512'
+   856→        appleLink.href = `/api/app-icon?size=${size}&t=${Date.now()}`
+   857→      })
+   858→
+   859→      // Update manifest link if it exists (added after auth) to pick up new icon
+   860→      const manifestLink = document.querySelector<HTMLLinkElement>("link[rel='manifest']")
+   861→      if (manifestLink) {
+   862→        manifestLink.href = `/api/manifest?t=${Date.now()}`
+   863→      }
+   864→    }
+   865→  }, [appIcon])
+   866→
+   867→  // On page close/navigate away: call logout API to delete the server-side session.
+   868→  // This ensures the user must re-login when they revisit the app.
+   869→  // Using sendBeacon for reliable delivery during page unload.
+   870→  useEffect(() => {
+   871→    const handleUnload = () => {
+   872→      if (isAuthenticated) {
+   873→        navigator.sendBeacon('/api/auth/logout')
+   874→      }
+   875→    }
+   876→    window.addEventListener('beforeunload', handleUnload)
+   877→    return () => window.removeEventListener('beforeunload', handleUnload)
+   878→  }, [isAuthenticated])
+   879→
+   880→  // Fetch ranking data
+   881→  const fetchRanking = useCallback(async () => {
+   882→    setRankingLoading(true)
+   883→    try {
+   884→      const params = new URLSearchParams()
+   885→      if (rankingJalur !== 'all') params.set('jalur', rankingJalur)
+   886→      if (rankingSekolah !== 'all') params.set('sekolah', rankingSekolah)
+   887→      if (rankingJurusan !== 'all') params.set('jurusan', rankingJurusan)
+   888→      params.set('tampilan', rankingTampilan)
+   889→      if (rankingStatus !== 'all') params.set('status', rankingStatus)
+   890→      if (tahap) params.set('tahap', tahap.toString())
+   891→
+   892→      const res = await fetch(`/api/ranking?${params}`)
+   893→      if (!res.ok) {
+   894→        toast({ title: 'Error', description: 'Gagal memuat data perangkingan', variant: 'destructive' })
+   895→        return
+   896→      }
+   897→      const data = await res.json()
+   898→      if (data.success) {
+   899→        setRankingData(data.data || [])
+   900→        setRankingFilters(data.filters || { jalurOptions: [], sekolahOptions: [], jurusanOptions: [] })
+   901→        setRankingKuota(data.kuota || 0)
+   902→        setRankingKuotaPerJalur(data.kuotaPerJalur || [])
+   903→      }
+   904→    } catch {
+   905→      toast({ title: 'Error', description: 'Gagal memuat data perangkingan', variant: 'destructive' })
+   906→    } finally {
+   907→      setRankingLoading(false)
+   908→    }
+   909→  }, [rankingJalur, rankingSekolah, rankingJurusan, rankingTampilan, rankingStatus, tahap, toast])
+   910→
+   911→  useEffect(() => {
+   912→    if (isAuthenticated && authUser?.role === 'admin' && authUser?.id) fetchRanking()
+   913→  }, [fetchRanking, isAuthenticated, authUser?.role, authUser?.id])
+   914→
+   915→  // ==================== CONDITIONAL RENDERS ====================
+   916→  // Auth screens
+   917→  if (authLoading || needsSetup || !isAuthenticated) {
+   918→    return (
+   919→      <AuthScreens
+   920→        authLoading={authLoading}
+   921→        needsSetup={needsSetup}
+   922→        isAuthenticated={isAuthenticated}
+   923→        appName={appName}
+   924→        schoolName={schoolName}
+   925→        appIcon={appIcon}
+   926→        appSubtitle={appSubtitle}
+   927→        loginUsername={loginUsername}
+   928→        setLoginUsername={setLoginUsername}
+   929→        loginPassword={loginPassword}
+   930→        setLoginPassword={setLoginPassword}
+   931→        loginLoading={loginLoading}
+   932→        loginError={loginError}
+   933→        showLoginPassword={showLoginPassword}
+   934→        setShowLoginPassword={setShowLoginPassword}
+   935→        handleLogin={handleLogin}
+   936→        setupUsername={setupUsername}
+   937→        setSetupUsername={setSetupUsername}
+   938→        setupPassword={setupPassword}
+   939→        setSetupPassword={setSetupPassword}
+   940→        setupNamaLengkap={setupNamaLengkap}
+   941→        setSetupNamaLengkap={setSetupNamaLengkap}
+   942→        setupLoading={setupLoading}
+   943→        setupError={setupError}
+   944→        showSetupPassword={showSetupPassword}
+   945→        setShowSetupPassword={setShowSetupPassword}
+   946→        handleSetup={handleSetup}
+   947→      />
+   948→    )
+   949→  }
+   950→
+   951→  // ==================== HANDLER FUNCTIONS ====================
+   952→  const handlePortalPaste = () => {
+   953→    if (!portalRawText.trim()) return
+   954→    setPortalParsing(true)
+   955→    try {
+   956→      const parsed = parsePortalText(portalRawText, jalurConfigs)
+   957→      setPortalParsedData(parsed)
+   958→      const detectedJalur = parsed['_detectedJalurNama'] || ''
+   959→      if (detectedJalur) {
+   960→        setPortalSelectedJalur(detectedJalur)
+   961→      } else {
+   962→        const firstActive = jalurConfigs.find(j => j.aktif)
+   963→        setPortalSelectedJalur(firstActive?.nama || '')
+   964→      }
+   965→      // Auto-set verification status based on portal-detected status
+   966→      const detectedStatus = parsed['status'] || ''
+   967→      if (detectedStatus === 'DITOLAK') {
+   968→        setPortalVerifStatus('REJECTED')
+   969→      } else {
+   970→        setPortalVerifStatus('VERIFIED')
+   971→      }
+   972→    } catch {
+   973→      toast({ title: 'Gagal', description: 'Tidak dapat memparse teks portal', variant: 'destructive' })
+   974→    } finally {
+   975→      setPortalParsing(false)
+   976→    }
+   977→  }
+   978→
+   979→  const handlePortalSave = async (overrideStatus?: 'VERIFIED' | 'REJECTED' | 'PENDING') => {
+   980→    if (!portalParsedData) return
+   981→
+   982→    // Use override status if provided, otherwise use the dialog selector
+   983→    const effectiveStatus = overrideStatus || portalVerifStatus
+   984→
+   985→    // Validation: if REJECTED, must have kekurangan verifikasi selected (same rule as Kekurangan Verifikasi column)
+   986→    if (effectiveStatus === 'REJECTED' && !portalKekurangan.trim()) {
+   987→      toast({ title: 'Gagal', description: 'Kekurangan verifikasi wajib dipilih! Pilih minimal 1 alasan penolakan.', variant: 'destructive' })
+   988→      return
+   989→    }
+   990→
+   991→    setImporting(true)
+   992→    setSavingStatus(effectiveStatus)
+   993→    try {
+   994→      const saveData = { ...portalParsedData }
+   995→      if (portalSelectedJalur) {
+   996→        saveData['subJalur'] = getJalurSubFilter(portalSelectedJalur)
+   997→      }
+   998→      delete saveData['_detectedJalurNama']
+   999→      delete saveData['_jalurAutoDetected']
+  1000→
+  1001→      // Set verification status from the effective status
+  1002→      if (effectiveStatus === 'REJECTED') {
+  1003→        saveData['status'] = 'DITOLAK'
+  1004→        saveData['verificationStatus'] = 'REJECTED'
+  1005→      } else if (effectiveStatus === 'PENDING') {
+  1006→        saveData['verificationStatus'] = 'PENDING'
+  1007→        saveData['status'] = 'ON PROGRESS'
+  1008→      } else {
+  1009→        saveData['verificationStatus'] = 'VERIFIED'
+  1010→        // Keep original status from portal if DITERIMA, otherwise default
+  1011→        if (saveData['status'] === 'DITOLAK') {
+  1012→          saveData['status'] = 'DITERIMA'
+  1013→        } else if (!saveData['status'] || saveData['status'] === 'ON PROGRESS') {
+  1014→          saveData['status'] = 'DITERIMA'
+  1015→        }
+  1016→      }
+  1017→
+  1018→      // Include verification fields
+  1019→      if (portalKekurangan) saveData['kekuranganVerifikasi'] = portalKekurangan
+  1020→      if (portalVerifNote) saveData['verificationNote'] = portalVerifNote
+  1021→      if (portalTanggalVerif) saveData['tanggalVerif'] = portalTanggalVerif
+  1022→      if (portalJamVerif) saveData['jamVerif'] = portalJamVerif
+  1023→      if (portalTerbitKK) saveData['terbitKK'] = portalTerbitKK
+  1024→
+  1025→      // Include tahap
+  1026→      saveData['tahap'] = tahap
+  1027→
+  1028→      const res = await fetch('/api/registrations/portal-paste', {
+  1029→        method: 'POST',
+  1030→        headers: { 'Content-Type': 'application/json' },
+  1031→        body: JSON.stringify(saveData),
+  1032→      })
+  1033→
+  1034→      const data = await res.json()
+  1035→
+  1036→      // Handle auth errors — API returns 200 with {authenticated: false} instead of 401
+  1037→      if (data.authenticated === false) {
+  1038→        toast({ title: 'Sesi Berakhir', description: 'Sesi login Anda telah habis. Silakan login ulang.', variant: 'destructive' })
+  1039→        setIsAuthenticated(false)
+  1040→        setAuthUser(null)
+  1041→        return
+  1042→      }
+  1043→
+  1044→      if (data.success) {
+  1045→        const nisnLabel = portalParsedData.nisn ? ` (NISN: ${portalParsedData.nisn})` : ''
+  1046→        const savedRegId = data.data?.id || null
+  1047→        if (data.action === 'created') {
+  1048→          toast({ title: '✅ Data Baru Disimpan', description: data.message || `Data ${portalParsedData.nama || 'pendaftar'}${nisnLabel} berhasil ditambahkan sebagai data baru` })
+  1049→        } else if (data.action === 'updated') {
+  1050→          toast({ title: '🔄 Data Diperbarui', description: data.message || `Data ${portalParsedData.nama || 'pendaftar'}${nisnLabel} berhasil diperbarui — field kosong telah diisi` })
+  1051→        } else {
+  1052→          toast({ title: 'ℹ️ Data Sudah Lengkap', description: data.message || `Data ${portalParsedData.nama || 'pendaftar'}${nisnLabel} sudah lengkap, tidak ada perubahan` })
+  1053→        }
+  1054→        setPortalPasteOpen(false)
+  1055→        setPortalRawText('')
+  1056→        setPortalParsedData(null)
+  1057→        setPortalSelectedJalur('')
+  1058→        // Reset verification fields
+  1059→        setPortalVerifStatus('VERIFIED')
+  1060→        setPortalKekurangan('')
+  1061→        setPortalVerifNote('')
+  1062→        setPortalTanggalVerif('')
+  1063→        setPortalJamVerif('')
+  1064→        setPortalTerbitKK('')
+  1065→        // Refresh Lembar Verifikasi sheet immediately (lightweight)
+  1066→        setLembarRefreshKey(prev => prev + 1)
+  1067→        // Also refresh parent-level data for other tabs
+  1068→        fetchRegistrations()
+  1069→        fetchStats()
+  1070→
+  1071→        // Navigate to correct Lembar Verifikasi tab and highlight the student
+  1072→        if (savedRegId && portalSelectedJalur) {
+  1073→          const subJalurValue = getJalurSubFilter(portalSelectedJalur)
+  1074→          // Find the matching lembar tab key
+  1075→          const matchingLembar = lembarVerifikasi.find(lv => {
+  1076→            const jalurNames = lv.subJalurFilter.split(',').map(s => s.trim())
+  1077→            return jalurNames.includes(subJalurValue)
+  1078→          })
+  1079→          if (matchingLembar) {
+  1080→            setLembarTab(matchingLembar.key)
+  1081→          }
+  1082→          setActiveTab('lembar-verifikasi')
+  1083→          setHighlightRegId(savedRegId)
+  1084→          // Clear highlight after 5 seconds
+  1085→          setTimeout(() => setHighlightRegId(null), 5000)
+  1086→        }
+  1087→      } else {
+  1088→        toast({ title: 'Gagal', description: data.error || 'Terjadi kesalahan', variant: 'destructive' })
+  1089→      }
+  1090→    } catch {
+  1091→      toast({ title: 'Gagal', description: 'Terjadi kesalahan', variant: 'destructive' })
+  1092→    } finally {
+  1093→      setImporting(false)
+  1094→      setSavingStatus(null)
+  1095→    }
+  1096→  }
+  1097→
+  1098→  const handleSumutBerkahSave = async () => {
+  1099→    if (!sumutBerkahPreview || sumutBerkahPreview.length === 0) return
+  1100→    setSumutBerkahParsing(true)
+  1101→    try {
+  1102→      const res = await fetch('/api/registrations/sumut-berkah', {
+  1103→        method: 'POST',
+  1104→        headers: { 'Content-Type': 'application/json' },
+  1105→        body: JSON.stringify({ updates: sumutBerkahPreview }),
+  1106→      })
+  1107→      const data = await res.json()
+  1108→      if (data.success) {
+  1109→        setSumutBerkahResult({ matched: data.matched, updated: data.updated, notFound: data.notFound })
+  1110→        toast({ title: '✅ Data Sumut Berkah Diperbarui', description: `${data.matched} nama cocok, ${data.updated} data diperbarui${data.notFound?.length > 0 ? `, ${data.notFound.length} tidak ditemukan` : ''}` })
+  1111→        fetchRegistrations()
+  1112→        fetchStats()
+  1113→      } else {
+  1114→        toast({ title: 'Gagal', description: data.error || 'Terjadi kesalahan', variant: 'destructive' })
+  1115→      }
+  1116→    } catch {
+  1117→      toast({ title: 'Gagal', description: 'Terjadi kesalahan saat menyimpan data', variant: 'destructive' })
+  1118→    } finally {
+  1119→      setSumutBerkahParsing(false)
+  1120→    }
+  1121→  }
+  1122→
+  1123→  const saveKuota = async () => {
+  1124→    setSettingsSaving(true)
+  1125→    try {
+  1126→      const res = await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kuota }) })
+  1127→      const data = await res.json()
+  1128→      if (data.success) toast({ title: 'Tersimpan', description: `Kuota siswa: ${kuota}` })
+  1129→    } catch {
+  1130→      toast({ title: 'Gagal', description: 'Gagal menyimpan kuota', variant: 'destructive' })
+  1131→    } finally {
+  1132→      setSettingsSaving(false)
+  1133→    }
+  1134→  }
+  1135→
+  1136→  const saveAppName = async () => {
+  1137→    setSettingsSaving(true)
+  1138→    try {
+  1139→      const res = await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ appName, schoolName, appIcon, appSubtitle }) })
+  1140→      const data = await res.json()
+  1141→      if (data.success) toast({ title: 'Tersimpan', description: `Pengaturan aplikasi berhasil disimpan` })
+  1142→    } catch {
+  1143→      toast({ title: 'Gagal', description: 'Gagal menyimpan pengaturan aplikasi', variant: 'destructive' })
+  1144→    } finally {
+  1145→      setSettingsSaving(false)
+  1146→    }
+  1147→  }
+  1148→
+  1149→  const updateJalurPersentase = async (id: string, persentase: number) => {
+  1150→    try {
+  1151→      const res = await fetch('/api/settings/jalur', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, persentase }) })
+  1152→      const data = await res.json()
+  1153→      if (data.success) setJalurConfigs(prev => prev.map(j => j.id === id ? { ...j, persentase } : j))
+  1154→    } catch {
+  1155→      toast({ title: 'Gagal', description: 'Gagal memperbarui persentase', variant: 'destructive' })
+  1156→    }
+  1157→  }
+  1158→
+  1159→  const addJalur = async () => {
+  1160→    if (!newJalurNama.trim()) { toast({ title: 'Gagal', description: 'Nama jalur wajib diisi', variant: 'destructive' }); return }
+  1161→    try {
+  1162→      const res = await fetch('/api/settings/jalur', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nama: newJalurNama.trim(), persentase: newJalurPersentase }) })
+  1163→      const data = await res.json()
+  1164→      if (data.success) {
+  1165→        setJalurConfigs(prev => [...prev, data.data])
+  1166→        setNewJalurNama('')
+  1167→        setNewJalurPersentase(0)
+  1168→        setAddJalurOpen(false)
+  1169→        toast({ title: 'Berhasil', description: `Jalur "${data.data.nama}" berhasil ditambahkan` })
+  1170→      } else {
+  1171→        toast({ title: 'Gagal', description: data.error || 'Gagal menambah jalur', variant: 'destructive' })
+  1172→      }
+  1173→    } catch {
+  1174→      toast({ title: 'Gagal', description: 'Gagal menambah jalur', variant: 'destructive' })
+  1175→    }
+  1176→  }
+  1177→
+  1178→  const deleteJalur = async (id: string, nama: string) => {
+  1179→    if (!confirm(`Hapus jalur "${nama}"?`)) return
+  1180→    try {
+  1181→      const res = await fetch(`/api/settings/jalur?id=${id}`, { method: 'DELETE' })
+  1182→      const data = await res.json()
+  1183→      if (data.success) {
+  1184→        setJalurConfigs(prev => prev.filter(j => j.id !== id))
+  1185→        toast({ title: 'Berhasil', description: data.message })
+  1186→      } else {
+  1187→        toast({ title: 'Gagal', description: data.error || 'Gagal menghapus jalur', variant: 'destructive' })
+  1188→      }
+  1189→    } catch {
+  1190→      toast({ title: 'Gagal', description: 'Gagal menghapus jalur', variant: 'destructive' })
+  1191→    }
+  1192→  }
+  1193→
+  1194→  const toggleJalurAktif = async (id: string, aktif: boolean) => {
+  1195→    try {
+  1196→      const res = await fetch('/api/settings/jalur', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, aktif }) })
+  1197→      const data = await res.json()
+  1198→      if (data.success) {
+  1199→        setJalurConfigs(prev => prev.map(j => j.id === id ? { ...j, aktif } : j))
+  1200→        // Also save per-tahap jalur activation so switching tahap remembers the toggle
+  1201→        setJalurAktifPerTahap(prev => {
+  1202→          const mapping: Record<string, string[]> = prev ? JSON.parse(prev) : {}
+  1203→          // Get the NEW active list (including this toggle)
+  1204→          const newActiveIds = jalurConfigs
+  1205→            .map(j => j.id === id ? { ...j, aktif } : j)
+  1206→            .filter(j => j.aktif)
+  1207→            .map(j => j.id)
+  1208→          mapping[tahap.toString()] = newActiveIds
+  1209→          const newMapping = JSON.stringify(mapping)
+  1210→          // Persist to backend
+  1211→          fetch('/api/settings', {
+  1212→            method: 'PUT',
+  1213→            headers: { 'Content-Type': 'application/json' },
+  1214→            body: JSON.stringify({ jalurAktifPerTahap: newMapping }),
+  1215→          })
+  1216→          return newMapping
+  1217→        })
+  1218→      }
+  1219→    } catch {
+  1220→      toast({ title: 'Gagal', description: 'Gagal mengubah status jalur', variant: 'destructive' })
+  1221→    }
+  1222→  }
+  1223→
+  1224→  const handlePortalSync = async () => {
+  1225→    if (!portalSyncEmail.trim() || !portalSyncPassword.trim()) { toast({ title: 'Gagal', description: 'Email dan password portal wajib diisi', variant: 'destructive' }); return }
+  1226→    setPortalSyncing(true)
+  1227→    setPortalSyncResult(null)
+  1228→    try {
+  1229→      const res = await fetch('/api/portal-sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: portalSyncEmail.trim(), password: portalSyncPassword, pages: portalSyncPages, status: portalSyncStatus }) })
+  1230→      const data = await res.json()
+  1231→      if (data.error) {
+  1232→        setPortalSyncResult({ success: false, message: data.error })
+  1233→        toast({ title: 'Gagal', description: data.error, variant: 'destructive' })
+  1234→      } else {
+  1235→        setPortalSyncResult({ success: true, message: data.message, created: data.created, updated: data.updated, unchanged: data.unchanged, total: data.total })
+  1236→        toast({ title: '✅ Sinkronisasi Berhasil', description: data.message })
+  1237→        fetchRegistrations()
+  1238→        fetchStats()
+  1239→      }
+  1240→    } catch {
+  1241→      const errMsg = 'Terjadi kesalahan saat sinkronisasi'
+  1242→      setPortalSyncResult({ success: false, message: errMsg })
+  1243→      toast({ title: 'Gagal', description: errMsg, variant: 'destructive' })
+  1244→    } finally {
+  1245→      setPortalSyncing(false)
+  1246→    }
+  1247→  }
+  1248→
+  1249→  const parseCSVClientSide = (text: string) => {
+  1250→    const lines = text.trim().split('\n')
+  1251→    if (lines.length < 2) return []
+  1252→    const headers = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim())
+  1253→    const rows: Record<string, string>[] = []
+  1254→    let skippedRows = 0
+  1255→    for (let i = 1; i < lines.length; i++) {
+  1256→      if (!lines[i].trim()) continue // skip empty lines
+  1257→      const values: string[] = []
+  1258→      let current = ''
+  1259→      let inQuotes = false
+  1260→      for (const char of lines[i]) {
+  1261→        if (char === '"') { inQuotes = !inQuotes } else if (char === ',' && !inQuotes) { values.push(current.trim()); current = '' } else { current += char }
+  1262→      }
+  1263→      values.push(current.trim())
+  1264→      // Accept rows with close column counts (allow slight mismatches by padding)
+  1265→      if (values.length >= headers.length - 2 && values.length <= headers.length + 2) {
+  1266→        const row: Record<string, string> = {}
+  1267→        headers.forEach((header, index) => { row[header] = values[index] || '' })
+  1268→        rows.push(row)
+  1269→      } else {
+  1270→        skippedRows++
+  1271→      }
+  1272→    }
+  1273→    if (skippedRows > 0) {
+  1274→      toast({ title: 'Perhatian', description: `${skippedRows} baris CSV dilewati karena format tidak valid`, variant: 'destructive' })
+  1275→    }
+  1276→    return rows
+  1277→  }
+  1278→
+  1279→  const handleImport = async () => {
+  1280→    if (!csvFile) return
+  1281→    setImporting(true)
+  1282→    try {
+  1283→      const text = await csvFile.text()
+  1284→      const csvRows = parseCSVClientSide(text)
+  1285→      if (csvRows.length === 0) throw new Error('File CSV kosong atau format tidak valid')
+  1286→      const finalStatus = useCsvStatus ? undefined : importStatus
+  1287→      const mappedRows = csvRows.map(row => ({
+  1288→        noRegistrasi: row['No.Registrasi'] || '', nama: row['Nama'] || '', nisn: row['NISN'] || '', subJalur: row['Sub Jalur'] || '',
+  1289→        npsnSekolahPilihan: row['NPSN Sekolah Pilihan'] || '', namaSekolahPilihan: row['Nama Sekolah Pilihan'] || '', jurusan: row['Jurusan'] || '',
+  1290→        npsnSekolahAsal: row['NPSN Sekolah Asal'] || '', namaSekolahAsal: row['Nama Sekolah Asal'] || '', status: finalStatus || row['Status'] || importStatus, waktuDaftar: row['Waktu Daftar'] || '',
+  1291→      }))
+  1292→      const importRes = await fetch('/api/registrations/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows: mappedRows, overrideStatus: !useCsvStatus, tahap }) })
+  1293→      const importData = await importRes.json()
+  1294→      if (importData.success) {
+  1295→        const skippedInfo = importData.skipped > 0 ? `, ${importData.skipped} dilewati` : ''
+  1296→        const errorInfo = importData.errors?.length > 0 ? `\n\nDetail: ${importData.errors.join('; ')}` : ''
+  1297→        toast({ title: 'Import Berhasil', description: `${importData.created || 0} data baru, ${importData.updated || 0} data diperbarui${skippedInfo} (Total: ${importData.imported || 0} dari ${csvRows.length} baris CSV)${errorInfo}` })
+  1298→        setImportDialogOpen(false)
+  1299→        setCsvFile(null)
+  1300→        setCsvRowCount(0)
+  1301→        fetchRegistrations()
+  1302→        fetchStats()
+  1303→      } else {
+  1304→        toast({ title: 'Import Gagal', description: importData.error || 'Terjadi kesalahan', variant: 'destructive' })
+  1305→      }
+  1306→    } catch (err) {
+  1307→      toast({ title: 'Import Gagal', description: err instanceof Error ? err.message : 'Terjadi kesalahan', variant: 'destructive' })
+  1308→    } finally {
+  1309→      setImporting(false)
+  1310→    }
+  1311→  }
+  1312→
+  1313→  const handleVerify = async () => {
+  1314→    if (!verifyTargetId) return
+  1315→    setVerifying(true)
+  1316→    try {
+  1317→      const res = await fetch('/api/registrations/verify', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: verifyTargetId, verificationStatus: verifyAction, verificationNote: verifyNote || undefined }) })
+  1318→      const data = await res.json()
+  1319→      if (data.success) {
+  1320→        toast({ title: verifyAction === 'VERIFIED' ? 'Pendaftar Diterima' : 'Pendaftar Ditolak', description: verifyAction === 'VERIFIED' ? 'Data pendaftar telah diverifikasi dan diterima' : 'Data pendaftar telah ditolak' })
+  1321→        setVerifyDialogOpen(false); setVerifyNote(''); setVerifyTargetId(null)
+  1322→        fetchRegistrations(); fetchStats()
+  1323→      } else {
+  1324→        toast({ title: 'Verifikasi Gagal', description: data.error || 'Terjadi kesalahan', variant: 'destructive' })
+  1325→      }
+  1326→    } catch { toast({ title: 'Verifikasi Gagal', description: 'Terjadi kesalahan', variant: 'destructive' }) } finally { setVerifying(false) }
+  1327→  }
+  1328→
+  1329→  const handleBulkVerify = async () => {
+  1330→    if (selectedIds.size === 0) return
+  1331→    setVerifying(true)
+  1332→    try {
+  1333→      const res = await fetch('/api/registrations/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: Array.from(selectedIds), verificationStatus: verifyAction, verificationNote: verifyNote || undefined }) })
+  1334→      const data = await res.json()
+  1335→      if (data.success) {
+  1336→        toast({ title: verifyAction === 'VERIFIED' ? 'Pendaftar Diterima' : 'Pendaftar Ditolak', description: `${data.updated} pendaftar ${verifyAction === 'VERIFIED' ? 'diterima' : 'ditolak'}` })
+  1337→        setBulkVerifyDialogOpen(false); setVerifyNote(''); setSelectedIds(new Set())
+  1338→        fetchRegistrations(); fetchStats()
+  1339→      } else { toast({ title: 'Verifikasi Gagal', description: data.error || 'Terjadi kesalahan', variant: 'destructive' }) }
+  1340→    } catch { toast({ title: 'Verifikasi Gagal', description: 'Terjadi kesalahan', variant: 'destructive' }) } finally { setVerifying(false) }
+  1341→  }
+  1342→
+  1343→  const verificationPercent = stats ? stats.total > 0 ? Math.round(((stats.verified + stats.rejected) / stats.total) * 100) : 0 : 0
+  1344→  const verifiedPercent = stats && stats.total > 0 ? Math.round((stats.verified / stats.total) * 100) : 0
+  1345→  const rejectedPercent = stats && stats.total > 0 ? Math.round((stats.rejected / stats.total) * 100) : 0
+  1346→  const pendingPercent = stats && stats.total > 0 ? Math.round((stats.pending / stats.total) * 100) : 0
+  1347→
+  1348→  const getPendingForLembar = (subJalurFilter: string) => {
+  1349→    if (!stats) return 0
+  1350→    const jalurNames = subJalurFilter.split(',').map(s => s.trim())
+  1351→    const relevantPending = stats.bySubJalur
+  1352→      .filter(item => jalurNames.includes(item.name))
+  1353→      .reduce((acc, item) => {
+  1354→        const verified = stats.verifiedBySubJalur.find(v => v.name === item.name)?.count || 0
+  1355→        const rejected = stats.rejectedBySubJalur.find(r => r.name === item.name)?.count || 0
+  1356→        return acc + item.count - verified - rejected
+  1357→      }, 0)
+  1358→    return relevantPending
+  1359→  }
+  1360→
+  1361→  const handleViewDetail = (reg: Registration) => {
+  1362→    setDetailTarget(reg)
+  1363→    setDetailDialogOpen(true)
+  1364→  }
+  1365→
+  1366→  const openEditDialog = (reg: Registration) => {
+  1367→    setEditTarget(reg)
+  1368→    setEditForm({
+  1369→      noRegistrasi: reg.noRegistrasi || '', nama: reg.nama || '', nisn: reg.nisn || '', subJalur: reg.subJalur || '',
+  1370→      nik: reg.nik || '', tanggalLahir: reg.tanggalLahir || '', alamat: reg.alamat || '', alamatLengkap: reg.alamatLengkap || '',
+  1371→      noTelpSiswa: reg.noTelpSiswa || '', noTelpOrangtua: reg.noTelpOrangtua || '', npsnSekolahPilihan: reg.npsnSekolahPilihan || '',
+  1372→      namaSekolahPilihan: reg.namaSekolahPilihan || '', jurusan: reg.jurusan || '', npsnSekolahAsal: reg.npsnSekolahAsal || '',
+  1373→      namaSekolahAsal: reg.namaSekolahAsal || '', skorJarak: reg.skorJarak || '', skorNilaiRaport: reg.skorNilaiRaport || '',
+  1374→      skorLomba: reg.skorLomba || '', nilaiRataRataTKA: reg.nilaiRataRataTKA || '', skorPrestasiAkademik: reg.skorPrestasiAkademik || '', skorPrestasiNonAkademik: reg.skorPrestasiNonAkademik || '',
+  1375→      kekuranganVerifikasi: reg.kekuranganVerifikasi || '', tanggalVerif: reg.tanggalVerif || '', jamVerif: reg.jamVerif || '',
+  1376→      terbitKK: reg.terbitKK || '', latitude: reg.latitude || '', longitude: reg.longitude || '', lokasiJarak: reg.lokasiJarak || '',
+  1377→      nilaiRataRata: reg.nilaiRataRata || '', totalNilai: reg.totalNilai || '',
+  1378→      statusLulus: reg.statusLulus || 'BELUM', statusDaftarUlang: reg.statusDaftarUlang || 'BELUM',
+  1379→    })
+  1380→    setEditDialogOpen(true)
+  1381→  }
+  1382→
+  1383→  const handleSaveEdit = async () => {
+  1384→    if (!editTarget) return
+  1385→    setSaving(true)
+  1386→    try {
+  1387→      const updateData = { ...editForm }
+  1388→      if (updateData.terbitKK) {
+  1389→        const calculatedLama = hitungLamaKK(updateData.terbitKK)
+  1390→        if (calculatedLama) updateData['lamaKK'] = calculatedLama
+  1391→      }
+  1392→      const res = await fetch(`/api/registrations/${editTarget.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updateData) })
+  1393→      const result = await res.json()
+  1394→      if (result.success) {
+  1395→        toast({ title: 'Berhasil', description: `Data ${editTarget.nama} berhasil diperbarui` })
+  1396→        setEditDialogOpen(false); setEditTarget(null)
+  1397→        fetchRegistrations(); fetchStats()
+  1398→      } else { toast({ title: 'Gagal', description: result.error || 'Gagal menyimpan', variant: 'destructive' }) }
+  1399→    } catch { toast({ title: 'Gagal', description: 'Terjadi kesalahan', variant: 'destructive' }) } finally { setSaving(false) }
+  1400→  }
+  1401→
+  1402→  const openDeleteDialog = (reg: Registration) => {
+  1403→    setDeleteTarget(reg)
+  1404→    setDeleteDialogOpen(true)
+  1405→  }
+  1406→
+  1407→  const handleDelete = async () => {
+  1408→    if (!deleteTarget) return
+  1409→    setDeleting(true)
+  1410→    try {
+  1411→      const res = await fetch(`/api/registrations/${deleteTarget.id}`, { method: 'DELETE' })
+  1412→      const result = await res.json()
+  1413→      if (result.success) {
+  1414→        toast({ title: 'Berhasil', description: `Data ${deleteTarget.nama} berhasil dihapus` })
+  1415→        setDeleteDialogOpen(false); setDeleteTarget(null)
+  1416→        fetchRegistrations(); fetchStats()
+  1417→      } else { toast({ title: 'Gagal', description: result.error || 'Gagal menghapus', variant: 'destructive' }) }
+  1418→    } catch { toast({ title: 'Gagal', description: 'Terjadi kesalahan', variant: 'destructive' }) } finally { setDeleting(false) }
+  1419→  }
+  1420→
+  1421→  const handlePrintReport = (type: 'diterima' | 'ditolak') => {
+  1422→    const list = type === 'diterima' ? stats?.verifiedList || [] : stats?.rejectedList || []
+  1423→    const title = type === 'diterima' ? 'LAPORAN PESERTA DITERIMA' : 'LAPORAN PESERTA DITOLAK'
+  1424→    const printWindow = window.open('', '_blank')
+  1425→    if (!printWindow) return
+  1426→    const rows = list.map((reg, idx) => `
+  1427→      <tr>
+  1428→        <td style="padding:6px 8px;border:1px solid #ddd;text-align:center">${idx + 1}</td>
+  1429→        <td style="padding:6px 8px;border:1px solid #ddd">${reg.noRegistrasi}</td>
+  1430→        <td style="padding:6px 8px;border:1px solid #ddd">${reg.nama}</td>
+  1431→        <td style="padding:6px 8px;border:1px solid #ddd">${reg.nisn}</td>
+  1432→        <td style="padding:6px 8px;border:1px solid #ddd">${reg.subJalur}</td>
+  1433→        <td style="padding:6px 8px;border:1px solid #ddd">${reg.namaSekolahAsal}</td>
+  1434→        <td style="padding:6px 8px;border:1px solid #ddd">${reg.jurusan}</td>
+  1435→        <td style="padding:6px 8px;border:1px solid #ddd">${reg.tanggalVerif || '-'}</td>
+  1436→        ${type === 'ditolak' ? `<td style="padding:6px 8px;border:1px solid #ddd">${reg.verificationNote || '-'}</td>` : ''}
+  1437→      </tr>
+  1438→    `).join('')
+  1439→    printWindow.document.write(`<!DOCTYPE html><html><head><title>${title}</title>
+  1440→      <style>body{font-family:Arial,sans-serif;margin:20px}table{width:100%;border-collapse:collapse}th{background:#f5f5f5;padding:8px;border:1px solid #ddd;text-align:left}h1{text-align:center;font-size:18px}h2{text-align:center;font-size:14px;color:#666}</style></head>
+  1441→      <body><h1>${title}</h1><h2>${appName}</h2>${schoolName ? `<h3 style="text-align:center;font-size:13px;color:#555">${schoolName}</h3>` : ''}<p style="text-align:center;color:#888">Dicetak pada: ${new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+  1442→      <table><thead><tr><th>No</th><th>No. Registrasi</th><th>Nama</th><th>NISN</th><th>Sub Jalur</th><th>Sekolah Asal</th><th>Jurusan</th><th>Tanggal Verif</th>${type === 'ditolak' ? '<th>Alasan Penolakan</th>' : ''}</tr></thead><tbody>${rows}</tbody></table></body></html>`)
+  1443→    printWindow.document.close()
+  1444→    printWindow.print()
+  1445→  }
+  1446→
+  1447→  const handleRankingPreview = (type: 'pdf' | 'excel') => {
+  1448→    setRankingPreviewType(type)
+  1449→    setRankingPreviewJalur('all')
+  1450→    setRankingPreviewOpen(true)
+  1451→  }
+  1452→
+  1453→  const handleRankingPrintPDF = () => {
+  1454→    const html = getRankingPrintHTML({
+  1455→      selectedJalur: rankingPreviewJalur, rankingTampilan, rankingSekolah, rankingJurusan, rankingStatus,
+  1456→      rankingData, rankingKuota, rankingKuotaPerJalur, appName, schoolName,
+  1457→    })
+  1458→    const printWindow = window.open('', '_blank')
+  1459→    if (!printWindow) return
+  1460→    printWindow.document.write(html)
+  1461→    printWindow.document.close()
+  1462→    setTimeout(() => { printWindow.print() }, 500)
+  1463→  }
+  1464→
+  1465→  const _handleRankingExportExcel = () => {
+  1466→    handleRankingExportExcel({
+  1467→      rankingPreviewJalur, rankingTampilan, rankingSekolah, rankingJurusan, rankingStatus,
+  1468→      rankingData, rankingKuota, rankingKuotaPerJalur, appName, schoolName,
+  1469→    })
+  1470→    toast({ title: 'Berhasil', description: 'File Excel berhasil diunduh' })
+  1471→  }
+  1472→
+  1473→  // ==================== MAIN RENDER ====================
+  1474→  return (
+  1475→    <AppLayout
+  1476→      appName={appName}
+  1477→      schoolName={schoolName}
+  1478→      appIcon={appIcon}
+  1479→      appSubtitle={appSubtitle}
+  1480→      authUser={authUser}
+  1481→      activeTab={activeTab}
+  1482→      setActiveTab={setActiveTab}
+  1483→      setLembarTab={setLembarTab}
+  1484→      stats={stats}
+  1485→      setPortalPasteOpen={setPortalPasteOpen}
+  1486→      setImportDialogOpen={setImportDialogOpen}
+  1487→      setChangePasswordOpen={setChangePasswordOpen}
+  1488→      handleLogout={handleLogout}
+  1489→      lembarVerifikasi={lembarVerifikasi}
+  1490→      getPendingForLembar={getPendingForLembar}
+  1491→      tahap={tahap}
+  1492→      dialogs={
+  1493→        <>
+  1494→          {/* ==================== IMPORT DIALOG ==================== */}
+  1495→          <ImportDialog
+  1496→            open={importDialogOpen}
+  1497→            onOpenChange={setImportDialogOpen}
+  1498→            importStatus={importStatus}
+  1499→            setImportStatus={setImportStatus}
+  1500→            useCsvStatus={useCsvStatus}
+  1501→            setUseCsvStatus={setUseCsvStatus}
+  1502→            csvFile={csvFile}
+  1503→            setCsvFile={handleSetCsvFile}
+  1504→            importing={importing}
+  1505→            onImport={handleImport}
+  1506→            csvRowCount={csvRowCount}
+  1507→          />
+  1508→
+  1509→          {/* ==================== CHANGE PASSWORD DIALOG ==================== */}
+  1510→          <ChangePasswordDialog
+  1511→            open={changePasswordOpen}
+  1512→            onOpenChange={setChangePasswordOpen}
+  1513→            changePasswordCurrent={changePasswordCurrent}
+  1514→            setChangePasswordCurrent={setChangePasswordCurrent}
+  1515→            changePasswordNew={changePasswordNew}
+  1516→            setChangePasswordNew={setChangePasswordNew}
+  1517→            changePasswordConfirm={changePasswordConfirm}
+  1518→            setChangePasswordConfirm={setChangePasswordConfirm}
+  1519→            changePasswordError={changePasswordError}
+  1520→            changePasswordLoading={changePasswordLoading}
+  1521→            showCurrentPassword={showCurrentPassword}
+  1522→            setShowCurrentPassword={setShowCurrentPassword}
+  1523→            showNewPassword={showNewPassword}
+  1524→            setShowNewPassword={setShowNewPassword}
+  1525→            onSubmit={handleChangePassword}
+  1526→          />
+  1527→
+  1528→          {/* ==================== RANKING PREVIEW DIALOG ==================== */}
+  1529→          {authUser?.role === 'admin' && <RankingPreviewDialog
+  1530→            open={rankingPreviewOpen}
+  1531→            onOpenChange={setRankingPreviewOpen}
+  1532→            rankingPreviewType={rankingPreviewType}
+  1533→            rankingPreviewJalur={rankingPreviewJalur}
+  1534→            setRankingPreviewJalur={setRankingPreviewJalur}
+  1535→            rankingData={rankingData}
+  1536→            rankingFilters={rankingFilters}
+  1537→            rankingTampilan={rankingTampilan}
+  1538→            rankingSekolah={rankingSekolah}
+  1539→            rankingJurusan={rankingJurusan}
+  1540→            rankingStatus={rankingStatus}
+  1541→            rankingKuota={rankingKuota}
+  1542→            rankingKuotaPerJalur={rankingKuotaPerJalur}
+  1543→            appName={appName}
+  1544→            schoolName={schoolName}
+  1545→            appSubtitle={appSubtitle}
+  1546→            onPrintPDF={handleRankingPrintPDF}
+  1547→            onExportExcel={_handleRankingExportExcel}
+  1548→          />}
+  1549→
+  1550→          {/* ==================== PORTAL PASTE DIALOG ==================== */}
+  1551→          <PortalPasteDialog
+  1552→            open={portalPasteOpen}
+  1553→            onOpenChange={setPortalPasteOpen}
+  1554→            portalRawText={portalRawText}
+  1555→            setPortalRawText={setPortalRawText}
+  1556→            portalParsedData={portalParsedData}
+  1557→            setPortalParsedData={setPortalParsedData}
+  1558→            portalParsing={portalParsing}
+  1559→            portalSelectedJalur={portalSelectedJalur}
+  1560→            setPortalSelectedJalur={setPortalSelectedJalur}
+  1561→            jalurConfigs={jalurConfigs}
+  1562→            importing={importing}
+  1563→            savingStatus={savingStatus}
+  1564→            onPaste={handlePortalPaste}
+  1565→            onSave={handlePortalSave}
+  1566→            portalKekurangan={portalKekurangan}
+  1567→            setPortalKekurangan={setPortalKekurangan}
+  1568→            portalVerifStatus={portalVerifStatus}
+  1569→            setPortalVerifStatus={setPortalVerifStatus}
+  1570→            portalVerifNote={portalVerifNote}
+  1571→            setPortalVerifNote={setPortalVerifNote}
+  1572→            portalTanggalVerif={portalTanggalVerif}
+  1573→            setPortalTanggalVerif={setPortalTanggalVerif}
+  1574→            portalJamVerif={portalJamVerif}
+  1575→            setPortalJamVerif={setPortalJamVerif}
+  1576→            portalTerbitKK={portalTerbitKK}
+  1577→            setPortalTerbitKK={setPortalTerbitKK}
+  1578→          />
+  1579→
+  1580→          {/* ==================== SUMUT BERKAH PASTE DIALOG ==================== */}
+  1581→          <SumutBerkahDialog
+  1582→            open={sumutBerkahOpen}
+  1583→            onOpenChange={setSumutBerkahOpen}
+  1584→            sumutBerkahText={sumutBerkahText}
+  1585→            setSumutBerkahText={setSumutBerkahText}
+  1586→            sumutBerkahParsing={sumutBerkahParsing}
+  1587→            setSumutBerkahParsing={setSumutBerkahParsing}
+  1588→            onSave={handleSumutBerkahSave}
+  1589→            sumutBerkahPreview={sumutBerkahPreview}
+  1590→            setSumutBerkahPreview={setSumutBerkahPreview}
+  1591→            sumutBerkahResult={sumutBerkahResult}
+  1592→            setSumutBerkahResult={setSumutBerkahResult}
+  1593→            toast={toast}
+  1594→          />
+  1595→
+  1596→          {/* ==================== SINGLE VERIFY DIALOG ==================== */}
+  1597→          <SingleVerifyDialog
+  1598→            open={verifyDialogOpen}
+  1599→            onOpenChange={setVerifyDialogOpen}
+  1600→            verifyAction={verifyAction}
+  1601→            verifyNote={verifyNote}
+  1602→            setVerifyNote={setVerifyNote}
+  1603→            verifying={verifying}
+  1604→            onVerify={handleVerify}
+  1605→          />
+  1606→
+  1607→          {/* ==================== BULK VERIFY DIALOG ==================== */}
+  1608→          <BulkVerifyDialog
+  1609→            open={bulkVerifyDialogOpen}
+  1610→            onOpenChange={setBulkVerifyDialogOpen}
+  1611→            verifyAction={verifyAction}
+  1612→            verifyNote={verifyNote}
+  1613→            setVerifyNote={setVerifyNote}
+  1614→            verifying={verifying}
+  1615→            onVerify={handleBulkVerify}
+  1616→          />
+  1617→
+  1618→          {/* ==================== DETAIL DIALOG ==================== */}
+  1619→          <DetailDialog
+  1620→            open={detailDialogOpen}
+  1621→            onOpenChange={setDetailDialogOpen}
+  1622→            detailTarget={detailTarget}
+  1623→          />
+  1624→
+  1625→          {/* ==================== EDIT DIALOG ==================== */}
+  1626→          <EditDialog
+  1627→            open={editDialogOpen}
+  1628→            onOpenChange={setEditDialogOpen}
+  1629→            editTarget={editTarget}
+  1630→            editForm={editForm}
+  1631→            setEditForm={setEditForm}
+  1632→            saving={saving}
+  1633→            onSave={handleSaveEdit}
+  1634→          />
+  1635→
+  1636→          {/* ==================== DELETE DIALOG ==================== */}
+  1637→          <DeleteDialog
+  1638→            open={deleteDialogOpen}
+  1639→            onOpenChange={setDeleteDialogOpen}
+  1640→            deleteTarget={deleteTarget}
+  1641→            deleting={deleting}
+  1642→            onDelete={handleDelete}
+  1643→          />
+  1644→
+  1645→          {/* ==================== DUPLICATE CHECK DIALOG ==================== */}
+  1646→          <DuplicateCheckDialog
+  1647→            open={duplicateDialogOpen}
+  1648→            onOpenChange={setDuplicateDialogOpen}
+  1649→            duplicateLoading={duplicateLoading}
+  1650→            duplicateData={duplicateData}
+  1651→          />
+  1652→        </>
+  1653→      }
+  1654→    >
+  1655→      {/* ==================== DASHBOARD TAB ==================== */}
+  1656→      <TabsContent value="dashboard" className="space-y-6">
+  1657→        <DashboardTab
+  1658→          stats={stats}
+  1659→          appName={appName}
+  1660→          schoolName={schoolName}
+  1661→          appSubtitle={appSubtitle}
+  1662→          lembarVerifikasi={lembarVerifikasi}
+  1663→          setActiveTab={setActiveTab}
+  1664→          setLembarTab={setLembarTab}
+  1665→          verificationPercent={verificationPercent}
+  1666→          verifiedPercent={verifiedPercent}
+  1667→          rejectedPercent={rejectedPercent}
+  1668→          pendingPercent={pendingPercent}
+  1669→          getPendingForLembar={getPendingForLembar}
+  1670→          authUser={authUser}
+  1671→        />
+  1672→      </TabsContent>
+  1673→
+  1674→      {/* ==================== LEMBAR VERIFIKASI TAB ==================== */}
+  1675→      <TabsContent value="lembar-verifikasi" className="space-y-6">
+  1676→        <Tabs value={lembarTab} onValueChange={setLembarTab}>
+  1677→          <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0 scrollbar-hide">
+  1678→            <TabsList className="flex-nowrap sm:flex-wrap h-auto gap-1 bg-white/60 backdrop-blur-sm border rounded-xl p-1 shadow-sm w-max sm:w-auto">
+  1679→              {lembarVerifikasi.map((lv) => {
+  1680→                const LvIcon = lv.icon
+  1681→                const pendingCount = getPendingForLembar(lv.subJalurFilter)
+  1682→                const hasChildren = lv.children && lv.children.length > 0
+  1683→                return (
+  1684→                  <TabsTrigger key={lv.key} value={lv.key} className="gap-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 rounded-lg transition-all duration-200 whitespace-nowrap">
+  1685→                    <LvIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+  1686→                    <span className="hidden md:inline">{lv.label}</span>
+  1687→                    <span className="md:hidden">{lv.label.length > 10 ? lv.label.substring(0, 8) + '..' : lv.label}</span>
+  1688→                    {pendingCount > 0 && <Badge className="ml-0.5 bg-amber-500 text-white text-[10px] sm:text-xs px-1 py-0 min-w-[14px] sm:min-w-[16px] h-3.5 sm:h-4 flex items-center justify-center">{pendingCount}</Badge>}
+  1689→                    {hasChildren && <span className="text-[10px] text-gray-400">▼</span>}
+  1690→                  </TabsTrigger>
+  1691→                )
+  1692→              })}
+  1693→            </TabsList>
+  1694→          </div>
+  1695→          {lembarVerifikasi.map((lv) => {
+  1696→            const hasChildren = lv.children && lv.children.length > 0
+  1697→            return (
+  1698→              <TabsContent key={lv.key} value={lv.key} className="mt-4">
+  1699→                {hasChildren ? (
+  1700→                  <div className="space-y-4">
+  1701→                    {/* Sub-tabs for parent jalur */}
+  1702→                    <Tabs value={lembarSubTab || '__all__'} onValueChange={setLembarSubTab}>
+  1703→                      <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0 scrollbar-hide">
+  1704→                        <TabsList className="flex-nowrap sm:flex-wrap h-auto gap-1 bg-gray-50/80 border rounded-lg p-1 w-max sm:w-auto">
+  1705→                          <TabsTrigger value="__all__" className="gap-1 text-xs sm:text-sm px-2 sm:px-3 py-1 rounded-md whitespace-nowrap font-semibold">
+  1706→                            <lv.icon className={`w-3.5 h-3.5 ${lv.iconColor}`} />
+  1707→                            Semua {lv.label}
+  1708→                          </TabsTrigger>
+  1709→                          {lv.children!.map((child) => {
+  1710→                            const ChildIcon = child.icon
+  1711→                            return (
+  1712→                              <TabsTrigger key={child.key} value={child.key} className="gap-1 text-xs sm:text-sm px-2 sm:px-3 py-1 rounded-md whitespace-nowrap">
+  1713→                                <ChildIcon className={`w-3.5 h-3.5 ${child.iconColor}`} />
+  1714→                                {child.label}
+  1715→                              </TabsTrigger>
+  1716→                            )
+  1717→                          })}
+  1718→                        </TabsList>
+  1719→                      </div>
+  1720→
+  1721→                      {/* All children combined */}
+  1722→                      <TabsContent value="__all__" className="mt-4">
+  1723→                        <LembarVerifikasiSheet
+  1724→                          config={lv}
+  1725→                          subJalurOptions={subJalurOptions}
+  1726→                          onVerify={() => {}}
+  1727→                          onBulkVerify={() => {}}
+  1728→                          onViewDetail={handleViewDetail}
+  1729→                          toast={toast}
+  1730→                          highlightRegId={highlightRegId}
+  1731→                          refreshKey={lembarRefreshKey}
+  1732→                        />
+  1733→                      </TabsContent>
+  1734→
+  1735→                      {/* Individual child */}
+  1736→                      {lv.children!.map((child) => (
+  1737→                        <TabsContent key={child.key} value={child.key} className="mt-4">
+  1738→                          <LembarVerifikasiSheet
+  1739→                            config={child}
+  1740→                            subJalurOptions={subJalurOptions}
+  1741→                            onVerify={() => {}}
+  1742→                            onBulkVerify={() => {}}
+  1743→                            onViewDetail={handleViewDetail}
+  1744→                            toast={toast}
+  1745→                            highlightRegId={highlightRegId}
+  1746→                            refreshKey={lembarRefreshKey}
+  1747→                          />
+  1748→                        </TabsContent>
+  1749→                      ))}
+  1750→                    </Tabs>
+  1751→                  </div>
+  1752→                ) : (
+  1753→                  <LembarVerifikasiSheet
+  1754→                    config={lv}
+  1755→                    subJalurOptions={subJalurOptions}
+  1756→                    onVerify={() => {}}
+  1757→                    onBulkVerify={() => {}}
+  1758→                    onViewDetail={handleViewDetail}
+  1759→                    toast={toast}
+  1760→                    highlightRegId={highlightRegId}
+  1761→                    refreshKey={lembarRefreshKey}
+  1762→                  />
+  1763→                )}
+  1764→              </TabsContent>
+  1765→            )
+  1766→          })}
+  1767→        </Tabs>
+  1768→      </TabsContent>
+  1769→
+  1770→      {/* ==================== DATA PENDAFTAR TAB ==================== */}
+  1771→      <TabsContent value="data" className="space-y-4">
+  1772→        <DataPendaftarTab
+  1773→          search={search} setSearch={setSearch}
+  1774→          subJalurFilter={subJalurFilter} setSubJalurFilter={setSubJalurFilter}
+  1775→          verificationFilter={verificationFilter} setVerificationFilter={setVerificationFilter}
+  1776→          jurusanFilter={jurusanFilter} setJurusanFilter={setJurusanFilter}
+  1777→          registrations={registrations}
+  1778→          pagination={pagination} setPagination={setPagination}
+  1779→          selectedIds={selectedIds} setSelectedIds={setSelectedIds}
+  1780→          loading={loading}
+  1781→          namaSortData={namaSortData} setNamaSortData={setNamaSortData}
+  1782→          groupBySekolah={groupBySekolah} setGroupBySekolah={setGroupBySekolah}
+  1783→          subJalurOptions={subJalurOptions}
+  1784→          dataLimit={dataLimit} setDataLimit={setDataLimit}
+  1785→          setImportDialogOpen={setImportDialogOpen}
+  1786→          setSumutBerkahOpen={setSumutBerkahOpen}
+  1787→          checkDuplicates={checkDuplicates}
+  1788→          setVerifyAction={setVerifyAction}
+  1789→          setBulkVerifyDialogOpen={setBulkVerifyDialogOpen}
+  1790→          setVerifyTargetId={setVerifyTargetId}
+  1791→          setVerifyNote={setVerifyNote}
+  1792→          setVerifyDialogOpen={setVerifyDialogOpen}
+  1793→          setDetailTarget={setDetailTarget}
+  1794→          setDetailDialogOpen={setDetailDialogOpen}
+  1795→          openEditDialog={openEditDialog}
+  1796→          openDeleteDialog={openDeleteDialog}
+  1797→        />
+  1798→      </TabsContent>
+  1799→
+  1800→      {/* ==================== RANKING TAB ==================== */}
+  1801→      {authUser?.role === 'admin' && <TabsContent value="ranking" className="space-y-6">
+  1802→        <RankingTab
+  1803→          rankingJalur={rankingJalur} setRankingJalur={setRankingJalur}
+  1804→          rankingSekolah={rankingSekolah} setRankingSekolah={setRankingSekolah}
+  1805→          rankingJurusan={rankingJurusan} setRankingJurusan={setRankingJurusan}
+  1806→          rankingTampilan={rankingTampilan} setRankingTampilan={setRankingTampilan}
+  1807→          rankingStatus={rankingStatus} setRankingStatus={setRankingStatus}
+  1808→          rankingData={rankingData}
+  1809→          rankingFilters={rankingFilters}
+  1810→          rankingKuota={rankingKuota}
+  1811→          rankingKuotaPerJalur={rankingKuotaPerJalur}
+  1812→          rankingLoading={rankingLoading}
+  1813→          namaSortRanking={namaSortRanking} setNamaSortRanking={setNamaSortRanking}
+  1814→          fetchRanking={fetchRanking}
+  1815→          handleRankingPreview={handleRankingPreview}
+  1816→        />
+  1817→      </TabsContent>}
+  1818→
+  1819→      {/* ==================== DITERIMA TAB ==================== */}
+  1820→      <TabsContent value="diterima" className="space-y-6">
+  1821→        <DiterimaTab
+  1822→          stats={stats}
+  1823→          appName={appName}
+  1824→          schoolName={schoolName}
+  1825→          appSubtitle={appSubtitle}
+  1826→          verifiedPercent={verifiedPercent}
+  1827→          diterimaFilterJalur={diterimaFilterJalur} setDiterimaFilterJalur={setDiterimaFilterJalur}
+  1828→          diterimaFilterSekolah={diterimaFilterSekolah} setDiterimaFilterSekolah={setDiterimaFilterSekolah}
+  1829→          subJalurOptions={subJalurOptions}
+  1830→          namaSortDiterima={namaSortDiterima} setNamaSortDiterima={setNamaSortDiterima}
+  1831→          handlePrintReport={handlePrintReport}
+  1832→          setDetailTarget={setDetailTarget} setDetailDialogOpen={setDetailDialogOpen}
+  1833→          openEditDialog={openEditDialog} openDeleteDialog={openDeleteDialog}
+  1834→        />
+  1835→      </TabsContent>
+  1836→
+  1837→      {/* ==================== DITOLAK TAB ==================== */}
+  1838→      <TabsContent value="ditolak" className="space-y-6">
+  1839→        <DitolakTab
+  1840→          stats={stats}
+  1841→          appName={appName}
+  1842→          schoolName={schoolName}
+  1843→          appSubtitle={appSubtitle}
+  1844→          rejectedPercent={rejectedPercent}
+  1845→          ditolakFilterJalur={ditolakFilterJalur} setDitolakFilterJalur={setDitolakFilterJalur}
+  1846→          subJalurOptions={subJalurOptions}
+  1847→          namaSortDitolak={namaSortDitolak} setNamaSortDitolak={setNamaSortDitolak}
+  1848→          handlePrintReport={handlePrintReport}
+  1849→          setDetailTarget={setDetailTarget} setDetailDialogOpen={setDetailDialogOpen}
+  1850→          openEditDialog={openEditDialog} openDeleteDialog={openDeleteDialog}
+  1851→        />
+  1852→      </TabsContent>
+  1853→
+  1854→      {/* ==================== KELULUSAN TAB ==================== */}
+  1855→      <TabsContent value="kelulusan" className="space-y-6">
+  1856→        <KelulusanTab
+  1857→          stats={stats}
+  1858→          appName={appName}
+  1859→          schoolName={schoolName}
+  1860→          appSubtitle={appSubtitle}
+  1861→          registrations={registrations}
+  1862→          selectedIds={selectedIds} setSelectedIds={setSelectedIds}
+  1863→          fetchStats={fetchStats}
+  1864→          fetchRegistrations={fetchRegistrations}
+  1865→          toast={toast}
+  1866→        />
+  1867→      </TabsContent>
+  1868→
+  1869→      {/* ==================== DAFTAR ULANG TAB ==================== */}
+  1870→      <TabsContent value="daftar-ulang" className="space-y-6">
+  1871→        <DaftarUlangTab
+  1872→          stats={stats}
+  1873→          appName={appName}
+  1874→          schoolName={schoolName}
+  1875→          appSubtitle={appSubtitle}
+  1876→          registrations={registrations}
+  1877→          selectedIds={selectedIds} setSelectedIds={setSelectedIds}
+  1878→          fetchStats={fetchStats}
+  1879→          fetchRegistrations={fetchRegistrations}
+  1880→          toast={toast}
+  1881→        />
+  1882→      </TabsContent>
+  1883→
+  1884→      {/* ==================== PENGATURAN TAB ==================== */}
+  1885→      <TabsContent value="pengaturan" className="space-y-6">
+  1886→        <PengaturanTab
+  1887→          appName={appName} schoolName={schoolName} authUser={authUser}
+  1888→          users={users} usersLoading={usersLoading}
+  1889→          addUserOpen={addUserOpen} setAddUserOpen={setAddUserOpen}
+  1890→          addUserForm={addUserForm} setAddUserForm={setAddUserForm}
+  1891→          userSaving={userSaving} handleAddUser={handleAddUser}
+  1892→          editUserOpen={editUserOpen} setEditUserOpen={setEditUserOpen}
+  1893→          editUserData={editUserData} setEditUserData={setEditUserData} editUserForm={editUserForm} setEditUserForm={setEditUserForm}
+  1894→          handleEditUser={handleEditUser}
+  1895→          deleteUserOpen={deleteUserOpen} setDeleteUserOpen={setDeleteUserOpen}
+  1896→          deleteUserTarget={deleteUserTarget} setDeleteUserTarget={setDeleteUserTarget} deleteUserLoading={deleteUserLoading} handleDeleteUser={handleDeleteUser}
+  1897→          editProfileOpen={editProfileOpen} setEditProfileOpen={setEditProfileOpen}
+  1898→          editProfileForm={editProfileForm} setEditProfileForm={setEditProfileForm}
+  1899→          editProfileSaving={editProfileSaving} handleUpdateProfile={handleUpdateProfile}
+  1900→          setAppName={setAppName} setSchoolName={setSchoolName}
+  1901→          appIcon={appIcon} setAppIcon={setAppIcon}
+  1902→          appSubtitle={appSubtitle} setAppSubtitle={setAppSubtitle}
+  1903→          saveAppName={saveAppName} settingsSaving={settingsSaving}
+  1904→          kuota={kuota} setKuota={setKuota} saveKuota={saveKuota}
+  1905→          jalurConfigs={jalurConfigs} setJalurConfigs={setJalurConfigs}
+  1906→          updateJalurPersentase={updateJalurPersentase}
+  1907→          addJalurOpen={addJalurOpen} setAddJalurOpen={setAddJalurOpen}
+  1908→          newJalurNama={newJalurNama} setNewJalurNama={setNewJalurNama}
+  1909→          newJalurPersentase={newJalurPersentase} setNewJalurPersentase={setNewJalurPersentase}
+  1910→          addJalur={addJalur} deleteJalur={deleteJalur} toggleJalurAktif={toggleJalurAktif}
+  1911→          settingsLoading={settingsLoading}
+  1912→          portalSyncEmail={portalSyncEmail} setPortalSyncEmail={setPortalSyncEmail}
+  1913→          portalSyncPassword={portalSyncPassword} setPortalSyncPassword={setPortalSyncPassword}
+  1914→          portalSyncStatus={portalSyncStatus} setPortalSyncStatus={setPortalSyncStatus}
+  1915→          portalSyncPages={portalSyncPages} setPortalSyncPages={setPortalSyncPages}
+  1916→          portalSyncing={portalSyncing} handlePortalSync={handlePortalSync}
+  1917→          portalSyncResult={portalSyncResult}
+  1918→          resetPasswordOpen={resetPasswordOpen} setResetPasswordOpen={setResetPasswordOpen}
+  1919→          resetPasswordTarget={resetPasswordTarget} resetPasswordNew={resetPasswordNew} setResetPasswordNew={setResetPasswordNew}
+  1920→          resetPasswordLoading={resetPasswordLoading} handleResetPassword={handleResetPassword}
+  1921→          showResetPassword={showResetPassword} setShowResetPassword={setShowResetPassword}
+  1922→          tahap={tahap} setTahap={setTahap}
+  1923→          jalurAktifPerTahap={jalurAktifPerTahap} setJalurAktifPerTahap={setJalurAktifPerTahap}
+  1924→          fetchStats={fetchStats} fetchRegistrations={fetchRegistrations} fetchRanking={fetchRanking}
+  1925→        />
+  1926→      </TabsContent>
+  1927→    </AppLayout>
+  1928→  )
+  1929→}
+  1930→
