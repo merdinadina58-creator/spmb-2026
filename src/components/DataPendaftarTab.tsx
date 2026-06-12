@@ -46,6 +46,7 @@ import {
   ClipboardPaste,
   ChevronUp,
   ChevronDown,
+  X,
 } from 'lucide-react'
 import type { Registration, PaginationInfo } from '@/lib/types'
 import { STATUS_COLORS, SUB_JALUR_COLORS } from '@/lib/constants'
@@ -131,13 +132,25 @@ export default function DataPendaftarTab(props: DataPendaftarTabProps) {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
                 placeholder="Cari nama, NISN..."
-                className="pl-9 h-9 sm:h-10 text-sm"
+                className="pl-9 pr-8 h-9 sm:h-10 text-sm"
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value)
                   setPagination(prev => ({ ...prev, page: 1 }))
                 }}
               />
+              {search && (
+                <button
+                  onClick={() => {
+                    setSearch('')
+                    setPagination(prev => ({ ...prev, page: 1 }))
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors"
+                  title="Hapus pencarian"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
             </div>
             <div className="grid grid-cols-2 sm:flex gap-2">
               <Select

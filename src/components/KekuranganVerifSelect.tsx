@@ -147,6 +147,15 @@ export function VerifyKekuranganPicker({ value, onChange }: { value: string; onC
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+        {search && (
+          <button
+            onClick={() => setSearch('')}
+            className="w-4 h-4 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors shrink-0"
+            title="Hapus pencarian"
+          >
+            <XIcon className="w-2.5 h-2.5" />
+          </button>
+        )}
       </div>
 
       {/* Options list */}
@@ -309,6 +318,15 @@ export function KekuranganVerifSelect({ value, onChange }: { value: string; onCh
             onChange={(e) => setSearch(e.target.value)}
             autoFocus
           />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="w-4 h-4 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors shrink-0"
+              title="Hapus pencarian"
+            >
+              <XIcon className="w-2.5 h-2.5" />
+            </button>
+          )}
         </div>
 
         {/* Selected items preview */}
