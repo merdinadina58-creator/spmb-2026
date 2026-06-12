@@ -1,0 +1,252 @@
+/home/z/my-project/src/components/tabs/PengaturanTab.tsx-493-                    'Anak Guru': 'from-pink-500 to-pink-600',
+/home/z/my-project/src/components/tabs/PengaturanTab.tsx-494-                    'Mutasi': 'from-cyan-500 to-cyan-600',
+/home/z/my-project/src/components/tabs/PengaturanTab.tsx-495-                    'Prestasi Nilai Rapor': 'from-emerald-500 to-emerald-600',
+/home/z/my-project/src/components/tabs/PengaturanTab.tsx:496:                    'Prestasi Non Akademik': 'from-orange-500 to-orange-600',
+/home/z/my-project/src/components/tabs/PengaturanTab.tsx-497-                  }
+/home/z/my-project/src/components/tabs/PengaturanTab.tsx-498-                  const gradient = colors[jalur.nama] || 'from-gray-500 to-gray-600'
+/home/z/my-project/src/components/tabs/PengaturanTab.tsx-499-                  return (
+--
+/home/z/my-project/src/components/tabs/RankingTab.tsx-64-  const [rankingJalur, setRankingJalur] = useState('all')
+/home/z/my-project/src/components/tabs/RankingTab.tsx-65-  const [rankingSekolah, setRankingSekolah] = useState('all')
+/home/z/my-project/src/components/tabs/RankingTab.tsx-66-  const [rankingJurusan, setRankingJurusan] = useState('all')
+/home/z/my-project/src/components/tabs/RankingTab.tsx:67:  const [rankingTampilan, setRankingTampilan] = useState(initialTampilan || 'jarak') // jarak | nilai | komposit
+/home/z/my-project/src/components/tabs/RankingTab.tsx-68-  const [rankingStatus, setRankingStatus] = useState('all')
+/home/z/my-project/src/components/tabs/RankingTab.tsx-69-  const [rankingData, setRankingData] = useState<Array<Record<string, unknown>>>([])
+/home/z/my-project/src/components/tabs/RankingTab.tsx-70-  const [rankingFilters, setRankingFilters] = useState<{ jalurOptions: string[]; sekolahOptions: string[]; jurusanOptions: string[] }>({ jalurOptions: [], sekolahOptions: [], jurusanOptions: [] })
+--
+/home/z/my-project/src/components/tabs/RankingTab.tsx-110-  }, [fetchRanking])
+/home/z/my-project/src/components/tabs/RankingTab.tsx-111-
+/home/z/my-project/src/components/tabs/RankingTab.tsx-112-  const getRankingPrintHTML = (selectedJalur: string = 'all') => {
+/home/z/my-project/src/components/tabs/RankingTab.tsx:113:    const sortLabel = rankingTampilan === 'jarak' ? 'Jarak Terdekat' : rankingTampilan === 'nilai' ? 'Nilai Tertinggi' : 'Skor Komposit'
+/home/z/my-project/src/components/tabs/RankingTab.tsx-114-    const jalurLabel = selectedJalur !== 'all' ? selectedJalur : 'Semua Jalur'
+/home/z/my-project/src/components/tabs/RankingTab.tsx-115-    const sekolahLabel = rankingSekolah !== 'all' ? rankingSekolah : 'Semua Sekolah'
+/home/z/my-project/src/components/tabs/RankingTab.tsx-116-    const jurusanLabel = rankingJurusan !== 'all' ? rankingJurusan : 'Semua Jurusan'
+--
+/home/z/my-project/src/components/tabs/RankingTab.tsx-166-        <td style="padding:6px 8px;border:1px solid #ddd;font-size:12px"><strong>${r.nama as string}</strong><br><span style="font-size:9px;color:#999">NISN: ${r.nisn as string}</span></td>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-167-        <td style="padding:6px 8px;border:1px solid #ddd;font-size:11px">${r.namaSekolahPilihan as string}</td>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-168-        <td style="padding:6px 8px;border:1px solid #ddd;font-size:11px">${r.jurusan as string}</td>
+/home/z/my-project/src/components/tabs/RankingTab.tsx:169:        <td style="padding:6px 8px;border:1px solid #ddd;text-align:right;font-size:11px;font-weight:${rankingTampilan === 'jarak' ? 'bold' : 'normal'};color:${jarakNum > 0 ? '#0369a1' : '#ccc'}">${r.jarakKeSekolah as string || r.lokasiJarak as string || '-'}</td>
+/home/z/my-project/src/components/tabs/RankingTab.tsx:170:        <td style="padding:6px 8px;border:1px solid #ddd;text-align:right;font-size:11px;font-weight:${rankingTampilan === 'nilai' ? 'bold' : 'normal'};color:${nilaiNum > 0 ? '#047857' : '#ccc'}">${r.totalNilai as string || r.nilaiRataRata as string || r.skorNilaiRaport as string || '-'}</td>
+/home/z/my-project/src/components/tabs/RankingTab.tsx:171:        <td style="padding:6px 8px;border:1px solid #ddd;text-align:right;font-size:11px;font-weight:${rankingTampilan === 'komposit' ? 'bold' : 'normal'};color:${skorNum > 0 ? '#b45309' : '#ccc'}">${r.totalNilai as string || r.skor as string || '-'}</td>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-172-        <td style="padding:6px 8px;border:1px solid #ddd;text-align:center;font-size:10px">${r.verificationStatus === 'VERIFIED' ? '<span style="background:#d1fae5;color:#047857;padding:2px 8px;border-radius:10px">Diterima</span>' : r.verificationStatus === 'REJECTED' ? '<span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:10px">Ditolak</span>' : '<span style="background:#fef3c7;color:#b45309;padding:2px 8px;border-radius:10px">Menunggu</span>'}</td>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-173-      </tr>`
+/home/z/my-project/src/components/tabs/RankingTab.tsx-174-    }).join('')
+--
+/home/z/my-project/src/components/tabs/RankingTab.tsx-214-            <th>Nama Pendaftar</th>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-215-            <th>Sekolah Pilihan</th>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-216-            <th>Jurusan</th>
+/home/z/my-project/src/components/tabs/RankingTab.tsx:217:            <th class="${rankingTampilan === 'jarak' ? 'active' : ''}" style="width:80px">Jarak</th>
+/home/z/my-project/src/components/tabs/RankingTab.tsx:218:            <th class="${rankingTampilan === 'nilai' ? 'active' : ''}" style="width:70px">Nilai</th>
+/home/z/my-project/src/components/tabs/RankingTab.tsx:219:            <th class="${rankingTampilan === 'komposit' ? 'active' : ''}" style="width:60px">Skor</th>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-220-            <th style="width:75px">Status</th>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-221-          </tr>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-222-        </thead>
+--
+/home/z/my-project/src/components/tabs/RankingTab.tsx-248-
+/home/z/my-project/src/components/tabs/RankingTab.tsx-249-  // Ranking: export to Excel
+/home/z/my-project/src/components/tabs/RankingTab.tsx-250-  const handleRankingExportExcel = () => {
+/home/z/my-project/src/components/tabs/RankingTab.tsx:251:    const sortLabel = rankingTampilan === 'jarak' ? 'Jarak Terdekat' : rankingTampilan === 'nilai' ? 'Nilai Tertinggi' : 'Skor Komposit'
+/home/z/my-project/src/components/tabs/RankingTab.tsx-252-    const selectedJalur = rankingPreviewJalur
+/home/z/my-project/src/components/tabs/RankingTab.tsx-253-    const jalurLabel = selectedJalur !== 'all' ? selectedJalur : 'Semua Jalur'
+/home/z/my-project/src/components/tabs/RankingTab.tsx-254-
+--
+/home/z/my-project/src/components/tabs/RankingTab.tsx-515-              const prestasiData = rankingData
+/home/z/my-project/src/components/tabs/RankingTab.tsx-516-                .filter((r: Record<string, unknown>) => {
+/home/z/my-project/src/components/tabs/RankingTab.tsx-517-                  const sj = (r.subJalur as string || '').toLowerCase()
+/home/z/my-project/src/components/tabs/RankingTab.tsx:518:                  return (sj.includes('prestasi') || sj.includes('akademik') || sj.includes('non')) && (r._skorPrestasiAkademikNum as number) > 0
+/home/z/my-project/src/components/tabs/RankingTab.tsx-519-                })
+/home/z/my-project/src/components/tabs/RankingTab.tsx:520:                .sort((a: Record<string, unknown>, b: Record<string, unknown>) => (b._skorPrestasiAkademikNum as number) - (a._skorPrestasiAkademikNum as number))
+/home/z/my-project/src/components/tabs/RankingTab.tsx-521-                .slice(0, 5)
+/home/z/my-project/src/components/tabs/RankingTab.tsx-522-              if (prestasiData.length === 0) return <p className="text-xs text-gray-400 text-center py-3">Belum ada data skor prestasi untuk Jalur Prestasi</p>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-523-              const presKuota = rankingKuotaPerJalur.find(k => k.nama.toLowerCase().includes('prestasi'))?.kuota || 0
+--
+/home/z/my-project/src/components/tabs/RankingTab.tsx-533-                        <p className="text-[10px] text-gray-500">{r.namaSekolahAsal as string}</p>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-534-                      </div>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-535-                      <div className="text-right shrink-0">
+/home/z/my-project/src/components/tabs/RankingTab.tsx:536:                        <p className="text-xs font-bold text-emerald-700">{r.skorPrestasiAkademik as string || '-'}</p>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-537-                        <p className="text-[10px] text-gray-400">skor prestasi</p>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-538-                      </div>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-539-                    </div>
+--
+/home/z/my-project/src/components/tabs/RankingTab.tsx-553-              <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+/home/z/my-project/src/components/tabs/RankingTab.tsx-554-                <Trophy className="w-5 h-5 text-amber-500" />
+/home/z/my-project/src/components/tabs/RankingTab.tsx-555-                Tabel Perangkingan
+/home/z/my-project/src/components/tabs/RankingTab.tsx:556:                {rankingTampilan === 'jarak' && <Badge className="bg-sky-100 text-sky-700 border-sky-200">Jarak Terdekat</Badge>}
+/home/z/my-project/src/components/tabs/RankingTab.tsx:557:                {rankingTampilan === 'nilai' && <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">Nilai Tertinggi</Badge>}
+/home/z/my-project/src/components/tabs/RankingTab.tsx:558:                {rankingTampilan === 'komposit' && <Badge className="bg-amber-100 text-amber-700 border-amber-200">Skor Komposit</Badge>}
+/home/z/my-project/src/components/tabs/RankingTab.tsx-559-              </CardTitle>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-560-              <CardDescription className="text-xs mt-1">
+/home/z/my-project/src/components/tabs/RankingTab.tsx-561-                {rankingData.length} pendaftar
+--
+/home/z/my-project/src/components/tabs/RankingTab.tsx-616-                      </span>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-617-                    </TableHead>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-618-                    <TableHead className="font-semibold text-xs">Sekolah Asal</TableHead>
+/home/z/my-project/src/components/tabs/RankingTab.tsx:619:                    <TableHead className="text-right font-semibold text-xs cursor-pointer select-none group" onClick={() => setRankingTampilan('jarak')}>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-620-                      <span className="inline-flex items-center gap-1">
+/home/z/my-project/src/components/tabs/RankingTab.tsx-621-                        Jarak
+/home/z/my-project/src/components/tabs/RankingTab.tsx:622:                        {rankingTampilan === 'jarak' ? (
+/home/z/my-project/src/components/tabs/RankingTab.tsx-623-                          <span className="text-sky-600" title="Diurutkan berdasarkan jarak">📍</span>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-624-                        ) : (
+/home/z/my-project/src/components/tabs/RankingTab.tsx-625-                          <ArrowUpDown className="w-3 h-3 text-gray-300 group-hover:text-sky-500 transition-colors" />
+/home/z/my-project/src/components/tabs/RankingTab.tsx-626-                        )}
+/home/z/my-project/src/components/tabs/RankingTab.tsx-627-                      </span>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-628-                    </TableHead>
+/home/z/my-project/src/components/tabs/RankingTab.tsx:629:                    <TableHead className="text-right font-semibold text-xs cursor-pointer select-none group" onClick={() => setRankingTampilan('nilai')}>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-630-                      <span className="inline-flex items-center gap-1">
+/home/z/my-project/src/components/tabs/RankingTab.tsx-631-                        Nilai
+/home/z/my-project/src/components/tabs/RankingTab.tsx:632:                        {rankingTampilan === 'nilai' ? (
+/home/z/my-project/src/components/tabs/RankingTab.tsx-633-                          <span className="text-emerald-600" title="Diurutkan berdasarkan nilai">📍</span>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-634-                        ) : (
+/home/z/my-project/src/components/tabs/RankingTab.tsx-635-                          <ArrowUpDown className="w-3 h-3 text-gray-300 group-hover:text-emerald-500 transition-colors" />
+/home/z/my-project/src/components/tabs/RankingTab.tsx-636-                        )}
+/home/z/my-project/src/components/tabs/RankingTab.tsx-637-                      </span>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-638-                    </TableHead>
+/home/z/my-project/src/components/tabs/RankingTab.tsx:639:                    <TableHead className="text-right font-semibold text-xs cursor-pointer select-none group" onClick={() => setRankingTampilan('komposit')}>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-640-                      <span className="inline-flex items-center gap-1">
+/home/z/my-project/src/components/tabs/RankingTab.tsx-641-                        Skor
+/home/z/my-project/src/components/tabs/RankingTab.tsx:642:                        {rankingTampilan === 'komposit' ? (
+/home/z/my-project/src/components/tabs/RankingTab.tsx-643-                          <span className="text-amber-600" title="Diurutkan berdasarkan skor komposit">📍</span>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-644-                        ) : (
+/home/z/my-project/src/components/tabs/RankingTab.tsx-645-                          <ArrowUpDown className="w-3 h-3 text-gray-300 group-hover:text-amber-500 transition-colors" />
+--
+/home/z/my-project/src/components/tabs/RankingTab.tsx-713-                          </div>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-714-                        </TableCell>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-715-                        <TableCell className="text-xs text-gray-700">{r.namaSekolahAsal as string}</TableCell>
+/home/z/my-project/src/components/tabs/RankingTab.tsx:716:                        <TableCell className="text-right" style={rankingTampilan === 'jarak' ? { backgroundColor: 'rgba(186, 230, 253, 0.3)' } : undefined}>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-717-                          <span className={`text-xs font-semibold ${jarakNum > 0 ? 'text-sky-700' : 'text-gray-300'}`}>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-718-                            {r.jarakKeSekolah as string || r.lokasiJarak as string || '-'}
+/home/z/my-project/src/components/tabs/RankingTab.tsx-719-                          </span>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-720-                        </TableCell>
+/home/z/my-project/src/components/tabs/RankingTab.tsx:721:                        <TableCell className="text-right" style={rankingTampilan === 'nilai' ? { backgroundColor: 'rgba(209, 250, 229, 0.3)' } : undefined}>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-722-                          <span className={`text-xs font-semibold ${nilaiNum > 0 ? 'text-emerald-700' : 'text-gray-300'}`}>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-723-                            {r.totalNilai as string || r.nilaiRataRata as string || r.skorNilaiRaport as string || '-'}
+/home/z/my-project/src/components/tabs/RankingTab.tsx-724-                          </span>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-725-                        </TableCell>
+/home/z/my-project/src/components/tabs/RankingTab.tsx:726:                        <TableCell className="text-right" style={rankingTampilan === 'komposit' ? { backgroundColor: 'rgba(254, 243, 199, 0.4)' } : undefined}>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-727-                          <span className={`text-xs font-semibold ${skorNum > 0 ? 'text-amber-700' : 'text-gray-300'}`}>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-728-                            {r.totalNilai as string || r.skor as string || '-'}
+/home/z/my-project/src/components/tabs/RankingTab.tsx-729-                          </span>
+--
+/home/z/my-project/src/components/tabs/RankingTab.tsx-805-                <h2 className="text-lg font-bold tracking-wider">LAPORAN PERANGKINGAN</h2>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-806-                <p className="text-sm text-gray-500">SPMB 2026 — Sistem Penerimaan Madrasah</p>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-807-                <p className="text-xs text-gray-400 mt-1">
+/home/z/my-project/src/components/tabs/RankingTab.tsx:808:                  Diurutkan berdasarkan: <strong>{rankingTampilan === 'jarak' ? 'Jarak Terdekat' : rankingTampilan === 'nilai' ? 'Nilai Tertinggi' : 'Skor Komposit'}</strong>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-809-                  {' · '}Dicetak pada: {new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+/home/z/my-project/src/components/tabs/RankingTab.tsx-810-                </p>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-811-              </div>
+--
+/home/z/my-project/src/components/tabs/RankingTab.tsx-836-                      <TableHead className="w-20 text-center font-semibold">Jalur</TableHead>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-837-                      <TableHead className="font-semibold">Nama Pendaftar</TableHead>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-838-                      <TableHead className="font-semibold">Sekolah Asal</TableHead>
+/home/z/my-project/src/components/tabs/RankingTab.tsx:839:                      <TableHead className={`text-right font-semibold ${rankingTampilan === 'jarak' ? 'bg-amber-50' : ''}`}>Jarak</TableHead>
+/home/z/my-project/src/components/tabs/RankingTab.tsx:840:                      <TableHead className={`text-right font-semibold ${rankingTampilan === 'nilai' ? 'bg-amber-50' : ''}`}>Nilai</TableHead>
+/home/z/my-project/src/components/tabs/RankingTab.tsx:841:                      <TableHead className={`text-right font-semibold ${rankingTampilan === 'komposit' ? 'bg-amber-50' : ''}`}>Skor</TableHead>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-842-                      <TableHead className="text-center font-semibold">Status</TableHead>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-843-                    </TableRow>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-844-                  </TableHeader>
+--
+/home/z/my-project/src/components/tabs/RankingTab.tsx-893-                            <p className="text-[9px] text-gray-400">NISN: {r.nisn as string}</p>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-894-                          </TableCell>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-895-                          <TableCell className="text-xs p-1">{r.namaSekolahAsal as string}</TableCell>
+/home/z/my-project/src/components/tabs/RankingTab.tsx:896:                          <TableCell className={`text-right p-1 ${rankingTampilan === 'jarak' ? 'bg-sky-50/50 font-bold' : ''}`}>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-897-                            <span className={`text-xs ${jarakNum > 0 ? 'text-sky-700' : 'text-gray-300'}`}>{r.lokasiJarak as string || '-'}</span>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-898-                          </TableCell>
+/home/z/my-project/src/components/tabs/RankingTab.tsx:899:                          <TableCell className={`text-right p-1 ${rankingTampilan === 'nilai' ? 'bg-emerald-50/50 font-bold' : ''}`}>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-900-                            <span className={`text-xs ${nilaiNum > 0 ? 'text-emerald-700' : 'text-gray-300'}`}>{r.nilaiRataRata as string || r.skorNilaiRaport as string || '-'}</span>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-901-                          </TableCell>
+/home/z/my-project/src/components/tabs/RankingTab.tsx:902:                          <TableCell className={`text-right p-1 ${rankingTampilan === 'komposit' ? 'bg-amber-50/50 font-bold' : ''}`}>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-903-                            <span className={`text-xs ${skorNum > 0 ? 'text-amber-700' : 'text-gray-300'}`}>{r.skor as string || '-'}</span>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-904-                          </TableCell>
+/home/z/my-project/src/components/tabs/RankingTab.tsx-905-                          <TableCell className="text-center p-1">
+--
+/home/z/my-project/src/components/LembarVerifikasiSheet.tsx-253-      skorNilaiRaport: reg.skorNilaiRaport || '',
+/home/z/my-project/src/components/LembarVerifikasiSheet.tsx-254-      skorLomba: reg.skorLomba || '',
+/home/z/my-project/src/components/LembarVerifikasiSheet.tsx-255-      nilaiRataRataTKA: reg.nilaiRataRataTKA || '',
+/home/z/my-project/src/components/LembarVerifikasiSheet.tsx:256:      skorPrestasiAkademik: reg.skorPrestasiAkademik || '',
+/home/z/my-project/src/components/LembarVerifikasiSheet.tsx-257-      kekuranganVerifikasi: reg.kekuranganVerifikasi || '',
+/home/z/my-project/src/components/LembarVerifikasiSheet.tsx-258-      tanggalVerif: reg.tanggalVerif || '',
+/home/z/my-project/src/components/LembarVerifikasiSheet.tsx-259-      jamVerif: reg.jamVerif || '',
+--
+/home/z/my-project/src/components/LembarVerifikasiSheet.tsx-821-                      <TableCell className="text-sm text-center bg-purple-50/50">
+/home/z/my-project/src/components/LembarVerifikasiSheet.tsx-822-                        {reg.nilaiRataRataTKA || '-'}
+/home/z/my-project/src/components/LembarVerifikasiSheet.tsx-823-                      </TableCell>
+/home/z/my-project/src/components/LembarVerifikasiSheet.tsx:824:                      {/* Skor Prestasi Akademik */}
+/home/z/my-project/src/components/LembarVerifikasiSheet.tsx-825-                      <TableCell className="text-sm text-center bg-purple-50/50">
+/home/z/my-project/src/components/LembarVerifikasiSheet.tsx:826:                        {reg.skorPrestasiAkademik || '-'}
+/home/z/my-project/src/components/LembarVerifikasiSheet.tsx-827-                      </TableCell>
+/home/z/my-project/src/components/LembarVerifikasiSheet.tsx-828-                      {/* Kekurangan Verifikasi - Multi-Select Dropdown */}
+/home/z/my-project/src/components/LembarVerifikasiSheet.tsx-829-                      <TableCell className="text-sm align-top" style={{ maxWidth: '280px' }}>
+--
+/home/z/my-project/src/components/LembarVerifikasiSheet.tsx-1351-                  </div>
+/home/z/my-project/src/components/LembarVerifikasiSheet.tsx-1352-                  <div>
+/home/z/my-project/src/components/LembarVerifikasiSheet.tsx-1353-                    <label className="text-xs text-gray-500 font-medium">Skor Prestasi</label>
+/home/z/my-project/src/components/LembarVerifikasiSheet.tsx:1354:                    <Input value={editForm.skorPrestasiAkademik || ''} onChange={e => setEditForm({...editForm, skorPrestasiAkademik: e.target.value})} className="mt-1" />
+/home/z/my-project/src/components/LembarVerifikasiSheet.tsx-1355-                  </div>
+/home/z/my-project/src/components/LembarVerifikasiSheet.tsx-1356-                  <div>
+/home/z/my-project/src/components/LembarVerifikasiSheet.tsx-1357-                    <label className="text-xs text-gray-500 font-medium">Total Nilai (Sumut Berkah)</label>
+--
+/home/z/my-project/src/components/dialogs/DetailDialog.tsx-122-            </div>
+/home/z/my-project/src/components/dialogs/DetailDialog.tsx-123-
+/home/z/my-project/src/components/dialogs/DetailDialog.tsx-124-            {/* Portal SPMB Data */}
+/home/z/my-project/src/components/dialogs/DetailDialog.tsx:125:            {(target.nik || target.tanggalLahir || target.alamat || target.noTelpSiswa || target.noTelpOrangtua || target.lokasiJarak || target.nilaiRataRata || target.skor || target.nilaiRapor || target.skorJarak || target.skorNilaiRaport || (target as Record<string, unknown>).skorLomba || (target as Record<string, unknown>).nilaiRataRataTKA || (target as Record<string, unknown>).skorPrestasiAkademik || (target as Record<string, unknown>).totalNilai || (target as Record<string, unknown>).jarakKeSekolah) && (
+/home/z/my-project/src/components/dialogs/DetailDialog.tsx-126-              <div className="border-t pt-4">
+/home/z/my-project/src/components/dialogs/DetailDialog.tsx-127-                <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-1.5">
+/home/z/my-project/src/components/dialogs/DetailDialog.tsx-128-                  <ClipboardCheck className="w-4 h-4 text-emerald-600" />
+--
+/home/z/my-project/src/components/dialogs/DetailDialog.tsx-196-                      <p className="text-sm font-bold text-purple-700">{String((target as Record<string, unknown>).nilaiRataRataTKA || '-')}</p>
+/home/z/my-project/src/components/dialogs/DetailDialog.tsx-197-                    </div>
+/home/z/my-project/src/components/dialogs/DetailDialog.tsx-198-                  )}
+/home/z/my-project/src/components/dialogs/DetailDialog.tsx:199:                  {(target as Record<string, unknown>).skorPrestasiAkademik && (
+/home/z/my-project/src/components/dialogs/DetailDialog.tsx-200-                    <div className="bg-purple-50 rounded-lg p-2">
+/home/z/my-project/src/components/dialogs/DetailDialog.tsx-201-                      <label className="text-xs text-purple-600 font-medium">Skor Prestasi</label>
+/home/z/my-project/src/components/dialogs/DetailDialog.tsx:202:                      <p className="text-sm font-bold text-purple-700">{String((target as Record<string, unknown>).skorPrestasiAkademik || '-')}</p>
+/home/z/my-project/src/components/dialogs/DetailDialog.tsx-203-                    </div>
+/home/z/my-project/src/components/dialogs/DetailDialog.tsx-204-                  )}
+/home/z/my-project/src/components/dialogs/DetailDialog.tsx-205-                  {(target as Record<string, unknown>).totalNilai && (
+--
+/home/z/my-project/src/components/dialogs/PortalPasteDialog.tsx-106-      'Penyandang Disabilitas': 'Disabilitas',
+/home/z/my-project/src/components/dialogs/PortalPasteDialog.tsx-107-      'Mutasi Orang tua/ Wali': 'Mutasi',
+/home/z/my-project/src/components/dialogs/PortalPasteDialog.tsx-108-      'Perpindahan Orang Tua': 'Mutasi',
+/home/z/my-project/src/components/dialogs/PortalPasteDialog.tsx:109:      'Prestasi Akademik': 'Prestasi Nilai Rapor',
+/home/z/my-project/src/components/dialogs/PortalPasteDialog.tsx:110:      'Prestasi Nonakademik': 'Prestasi Non Akademik',
+/home/z/my-project/src/components/dialogs/PortalPasteDialog.tsx:111:      'Non Akademik': 'Prestasi Non Akademik',
+/home/z/my-project/src/components/dialogs/PortalPasteDialog.tsx-112-      'Terdampak Bencana Alam': 'Terdampak Bencana Alam',
+/home/z/my-project/src/components/dialogs/PortalPasteDialog.tsx-113-    }
+/home/z/my-project/src/components/dialogs/PortalPasteDialog.tsx-114-    // Combine: active jalur names + their known aliases (only if alias maps to an active jalur)
+--
+/home/z/my-project/src/components/PengaturanTab.tsx-698-                  <ul className="mt-1 space-y-1 text-sky-600 list-disc list-inside">
+/home/z/my-project/src/components/PengaturanTab.tsx-699-                    <li><strong>Klik "Aktif/Off"</strong> di kolom tahap untuk mengatur jalur aktif di tahap tersebut</li>
+/home/z/my-project/src/components/PengaturanTab.tsx-700-                    <li>Contoh: Domisili → Aktif di Tahap 1, Off di Tahap 2</li>
+/home/z/my-project/src/components/PengaturanTab.tsx:701:                    <li>Contoh: Prestasi Nonakademik → Off di Tahap 1, Aktif di Tahap 2</li>
+/home/z/my-project/src/components/PengaturanTab.tsx-702-                    <li>Klik <strong>kartu tahap</strong> di bawah tabel untuk berpindah tahap aktif</li>
+/home/z/my-project/src/components/PengaturanTab.tsx-703-                    <li>Data pendaftar antar tahap <strong>terpisah sepenuhnya</strong></li>
+/home/z/my-project/src/components/PengaturanTab.tsx-704-                  </ul>
+--
+/home/z/my-project/src/components/PengaturanTab.tsx-761-                      return (
+/home/z/my-project/src/components/PengaturanTab.tsx-762-                        <TableRow key={jalur.id} className={!jalur.aktif ? 'opacity-50' : ''}>
+/home/z/my-project/src/components/PengaturanTab.tsx-763-                          <TableCell className="text-center text-sm text-gray-500">{idx + 1}</TableCell>
+/home/z/my-project/src/components/PengaturanTab.tsx:764:                          <TableCell><div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full" style={{ backgroundColor: jalur.nama.toLowerCase().includes('non akademik') || jalur.nama.toLowerCase().includes('nonakademik') ? '#f97316' : jalur.nama === 'Domisili' ? '#3b82f6' : jalur.nama.includes('Afirmasi') || jalur.nama.includes('KTM') ? '#f59e0b' : jalur.nama.includes('Disabilitas') ? '#8b5cf6' : jalur.nama === 'Anak Guru' ? '#ec4899' : jalur.nama === 'Mutasi' ? '#06b6d4' : jalur.nama.includes('Prestasi') || jalur.nama.includes('Akademik') ? '#10b981' : jalur.nama.includes('Bencana') ? '#ef4444' : '#6b7280' }} /><span className="font-medium text-sm">{jalur.nama}</span></div></TableCell>
+/home/z/my-project/src/components/PengaturanTab.tsx-765-                          <TableCell className="text-center"><div className="flex items-center justify-center gap-1"><Input type="number" min={0} max={100} step={0.5} value={jalur.persentase} onChange={(e) => { const val = parseFloat(e.target.value) || 0; setJalurConfigs(prev => prev.map(j => j.id === jalur.id ? { ...j, persentase: val } : j)) }} onBlur={() => updateJalurPersentase(jalur.id, jalur.persentase)} className="w-20 text-center text-sm font-bold" /><span className="text-xs text-gray-400">%</span></div><div className="mt-1 h-1.5 bg-gray-100 rounded-full overflow-hidden"><div className="h-full bg-sky-400 rounded-full transition-all" style={{ width: `${barWidth}%` }} /></div></TableCell>
+/home/z/my-project/src/components/PengaturanTab.tsx-766-                          <TableCell className="text-center"><div className="inline-flex flex-col items-center"><span className="text-lg font-bold text-sky-700">{jumlahSiswa}</span><span className="text-xs text-gray-400">siswa</span></div></TableCell>
+/home/z/my-project/src/components/PengaturanTab.tsx-767-                          <TableCell className="text-center"><button onClick={() => toggleJalurAktif(jalur.id, !jalur.aktif)} className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-colors ${jalur.aktif ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>{jalur.aktif ? <><CheckCircle2 className="w-3 h-3" /> Aktif</> : <><XCircle className="w-3 h-3" /> Nonaktif</>}</button></TableCell>
+--
+/home/z/my-project/src/components/PengaturanTab.tsx-775-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+/home/z/my-project/src/components/PengaturanTab.tsx-776-                {jalurConfigs.filter(j => j.aktif).map(jalur => {
+/home/z/my-project/src/components/PengaturanTab.tsx-777-                  const jumlahSiswa = Math.round(kuota * jalur.persentase / 100)
+/home/z/my-project/src/components/PengaturanTab.tsx:778:                  const colors: Record<string, string> = { 'Domisili': 'from-blue-500 to-blue-600', 'Afirmasi (KTM)': 'from-amber-500 to-amber-600', 'Keluarga Tidak Mampu': 'from-amber-500 to-amber-600', 'Disabilitas': 'from-purple-500 to-purple-600', 'Penyandang Disabilitas': 'from-purple-500 to-purple-600', 'Anak Guru': 'from-pink-500 to-pink-600', 'Mutasi': 'from-cyan-500 to-cyan-600', 'Mutasi Orangtua/Wali': 'from-cyan-500 to-cyan-600', 'Prestasi Nilai Rapor': 'from-emerald-500 to-emerald-600', 'Prestasi Akademik': 'from-emerald-500 to-emerald-600', 'Prestasi Non Akademik': 'from-orange-500 to-orange-600', 'Prestasi Nonakademik': 'from-orange-500 to-orange-600', 'Prestasi Non-Akademik': 'from-orange-500 to-orange-600', 'Terdampak Bencana Alam': 'from-red-500 to-red-600' }
+/home/z/my-project/src/components/PengaturanTab.tsx-779-                  const gradient = colors[jalur.nama] || 'from-gray-500 to-gray-600'
+/home/z/my-project/src/components/PengaturanTab.tsx-780-                  return (<div key={jalur.id} className={`rounded-xl p-4 text-white bg-gradient-to-br ${gradient} shadow-sm`}><p className="text-xs font-medium opacity-80">{jalur.nama}</p><p className="text-3xl font-bold mt-1">{jumlahSiswa}</p><p className="text-xs opacity-70 mt-0.5">{jalur.persentase}% dari {kuota}</p></div>)
+/home/z/my-project/src/components/PengaturanTab.tsx-781-                })}
+--
+/home/z/my-project/src/components/RankingPreviewDialog.tsx-149-              <h2 className="text-lg font-bold tracking-wider">LAPORAN PERANGKINGAN PESERTA SPMB</h2>
+/home/z/my-project/src/components/RankingPreviewDialog.tsx-150-              <p className="text-sm text-gray-500">{appName}{schoolName ? ` — ${schoolName}` : ''} — {appSubtitle.split('\n')[0]}</p>
+/home/z/my-project/src/components/RankingPreviewDialog.tsx-151-              <p className="text-xs text-gray-400 mt-1">
+/home/z/my-project/src/components/RankingPreviewDialog.tsx:152:                Diurutkan berdasarkan: <strong>{rankingTampilan === 'jarak' ? 'Jarak Terdekat' : rankingTampilan === 'nilai' ? 'Nilai Tertinggi' : 'Skor Komposit'}</strong>
+/home/z/my-project/src/components/RankingPreviewDialog.tsx-153-                {' · '}Dicetak pada: {new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+/home/z/my-project/src/components/RankingPreviewDialog.tsx-154-              </p>
+/home/z/my-project/src/components/RankingPreviewDialog.tsx-155-            </div>
+--
+/home/z/my-project/src/components/RankingPreviewDialog.tsx-209-                    <TableHead colSpan={2} className="text-center font-semibold text-white bg-slate-700">Data Pendaftar</TableHead>
+/home/z/my-project/src/components/RankingPreviewDialog.tsx-210-                    <TableHead rowSpan={2} className="font-semibold text-white bg-slate-800">Sekolah Asal</TableHead>
+
+[Showing results with pagination = limit: 250]
