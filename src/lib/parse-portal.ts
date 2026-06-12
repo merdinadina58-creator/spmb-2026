@@ -444,6 +444,31 @@ export function parsePortalText(
     result['status'] = 'ON PROGRESS'
   }
 
+  // ==================== JALUR-AWARE SCORE REMAPPING ====================
+  // The SPMB Portal always uses "Skor Prestasi Akademik" as the label,
+  // even for Non-Akademik pathway records. So when the detected jalur
+  // is Non-Akademik, we need to move the score to the correct field.
+  const detectedJalurNama = (result['_detectedJalurNama'] || '').toLowerCase()
+  const isNonAkd = detectedJalurNama.includes('non') && detectedJalurNama.includes('akademik')
+
+  if (isNonAkd) {
+    // For Non-Akademik pathway:
+    // If skorPrestasiNonAkademik is empty but skorPrestasiAkademik has a value,
+    // move the value from Akademik to Non-Akademik field
+    if (!result['skorPrestasiNonAkademik'] && result['skorPrestasiAkademik']) {
+      result['skorPrestasiNonAkademik'] = result['skorPrestasiAkademik']
+      delete result['skorPrestasiAkademik']
+    }
+  } else if (detectedJalurNama.includes('prestasi') && detectedJalurNama.includes('akademik')) {
+    // For Akademik pathway:
+    // If skorPrestasiAkademik is empty but skorPrestasiNonAkademik has a value,
+    // move the value from Non-Akademik to Akademik field
+    if (!result['skorPrestasiAkademik'] && result['skorPrestasiNonAkademik']) {
+      result['skorPrestasiAkademik'] = result['skorPrestasiNonAkademik']
+      delete result['skorPrestasiNonAkademik']
+    }
+  }
+
   // NPSN - we don't have this from portal, use empty
   result['npsnSekolahPilihan'] = ''
   result['npsnSekolahAsal'] = ''

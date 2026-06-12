@@ -88,6 +88,19 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Jalur-aware score remapping safety net:
+    // The SPMB Portal always shows "Skor Prestasi Akademik" as the label,
+    // even for Non-Akademik pathway records. If a Non-Akademik record has
+    // skorPrestasiAkademik but no skorPrestasiNonAkademik, move the value.
+    const subJalurLower = (data.subJalur || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+    const isNonAkdJalur = subJalurLower.includes('nonakademik') || subJalurLower.includes('nonakademik')
+    if (isNonAkdJalur) {
+      if (portalFields['skorPrestasiAkademik'] && !portalFields['skorPrestasiNonAkademik']) {
+        portalFields['skorPrestasiNonAkademik'] = portalFields['skorPrestasiAkademik']
+        delete portalFields['skorPrestasiAkademik']
+      }
+    }
+
     // Also add verificationNote if provided
     if (data.verificationNote && data.verificationNote.trim()) {
       portalFields['verificationNote'] = data.verificationNote.trim();
