@@ -37,3 +37,31 @@ Stage Summary:
 - PENDING (Simpan) button now works by always updating verificationStatus and status
 - REJECTED (Tolak & Simpan) now handles unique constraint violations gracefully
 - Cross-tahap fallback function handles Prisma P2002 errors by finding and updating existing records
+
+---
+Task ID: 3
+Agent: main
+Task: Add sidebar minimize/maximize (collapse/expand) feature
+
+Work Log:
+- Added sidebarCollapsed state with localStorage persistence (key: spmb-sidebar-collapsed)
+- Created SidebarNavItem component for cleaner code, supports both collapsed and expanded states
+- When collapsed: sidebar width transitions from w-64 to w-16, only icons shown with tooltips on hover
+- When expanded: full labels, badges, section headers displayed normally
+- Added ChevronsLeft/ChevronsRight icons for minimize/expand toggle buttons
+- Minimize button in expanded footer with text label "Minimize"
+- Expand button in collapsed footer with title="Expand Sidebar"
+- Smooth 300ms CSS transition on sidebar width change
+- Wrapped entire layout in TooltipProvider for collapsed-mode tooltips
+- Section dividers (Umum, Verifikasi, Hasil, Keputusan, Sistem) show as thin lines when collapsed
+- User avatar in footer shows with tooltip when collapsed, full info when expanded
+- Tested navigation in both states — all tabs work correctly
+- Tested minimize/expand toggle — state persists in localStorage across reloads
+- Lint check passes cleanly (errors only in pre-existing deploy-spmb2026 folder)
+
+Stage Summary:
+- Sidebar collapse/expand feature fully implemented and tested
+- State persists in localStorage (spmb-sidebar-collapsed key)
+- All existing features (navigation, badges, tooltips) work in both states
+- Smooth transition animation (300ms ease-in-out)
+- No regressions found in browser testing
