@@ -10,6 +10,32 @@ function v(r: Record<string, unknown>, key: string): string {
   return String(val) || '-'
 }
 
+// Helper: check if a jalur name is Non-Akademik variant
+function isNonAkademikJalur(subJalur: string): boolean {
+  const lower = subJalur.toLowerCase().replace(/[^a-z0-9]/g, '')
+  return lower.includes('nonakademik')
+}
+
+// Helper: get prestasi score for display from a record
+function getPrestasiDisplayValue(r: Record<string, unknown>): string {
+  const subJalur = (r.subJalur as string) || ''
+  if (isNonAkademikJalur(subJalur)) {
+    return v(r, 'skorPrestasiNonAkademik') !== '-' ? v(r, 'skorPrestasiNonAkademik') : v(r, 'skorPrestasiAkademik')
+  }
+  return v(r, 'skorPrestasiAkademik') !== '-' ? v(r, 'skorPrestasiAkademik') : v(r, 'skorPrestasiNonAkademik')
+}
+
+// Helper: get numeric prestasi score from a record
+function getPrestasiNumValue(r: Record<string, unknown>): number {
+  const subJalur = (r.subJalur as string) || ''
+  const akdNum = (r._skorPrestasiAkademikNum as number) || -1
+  const nonAkdNum = (r._skorPrestasiNonAkademikNum as number) || -1
+  if (isNonAkademikJalur(subJalur)) {
+    return nonAkdNum > 0 ? nonAkdNum : akdNum
+  }
+  return akdNum > 0 ? akdNum : nonAkdNum
+}
+
 /**
  * Generate print HTML content for ranking report.
  * Designed to match the detail level of Lembar Verifikasi.
@@ -39,7 +65,7 @@ export function getRankingPrintHTML(params: {
     schoolName,
   } = params
 
-  const sortLabel = rankingTampilan === 'jarak' ? 'Jarak Terdekat' : rankingTampilan === 'nilai' ? 'Nilai Tertinggi' : 'Skor Komposit'
+  const sortLabel = rankingTampilan === 'jarak' ? 'Jarak Terdekat' : rankingTampilan === 'nilai' ? 'Nilai Tertinggi' : rankingTampilan === 'komposit' ? 'Skor Komposit' : 'Skor Prestasi'
   const jalurLabel = selectedJalur !== 'all' ? selectedJalur : 'Semua Jalur'
   const sekolahLabel = rankingSekolah !== 'all' ? rankingSekolah : 'Semua Sekolah'
   const jurusanLabel = rankingJurusan !== 'all' ? rankingJurusan : 'Semua Jurusan'
@@ -91,6 +117,8 @@ export function getRankingPrintHTML(params: {
     const jarakNum = r._jarakNum as number
     const nilaiNum = r._nilaiNum as number
     const skorNum = r._skorNum as number
+    const skorPrestasiNum = getPrestasiNumValue(r)
+    const prestasiDisplay = getPrestasiDisplayValue(r)
 
     // Determine kuota cutoff
     const currentKuota = findKuota(r.subJalur as string)
@@ -142,6 +170,7 @@ export function getRankingPrintHTML(params: {
       <td style="padding:4px 3px;border:1px solid #ddd;text-align:center;font-size:9px;color:#7c3aed">${skorPrestasiAkademik}</td>
       <td style="padding:4px 3px;border:1px solid #ddd;text-align:center;font-size:9px;color:${skorNum > 0 ? '#b45309' : '#ccc'}">${v(r, 'totalNilai')}</td>
       <td style="padding:4px 3px;border:1px solid #ddd;text-align:center;font-size:9px;font-weight:${rankingTampilan === 'komposit' ? 'bold' : 'normal'};color:${skorNum > 0 ? '#b45309' : '#ccc'}">${v(r, 'skor')}</td>
+      <td style="padding:4px 6px;border:1px solid #ddd;text-align:right;font-size:10px;font-weight:${rankingTampilan === 'prestasi' ? 'bold' : 'normal'};color:${skorPrestasiNum > 0 ? '#0d9488' : '#ccc'}">${prestasiDisplay}</td>
       <td style="padding:4px 3px;border:1px solid #ddd;font-size:8px;line-height:1.2;max-width:120px;overflow:hidden">${kekuranganText}</td>
       <td style="padding:4px 3px;border:1px solid #ddd;font-size:8px;text-align:center">${v(r, 'tanggalVerif')}</td>
       <td style="padding:4px 3px;border:1px solid #ddd;font-size:8px;text-align:center">${v(r, 'jamVerif')}</td>
@@ -275,7 +304,7 @@ export function getRankingPrintHTML(params: {
             <th class="group-header" colspan="2" style="${rankingTampilan === 'jarak' ? 'background:#0c4a6e' : ''}">Jarak</th>
             <th class="group-header" colspan="2" style="${rankingTampilan === 'nilai' ? 'background:#064e3b' : ''}">Nilai Raport</th>
             <th class="group-header" colspan="3" style="background:#4c1d95">Detail Portal</th>
-            <th class="group-header" colspan="2" style="${rankingTampilan === 'komposit' ? 'background:#78350f' : ''}">Skor</th>
+            <th class="group-header" colspan="3" style="${rankingTampilan === 'komposit' || rankingTampilan === 'prestasi' ? 'background:#78350f' : ''}">Skor</th>
             <th class="group-header" colspan="5">Verifikasi</th>
             <th class="group-header" rowspan="2" style="width:45px">Status</th>
             <th class="group-header" rowspan="2" style="width:30px">Kuota</th>
@@ -297,6 +326,7 @@ export function getRankingPrintHTML(params: {
             <!-- Skor -->
             <th style="width:45px">Total</th>
             <th class="${rankingTampilan === 'komposit' ? 'active' : ''}" style="width:45px">Komposit</th>
+            <th class="${rankingTampilan === 'prestasi' ? 'active' : ''}" style="width:80px">Skor Prestasi</th>
             <!-- Verifikasi -->
             <th style="width:90px">Kekurangan</th>
             <th style="width:55px">Tgl Verif</th>
@@ -350,7 +380,7 @@ export function handleRankingExportExcel(params: {
     schoolName,
   } = params
 
-  const sortLabel = rankingTampilan === 'jarak' ? 'Jarak Terdekat' : rankingTampilan === 'nilai' ? 'Nilai Tertinggi' : 'Skor Komposit'
+  const sortLabel = rankingTampilan === 'jarak' ? 'Jarak Terdekat' : rankingTampilan === 'nilai' ? 'Nilai Tertinggi' : rankingTampilan === 'komposit' ? 'Skor Komposit' : 'Skor Prestasi'
   const jalurLabel = selectedJalur !== 'all' ? selectedJalur : 'Semua Jalur'
 
   // Filter data by selected jalur
@@ -406,6 +436,8 @@ export function handleRankingExportExcel(params: {
       'Skor Lomba': v(r, 'skorLomba'),
       'Nilai Rata-Rata TKA': v(r, 'nilaiRataRataTKA'),
       'Skor Prestasi': v(r, 'skorPrestasiAkademik'),
+      'Skor Prestasi Akademik': (r.skorPrestasiAkademik as string) || '-',
+      'Skor Prestasi Non Akademik': (r.skorPrestasiNonAkademik as string) || '-',
       'Skor Komposit': v(r, 'skor'),
       'Kekurangan Verifikasi': v(r, 'kekuranganVerifikasi'),
       'Tanggal Verif': v(r, 'tanggalVerif'),

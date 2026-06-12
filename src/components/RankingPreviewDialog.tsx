@@ -226,7 +226,8 @@ export default function RankingPreviewDialog({
                     <TableHead className={`font-semibold ${rankingTampilan === 'nilai' ? 'bg-emerald-50' : ''}`}>Skor</TableHead>
                     <TableHead className="font-semibold bg-purple-50 text-purple-700">Skor Lomba</TableHead>
                     <TableHead className="font-semibold bg-purple-50 text-purple-700">Nilai TKA</TableHead>
-                    <TableHead className="font-semibold bg-purple-50 text-purple-700">Skor Prestasi</TableHead>
+                    <TableHead className="font-semibold bg-purple-50 text-purple-700">Skor Pres. Akd</TableHead>
+                    <TableHead className="font-semibold bg-teal-50 text-teal-700">Skor Pres. Non-Akd</TableHead>
                     <TableHead className="font-semibold">Total</TableHead>
                     <TableHead className={`font-semibold ${rankingTampilan === 'komposit' ? 'bg-amber-50' : ''}`}>Komposit</TableHead>
                     <TableHead className="font-semibold">Kekurangan</TableHead>
@@ -312,6 +313,9 @@ export default function RankingPreviewDialog({
                         </TableCell>
                         <TableCell className="text-center p-0.5 bg-purple-50/50">
                           <span className={`text-[9px] ${v(r, 'skorPrestasiAkademik') !== '-' ? 'text-purple-700' : 'text-gray-300'}`}>{v(r, 'skorPrestasiAkademik')}</span>
+                        </TableCell>
+                        <TableCell className="text-center p-0.5 bg-teal-50/50">
+                          <span className={`text-[9px] ${v(r, 'skorPrestasiNonAkademik') !== '-' ? 'text-teal-700' : 'text-gray-300'}`}>{v(r, 'skorPrestasiNonAkademik')}</span>
                         </TableCell>
                         <TableCell className="text-center p-0.5">
                           <span className={`text-[9px] ${skorNum > 0 ? 'text-amber-700' : 'text-gray-300'}`}>{v(r, 'totalNilai')}</span>

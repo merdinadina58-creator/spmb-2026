@@ -65,3 +65,33 @@ Stage Summary:
 - All existing features (navigation, badges, tooltips) work in both states
 - Smooth transition animation (300ms ease-in-out)
 - No regressions found in browser testing
+---
+Task ID: 1
+Agent: Main
+Task: Implement perangkingan berdasarkan Skor Prestasi Akademik dan Skor Prestasi Non Akademik sesuai jalur
+
+Work Log:
+- Analyzed existing code: API ranking, RankingTab, parse-portal, Prisma schema, utils-shared
+- Discovered both Skor Prestasi Akademik and Non Akademik were stored in the same field (skorPrestasiAkademik)
+- Added new `skorPrestasiNonAkademik` column to SQLite database
+- Updated Prisma schema with new field
+- Updated parse-portal.ts: separated parsing for Akademik and Non Akademik scores into their own fields
+- Updated API ranking route: added `tampilan='prestasi'` sort mode that sorts by appropriate prestasi score based on jalur
+- Added helper functions: `isNonAkademikJalur()`, `getPrestasiScore()`, `getPrestasiNumValue()`, `getPrestasiDisplayValue()`
+- Updated all API routes to support skorPrestasiNonAkademik: portal-paste, import, portal-sync, [id]
+- Updated RankingTab.tsx: added Prestasi option in sort dropdown, Prestasi column in table, updated mini-card
+- Updated ranking-print.ts: added Skor Prestasi column in PDF and Excel, added two separate columns for Akademik/NonAkademik in Excel
+- Updated RankingPreviewDialog.tsx: added Skor Pres. Non-Akd column
+- Updated LembarVerifikasiSheet.tsx: added separate columns and edit fields for both scores
+- Updated EditDialog.tsx: added separate input fields for both scores
+- Updated DetailDialog.tsx: added display for Skor Prestasi Non Akademik
+- Updated page.tsx: added skorPrestasiNonAkademik to editForm initialization
+- Migrated existing data in SQLite (no data needed migration as no Non-Akademik scores existed)
+- Tested with Agent Browser: confirmed Prestasi sort option, Prestasi column, and jalur separation working correctly
+
+Stage Summary:
+- Perangkingan now correctly sorts by Skor Prestasi Akademik for Prestasi Akademik jalur
+- Perangkingan now correctly sorts by Skor Prestasi Non Akademik for Prestasi Non-Akademik jalur
+- New `tampilan='prestasi'` mode added to API and frontend
+- Both scores stored separately in database and displayed separately in all UI components
+- Print/PDF/Excel exports include both Skor Prestasi Akademik and Non Akademik columns

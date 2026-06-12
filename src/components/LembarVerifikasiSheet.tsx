@@ -254,6 +254,7 @@ export default function LembarVerifikasiSheet({
       skorLomba: reg.skorLomba || '',
       nilaiRataRataTKA: reg.nilaiRataRataTKA || '',
       skorPrestasiAkademik: reg.skorPrestasiAkademik || '',
+      skorPrestasiNonAkademik: reg.skorPrestasiNonAkademik || '',
       kekuranganVerifikasi: reg.kekuranganVerifikasi || '',
       tanggalVerif: reg.tanggalVerif || '',
       jamVerif: reg.jamVerif || '',
@@ -713,9 +714,8 @@ export default function LembarVerifikasiSheet({
                   <TableHead className="bg-purple-50 text-purple-700">Nilai Rata² Raport</TableHead>
                   <TableHead className="bg-purple-50 text-purple-700">Skor Lomba</TableHead>
                   <TableHead className="bg-purple-50 text-purple-700">Nilai TKA</TableHead>
-                  <TableHead className="bg-purple-50 text-purple-700">
-                    {config.subJalurFilter?.toLowerCase().includes('non') ? 'Skor Pres. Non-Akad.' : 'Skor Pres. Akad.'}
-                  </TableHead>
+                  <TableHead className="bg-purple-50 text-purple-700">Skor Pres. Akad.</TableHead>
+                  <TableHead className="bg-teal-50 text-teal-700">Skor Pres. Non-Akad.</TableHead>
                   <TableHead className="min-w-[180px]">
                     <span className="inline-flex items-center gap-1 cursor-pointer group" onClick={() => {
                       if (selectedIds.size > 0) {
@@ -824,6 +824,10 @@ export default function LembarVerifikasiSheet({
                       {/* Skor Prestasi Akademik */}
                       <TableCell className="text-sm text-center bg-purple-50/50">
                         {reg.skorPrestasiAkademik || '-'}
+                      </TableCell>
+                      {/* Skor Prestasi Non Akademik */}
+                      <TableCell className="text-sm text-center bg-teal-50/50">
+                        {reg.skorPrestasiNonAkademik || '-'}
                       </TableCell>
                       {/* Kekurangan Verifikasi - Multi-Select Dropdown */}
                       <TableCell className="text-sm align-top" style={{ maxWidth: '280px' }}>
@@ -1350,8 +1354,12 @@ export default function LembarVerifikasiSheet({
                     <Input value={editForm.nilaiRataRataTKA || ''} onChange={e => setEditForm({...editForm, nilaiRataRataTKA: e.target.value})} className="mt-1" />
                   </div>
                   <div>
-                    <label className="text-xs text-gray-500 font-medium">Skor Prestasi</label>
+                    <label className="text-xs text-gray-500 font-medium">Skor Prestasi Akademik</label>
                     <Input value={editForm.skorPrestasiAkademik || ''} onChange={e => setEditForm({...editForm, skorPrestasiAkademik: e.target.value})} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Skor Prestasi Non Akademik</label>
+                    <Input value={editForm.skorPrestasiNonAkademik || ''} onChange={e => setEditForm({...editForm, skorPrestasiNonAkademik: e.target.value})} className="mt-1" />
                   </div>
                   <div>
                     <label className="text-xs text-gray-500 font-medium">Total Nilai (Sumut Berkah)</label>

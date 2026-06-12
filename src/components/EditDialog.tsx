@@ -168,8 +168,12 @@ export default function EditDialog({
                   <Input value={editForm.nilaiRataRataTKA || ''} onChange={e => setEditForm({...editForm, nilaiRataRataTKA: e.target.value})} className="mt-1" />
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500 font-medium">Skor Prestasi</label>
+                  <label className="text-xs text-gray-500 font-medium">Skor Prestasi Akademik</label>
                   <Input value={editForm.skorPrestasiAkademik || ''} onChange={e => setEditForm({...editForm, skorPrestasiAkademik: e.target.value})} className="mt-1" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 font-medium">Skor Prestasi Non Akademik</label>
+                  <Input value={editForm.skorPrestasiNonAkademik || ''} onChange={e => setEditForm({...editForm, skorPrestasiNonAkademik: e.target.value})} className="mt-1" />
                 </div>
                 <div>
                   <label className="text-xs text-gray-500 font-medium">Total Nilai (Sumut Berkah)</label>

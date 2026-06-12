@@ -60,6 +60,7 @@ export async function PATCH(
       'skorLomba',
       'nilaiRataRataTKA',
       'skorPrestasiAkademik',
+      'skorPrestasiNonAkademik',
       'skorJarak',
       'noRegistrasi',
       'nama',

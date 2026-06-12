@@ -86,7 +86,7 @@ export default function RankingTab(props: RankingTabProps) {
             </div>
             <div>
               <h2 className="text-xl sm:text-2xl font-bold">Perangkingan</h2>
-              <p className="text-amber-100 text-xs sm:text-sm mt-1">Rangking pendaftar berdasarkan jarak, nilai, dan skor komposit</p>
+              <p className="text-amber-100 text-xs sm:text-sm mt-1">Rangking pendaftar berdasarkan jarak, nilai, skor komposit, dan skor prestasi</p>
             </div>
           </div>
         </div>
@@ -131,6 +131,7 @@ export default function RankingTab(props: RankingTabProps) {
                   <SelectItem value="jarak">📏 Jarak (Terdekat → Terjauh)</SelectItem>
                   <SelectItem value="nilai">📝 Nilai (Tertinggi → Terendah)</SelectItem>
                   <SelectItem value="komposit">🏆 Skor Komposit (Tertinggi → Terendah)</SelectItem>
+                  <SelectItem value="prestasi">🎖️ Skor Prestasi (Tertinggi → Terendah)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -241,32 +242,60 @@ export default function RankingTab(props: RankingTabProps) {
               <h4 className="font-semibold text-sm text-emerald-900">Prestasi — Skor Tertinggi</h4>
             </div>
             {(() => {
+              // Helper: check if a jalur name is Non-Akademik variant
+              const isNonAkademikJalur = (sj: string) => {
+                const lower = sj.toLowerCase().replace(/[^a-z0-9]/g, '')
+                return lower.includes('nonakademik')
+              }
+              // Helper: get prestasi score for display from a record
+              const getPrestasiDisplayValue = (r: Record<string, unknown>) => {
+                const sj = (r.subJalur as string) || ''
+                if (isNonAkademikJalur(sj)) {
+                  return (r.skorPrestasiNonAkademik as string) || (r.skorPrestasiAkademik as string) || '-'
+                }
+                return (r.skorPrestasiAkademik as string) || (r.skorPrestasiNonAkademik as string) || '-'
+              }
+              // Helper: get numeric prestasi score from a record
+              const getPrestasiNumValue = (r: Record<string, unknown>) => {
+                const sj = (r.subJalur as string) || ''
+                const akdNum = (r._skorPrestasiAkademikNum as number) || -1
+                const nonAkdNum = (r._skorPrestasiNonAkademikNum as number) || -1
+                if (isNonAkademikJalur(sj)) {
+                  return nonAkdNum > 0 ? nonAkdNum : akdNum
+                }
+                return akdNum > 0 ? akdNum : nonAkdNum
+              }
               const prestasiData = rankingData
                 .filter((r: Record<string, unknown>) => {
                   const sj = (r.subJalur as string || '').toLowerCase()
-                  return (sj.includes('prestasi') || sj.includes('akademik') || sj.includes('non')) && (r._skorPrestasiAkademikNum as number) > 0
+                  return sj.includes('prestasi') && getPrestasiNumValue(r) > 0
                 })
-                .sort((a: Record<string, unknown>, b: Record<string, unknown>) => (b._skorPrestasiAkademikNum as number) - (a._skorPrestasiAkademikNum as number))
+                .sort((a: Record<string, unknown>, b: Record<string, unknown>) => getPrestasiNumValue(b) - getPrestasiNumValue(a))
                 .slice(0, 5)
-              if (prestasiData.length === 0) return <p className="text-xs text-gray-400 text-center py-3">Belum ada data skor prestasi untuk Jalur Prestasi</p>
+              if (prestasiData.length === 0) return <p className="text-xs text-gray-400 text-center py-3">Belum ada data skor prestasi</p>
               const presKuota = rankingKuotaPerJalur.find(k => k.nama.toLowerCase().includes('prestasi'))?.kuota || 0
               return (
                 <div className="space-y-1.5">
-                  {prestasiData.map((r: Record<string, unknown>, idx: number) => (
-                    <div key={`rank-pres-${r.id}-${idx}`} className={`flex items-center gap-2 p-2 rounded-lg ${idx < presKuota && presKuota > 0 ? 'bg-emerald-50 border border-emerald-200' : 'bg-gray-50 border border-gray-100'}`}>
-                      <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${idx < presKuota && presKuota > 0 ? 'bg-emerald-500 text-white' : 'bg-gray-300 text-white'}`}>
-                        {idx + 1}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-gray-900 truncate">{r.nama as string}</p>
-                        <p className="text-[10px] text-gray-500">{r.namaSekolahAsal as string} — {r.jurusan as string}</p>
+                  {prestasiData.map((r: Record<string, unknown>, idx: number) => {
+                    const sj = (r.subJalur as string) || ''
+                    const isNonAkd = isNonAkademikJalur(sj)
+                    const prestasiDisplay = getPrestasiDisplayValue(r)
+                    return (
+                      <div key={`rank-pres-${r.id}-${idx}`} className={`flex items-center gap-2 p-2 rounded-lg ${idx < presKuota && presKuota > 0 ? 'bg-emerald-50 border border-emerald-200' : 'bg-gray-50 border border-gray-100'}`}>
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${idx < presKuota && presKuota > 0 ? 'bg-emerald-500 text-white' : isNonAkd ? 'bg-teal-400 text-white' : 'bg-gray-300 text-white'}`}>
+                          {idx + 1}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-gray-900 truncate">{r.nama as string}</p>
+                          <p className="text-[10px] text-gray-500">{isNonAkd ? 'Non-Akademik' : 'Akademik'} · {r.namaSekolahAsal as string}</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-xs font-bold text-teal-700">{prestasiDisplay}</p>
+                          <p className="text-[10px] text-gray-400">skor</p>
+                        </div>
                       </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-xs font-bold text-emerald-700">{r.skorPrestasiAkademik as string || '-'}</p>
-                        <p className="text-[10px] text-gray-400">skor prestasi</p>
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )
             })()}
@@ -285,6 +314,7 @@ export default function RankingTab(props: RankingTabProps) {
                 {rankingTampilan === 'jarak' && <Badge className="bg-sky-100 text-sky-700 border-sky-200">Jarak Terdekat</Badge>}
                 {rankingTampilan === 'nilai' && <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">Nilai Tertinggi</Badge>}
                 {rankingTampilan === 'komposit' && <Badge className="bg-amber-100 text-amber-700 border-amber-200">Skor Komposit</Badge>}
+                {rankingTampilan === 'prestasi' && <Badge className="bg-teal-100 text-teal-700 border-teal-200">Skor Prestasi</Badge>}
               </CardTitle>
               <CardDescription className="text-xs mt-1">
                 {rankingData.length} pendaftar
@@ -352,6 +382,12 @@ export default function RankingTab(props: RankingTabProps) {
                         {rankingTampilan === 'komposit' ? <span className="text-amber-600" title="Diurutkan berdasarkan skor komposit">📍</span> : <ArrowUpDown className="w-3 h-3 text-gray-300 group-hover:text-amber-500 transition-colors" />}
                       </span>
                     </TableHead>
+                    <TableHead className="text-right font-semibold text-xs cursor-pointer select-none group" onClick={() => setRankingTampilan('prestasi')}>
+                      <span className="inline-flex items-center gap-1">
+                        Prestasi
+                        {rankingTampilan === 'prestasi' ? <span className="text-teal-600" title="Diurutkan berdasarkan skor prestasi">📍</span> : <ArrowUpDown className="w-3 h-3 text-gray-300 group-hover:text-teal-500 transition-colors" />}
+                      </span>
+                    </TableHead>
                     <TableHead className="text-center font-semibold text-xs">Status</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -364,6 +400,16 @@ export default function RankingTab(props: RankingTabProps) {
                     const rankNum = (r._ranking as number) || (idx + 1)
                     const jalurRank = (r._jalurRank as number) || -1
                     const isVerified = r.verificationStatus === 'VERIFIED'
+
+                    // Prestasi score helpers
+                    const sj = ((r.subJalur as string) || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+                    const isNonAkd = sj.includes('nonakademik')
+                    const akdNum = (r._skorPrestasiAkademikNum as number) || -1
+                    const nonAkdNum = (r._skorPrestasiNonAkademikNum as number) || -1
+                    const skorPrestasiNum = isNonAkd ? (nonAkdNum > 0 ? nonAkdNum : akdNum) : (akdNum > 0 ? akdNum : nonAkdNum)
+                    const prestasiDisplay = isNonAkd
+                      ? ((r.skorPrestasiNonAkademik as string) || (r.skorPrestasiAkademik as string) || '-')
+                      : ((r.skorPrestasiAkademik as string) || (r.skorPrestasiNonAkademik as string) || '-')
 
                     const currentKuota = rankingKuotaPerJalur.find(k => {
                       const jalurName = (r.subJalur as string || '').toLowerCase()
@@ -406,6 +452,7 @@ export default function RankingTab(props: RankingTabProps) {
                         <TableCell className="text-right text-xs font-mono" style={{ color: (r._jarakNum as number) > 0 ? '#0369a1' : '#ccc', fontWeight: rankingTampilan === 'jarak' ? 'bold' : 'normal' }}>{r.lokasiJarak as string || '-'}</TableCell>
                         <TableCell className="text-right text-xs font-mono" style={{ color: (r._nilaiNum as number) > 0 ? '#047857' : '#ccc', fontWeight: rankingTampilan === 'nilai' ? 'bold' : 'normal' }}>{r.nilaiRataRata as string || r.skorNilaiRaport as string || '-'}</TableCell>
                         <TableCell className="text-right text-xs font-mono" style={{ color: (r._skorNum as number) > 0 ? '#b45309' : '#ccc', fontWeight: rankingTampilan === 'komposit' ? 'bold' : 'normal' }}>{r.skor as string || '-'}</TableCell>
+                        <TableCell className="text-right text-xs font-mono" style={{ color: skorPrestasiNum > 0 ? '#0d9488' : '#ccc', fontWeight: rankingTampilan === 'prestasi' ? 'bold' : 'normal' }}>{prestasiDisplay}</TableCell>
                         <TableCell className="text-center">
                           <Badge variant="outline" className={r.verificationStatus === 'VERIFIED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : r.verificationStatus === 'REJECTED' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-amber-50 text-amber-700 border-amber-200'}>
                             {r.verificationStatus === 'VERIFIED' ? 'Diterima' : r.verificationStatus === 'REJECTED' ? 'Ditolak' : 'Menunggu'}

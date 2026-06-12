@@ -38,19 +38,6 @@ function parseIndonesianNumber(val: string | null | undefined): number {
       return isNaN(result) ? -1 : result
     }
     
-    // If the part after dot has 3 digits, it could be:
-    // - thousands separator: "1.383" = 1383  (when part of larger number with comma elsewhere)
-    // - decimal: "83.286" = 83.286  (common in Indonesian scores/grades)
-    // 
-    // KEY INSIGHT: In Indonesian number format:
-    // - If there's a comma somewhere, then dots are thousands separators
-    // - If there's NO comma, then a single dot with 3+ digits after is usually a decimal
-    //   because Indonesian uses comma for decimal, but sometimes dots are used too
-    //
-    // Since we already handled the comma case above, here (no comma):
-    // A value like "83.286" is most likely a decimal (score/grade)
-    // A value like "1.383" could be 1.383 or 1383
-    
     const withDot = parseFloat(`${before}.${after}`)
     const withoutDot = parseFloat(`${before}${after}`)
     
@@ -59,21 +46,6 @@ function parseIndonesianNumber(val: string | null | undefined): number {
     if (isNaN(withoutDot)) return withDot
     
     // No comma present -> dot is more likely a decimal separator
-    // Use the decimal interpretation unless it makes no sense
-    // (i.e., the number with dot as decimal is negative or the integer interpretation is clearly better)
-    
-    // Exception: if before-dot is >= 1 and after-dot has exactly 3 digits and
-    // the combined number is clearly a distance (large number), use thousands
-    // E.g. "1.383" for distance = 1383 meters, not 1.383 meters
-    
-    // For context: this function is called for both jarak and nilai
-    // For nilai: "83.286" = 83.286 (dot = decimal)
-    // For jarak: "1.383" could be either, but since we have comma for decimal
-    // in Indonesian format, "1.383" without comma = likely 1383
-    
-    // Simple heuristic: if withDot < 1, it's probably thousands separator
-    // If withDot is between 0-100, it's a valid grade/score -> use decimal
-    // If withDot > 100, less likely a decimal -> use thousands interpretation
     if (withDot >= 0 && withDot <= 100) return withDot
     if (withoutDot > 1000) return withoutDot
     return withDot
@@ -91,6 +63,30 @@ function parseDistance(val: string | null | undefined): number {
   const cleaned = val.replace(/[^\d.,-]/g, '').trim()
   if (!cleaned) return -1
   return parseIndonesianNumber(val)
+}
+
+// Helper: determine if a subJalur is "Non Akademik" variant
+function isNonAkademikJalur(subJalur: string): boolean {
+  const lower = subJalur.toLowerCase().replace(/[^a-z0-9]/g, '')
+  return lower.includes('nonakademik') || lower.includes('nonakademik')
+}
+
+// Helper: get the appropriate prestasi score for a record based on its jalur
+// - Prestasi Akademik → skorPrestasiAkademik
+// - Prestasi Non Akademik → skorPrestasiNonAkademik
+// - Other jalur → max of both (fallback)
+function getPrestasiScore(
+  subJalur: string,
+  skorPrestasiAkademikNum: number,
+  skorPrestasiNonAkademikNum: number,
+): number {
+  if (isNonAkademikJalur(subJalur)) {
+    return skorPrestasiNonAkademikNum
+  }
+  // For Prestasi Akademik or any other jalur, use Akademik score
+  // If Akademik score is -1 (no data), fall back to Non Akademik score
+  if (skorPrestasiAkademikNum > 0) return skorPrestasiAkademikNum
+  return skorPrestasiNonAkademikNum
 }
 
 export async function GET(request: NextRequest) {
@@ -165,6 +161,11 @@ export async function GET(request: NextRequest) {
       const nilaiNum = parseIndonesianNumber(r.nilaiRataRata || r.skorNilaiRaport)
       const skorNum = parseIndonesianNumber(r.skor)
       const skorPrestasiAkademikNum = parseIndonesianNumber(r.skorPrestasiAkademik)
+      const skorPrestasiNonAkademikNum = parseIndonesianNumber(r.skorPrestasiNonAkademik)
+
+      // Compute the effective prestasi score based on the jalur
+      const subJalur = (r.subJalur as string) || ''
+      const skorPrestasiNum = getPrestasiScore(subJalur, skorPrestasiAkademikNum, skorPrestasiNonAkademikNum)
 
       return {
         ...r,
@@ -172,7 +173,9 @@ export async function GET(request: NextRequest) {
         _nilaiNum: nilaiNum,
         _skorNum: skorNum,
         _skorPrestasiAkademikNum: skorPrestasiAkademikNum,
-        _hasData: jarakNum > 0 || nilaiNum > 0 || skorNum > 0,
+        _skorPrestasiNonAkademikNum: skorPrestasiNonAkademikNum,
+        _skorPrestasiNum: skorPrestasiNum,
+        _hasData: jarakNum > 0 || nilaiNum > 0 || skorNum > 0 || skorPrestasiNum > 0,
       }
     })
 
@@ -203,6 +206,16 @@ export async function GET(request: NextRequest) {
         if (b._skorNum > 0) return 1
         return 0
       })
+    } else if (tampilan === 'prestasi') {
+      // Sort by Skor Prestasi based on jalur:
+      // - Prestasi Akademik → Skor Prestasi Akademik (highest first)
+      // - Prestasi Non Akademik → Skor Prestasi Non Akademik (highest first)
+      sorted.sort((a, b) => {
+        if (a._skorPrestasiNum > 0 && b._skorPrestasiNum > 0) return b._skorPrestasiNum - a._skorPrestasiNum
+        if (a._skorPrestasiNum > 0) return -1
+        if (b._skorPrestasiNum > 0) return 1
+        return 0
+      })
     }
 
     // Add ranking number (global and per-jalur)
@@ -217,6 +230,7 @@ export async function GET(request: NextRequest) {
       if (tampilan === 'jarak' && r._jarakNum <= 0) jalurRank = -1
       if (tampilan === 'nilai' && r._nilaiNum <= 0) jalurRank = -1
       if (tampilan === 'komposit' && r._skorNum <= 0) jalurRank = -1
+      if (tampilan === 'prestasi' && r._skorPrestasiNum <= 0) jalurRank = -1
 
       return {
         ...r,

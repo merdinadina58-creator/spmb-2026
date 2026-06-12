@@ -46,6 +46,7 @@ model Registration {
   skorLomba           String?  // Skor Lomba from Portal SPMB
   nilaiRataRataTKA    String?  // Nilai Rata Rata TKA from Portal SPMB
   skorPrestasiAkademik String? // Skor Prestasi Akademik from Portal SPMB
+  skorPrestasiNonAkademik String? // Skor Prestasi Non Akademik from Portal SPMB
 
   // TKA individual scores (from Portal SPMB)
   nilaiTKABIndo       String?  // Nilai TKA Bahasa Indonesia

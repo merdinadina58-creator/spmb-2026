@@ -25,6 +25,7 @@ interface PortalStudent {
   skorLomba?: string;
   nilaiRataRataTKA?: string;
   skorPrestasiAkademik?: string;
+  skorPrestasiNonAkademik?: string;
   skor?: string;
 }
 
@@ -166,6 +167,7 @@ export async function POST(request: NextRequest) {
         mergeField('skorLomba', student.skorLomba, existing.skorLomba);
         mergeField('nilaiRataRataTKA', student.nilaiRataRataTKA, existing.nilaiRataRataTKA);
         mergeField('skorPrestasiAkademik', student.skorPrestasiAkademik, existing.skorPrestasiAkademik);
+        mergeField('skorPrestasiNonAkademik', student.skorPrestasiNonAkademik, existing.skorPrestasiNonAkademik);
         mergeField('skor', student.skor, existing.skor);
 
         if (Object.keys(updateData).length > 0) {
@@ -203,6 +205,7 @@ export async function POST(request: NextRequest) {
             skorLomba: student.skorLomba || null,
             nilaiRataRataTKA: student.nilaiRataRataTKA || null,
             skorPrestasiAkademik: student.skorPrestasiAkademik || null,
+            skorPrestasiNonAkademik: student.skorPrestasiNonAkademik || null,
             skor: student.skor || null,
           },
         });
@@ -265,6 +268,7 @@ function mapPortalRow(row: Record<string, string>): PortalStudent | null {
   const skorLomba = getValue(['skor lomba', 'lomba']);
   const nilaiRataRataTKA = getValue(['nilai rata rata tka', 'rata-rata tka', 'tka', 'rata rata tka']);
   const skorPrestasiAkademik = getValue(['skor prestasi akademik', 'prestasi akademik']);
+  const skorPrestasiNonAkademik = getValue(['skor prestasi non akademik', 'prestasi non akademik', 'prestasi non-akademik', 'prestasi nonakademik']);
   const skor = getValue(['skor total', 'total skor', 'skor']);
 
   if (!nama && !nisn && !noRegistrasi) return null;
@@ -290,6 +294,7 @@ function mapPortalRow(row: Record<string, string>): PortalStudent | null {
     skorLomba,
     nilaiRataRataTKA,
     skorPrestasiAkademik,
+    skorPrestasiNonAkademik,
     skor,
   };
 }

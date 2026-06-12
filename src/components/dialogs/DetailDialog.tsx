@@ -122,7 +122,7 @@ export default function DetailDialog({
             </div>
 
             {/* Portal SPMB Data */}
-            {(target.nik || target.tanggalLahir || target.alamat || target.noTelpSiswa || target.noTelpOrangtua || target.lokasiJarak || target.nilaiRataRata || target.skor || target.nilaiRapor || target.skorJarak || target.skorNilaiRaport || (target as Record<string, unknown>).skorLomba || (target as Record<string, unknown>).nilaiRataRataTKA || (target as Record<string, unknown>).skorPrestasiAkademik || (target as Record<string, unknown>).totalNilai || (target as Record<string, unknown>).jarakKeSekolah) && (
+            {(target.nik || target.tanggalLahir || target.alamat || target.noTelpSiswa || target.noTelpOrangtua || target.lokasiJarak || target.nilaiRataRata || target.skor || target.nilaiRapor || target.skorJarak || target.skorNilaiRaport || (target as Record<string, unknown>).skorLomba || (target as Record<string, unknown>).nilaiRataRataTKA || (target as Record<string, unknown>).skorPrestasiAkademik || (target as Record<string, unknown>).skorPrestasiNonAkademik || (target as Record<string, unknown>).totalNilai || (target as Record<string, unknown>).jarakKeSekolah) && (
               <div className="border-t pt-4">
                 <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-1.5">
                   <ClipboardCheck className="w-4 h-4 text-emerald-600" />
@@ -198,8 +198,14 @@ export default function DetailDialog({
                   )}
                   {(target as Record<string, unknown>).skorPrestasiAkademik && (
                     <div className="bg-purple-50 rounded-lg p-2">
-                      <label className="text-xs text-purple-600 font-medium">Skor Prestasi</label>
+                      <label className="text-xs text-purple-600 font-medium">Skor Prestasi Akademik</label>
                       <p className="text-sm font-bold text-purple-700">{String((target as Record<string, unknown>).skorPrestasiAkademik || '-')}</p>
+                    </div>
+                  )}
+                  {(target as Record<string, unknown>).skorPrestasiNonAkademik && (
+                    <div className="bg-teal-50 rounded-lg p-2">
+                      <label className="text-xs text-teal-600 font-medium">Skor Prestasi Non Akademik</label>
+                      <p className="text-sm font-bold text-teal-700">{String((target as Record<string, unknown>).skorPrestasiNonAkademik || '-')}</p>
                     </div>
                   )}
                   {(target as Record<string, unknown>).totalNilai && (
