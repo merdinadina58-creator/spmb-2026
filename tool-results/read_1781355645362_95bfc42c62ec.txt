@@ -1,0 +1,470 @@
+     1→'use client'
+     2→
+     3→import {
+     4→  Dialog,
+     5→  DialogContent,
+     6→  DialogDescription,
+     7→  DialogFooter,
+     8→  DialogHeader,
+     9→  DialogTitle,
+    10→} from '@/components/ui/dialog'
+    11→import { Button } from '@/components/ui/button'
+    12→import { Badge } from '@/components/ui/badge'
+    13→import {
+    14→  Table,
+    15→  TableBody,
+    16→  TableCell,
+    17→  TableHead,
+    18→  TableHeader,
+    19→  TableRow,
+    20→} from '@/components/ui/table'
+    21→import { Printer, FileSpreadsheet, FileDown, Filter } from 'lucide-react'
+    22→import { STATUS_COLORS, SUB_JALUR_COLORS } from '@/lib/constants'
+    23→
+    24→function v(r: Record<string, unknown>, key: string): string {
+    25→  const val = r[key]
+    26→  if (val === null || val === undefined) return '-'
+    27→  return String(val) || '-'
+    28→}
+    29→
+    30→// Helper: check if a jalur name is Non-Akademik variant
+    31→function isNonAkademikJalur(subJalur: string): boolean {
+    32→  const lower = subJalur.toLowerCase().replace(/[^a-z0-9]/g, '')
+    33→  return lower.includes('nonakademik')
+    34→}
+    35→
+    36→// Helper: check if a jalur name is Akademik variant (includes "Prestasi" without "Nonakademik")
+    37→function isAkademikJalur(subJalur: string): boolean {
+    38→  const lower = subJalur.toLowerCase().replace(/[^a-z0-9]/g, '')
+    39→  return (lower.includes('akademik') || lower === 'prestasi') && !lower.includes('nonakademik')
+    40→}
+    41→
+    42→// Helper: check if a jalur is a prestasi type (either Akademik or Non-Akademik)
+    43→function isPrestasiJalur(subJalur: string): boolean {
+    44→  const lower = subJalur.toLowerCase().replace(/[^a-z0-9]/g, '')
+    45→  return lower.includes('prestasi') || lower.includes('akademik')
+    46→}
+    47→
+    48→// Re-sort data by the appropriate prestasi score based on jalur
+    49→function reSortByPrestasiJalur(data: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
+    50→  return [...data].sort((a, b) => {
+    51→    const subJalurA = (a.subJalur as string) || ''
+    52→    const subJalurB = (b.subJalur as string) || ''
+    53→
+    54→    const getScore = (r: Record<string, unknown>, subJalur: string): number => {
+    55→      if (isNonAkademikJalur(subJalur)) {
+    56→        return (r._skorPrestasiNonAkademikNum as number) || -1
+    57→      }
+    58→      if (isAkademikJalur(subJalur)) {
+    59→        return (r._skorPrestasiAkademikNum as number) || -1
+    60→      }
+    61→      // Fallback
+    62→      const akdNum = (r._skorPrestasiAkademikNum as number) || -1
+    63→      const nonAkdNum = (r._skorPrestasiNonAkademikNum as number) || -1
+    64→      return akdNum > 0 ? akdNum : nonAkdNum
+    65→    }
+    66→
+    67→    const scoreA = getScore(a, subJalurA)
+    68→    const scoreB = getScore(b, subJalurB)
+    69→
+    70→    if (scoreA > 0 && scoreB > 0) return scoreB - scoreA
+    71→    if (scoreA > 0) return -1
+    72→    if (scoreB > 0) return 1
+    73→    return 0
+    74→  })
+    75→}
+    76→
+    77→interface RankingPreviewDialogProps {
+    78→  open: boolean
+    79→  onOpenChange: (open: boolean) => void
+    80→  rankingPreviewType: 'pdf' | 'excel'
+    81→  rankingPreviewJalur: string
+    82→  setRankingPreviewJalur: (jalur: string) => void
+    83→  rankingData: Array<Record<string, unknown>>
+    84→  rankingFilters: { jalurOptions: string[]; sekolahOptions: string[]; jurusanOptions: string[] }
+    85→  rankingTampilan: string
+    86→  rankingSekolah: string
+    87→  rankingJurusan: string
+    88→  rankingStatus: string
+    89→  rankingKuota: number
+    90→  rankingKuotaPerJalur: Array<{ nama: string; persentase: number; kuota: number }>
+    91→  appName: string
+    92→  schoolName: string
+    93→  appSubtitle: string
+    94→  onPrintPDF: () => void
+    95→  onExportExcel: () => void
+    96→}
+    97→
+    98→export default function RankingPreviewDialog({
+    99→  open,
+   100→  onOpenChange,
+   101→  rankingPreviewType,
+   102→  rankingPreviewJalur,
+   103→  setRankingPreviewJalur,
+   104→  rankingData,
+   105→  rankingFilters,
+   106→  rankingTampilan,
+   107→  rankingSekolah,
+   108→  rankingJurusan,
+   109→  rankingStatus,
+   110→  rankingKuota,
+   111→  rankingKuotaPerJalur,
+   112→  appName,
+   113→  schoolName,
+   114→  appSubtitle,
+   115→  onPrintPDF,
+   116→  onExportExcel,
+   117→}: RankingPreviewDialogProps) {
+   118→  const getFilteredCount = () => {
+   119→    return rankingPreviewJalur === 'all'
+   120→      ? rankingData.length
+   121→      : rankingData.filter((r: Record<string, unknown>) => (r.subJalur as string) === rankingPreviewJalur).length
+   122→  }
+   123→
+   124→  // Filter and optionally re-sort by prestasi score based on jalur
+   125→  const baseFiltered = rankingPreviewJalur === 'all'
+   126→    ? rankingData
+   127→    : rankingData.filter((r: Record<string, unknown>) => (r.subJalur as string) === rankingPreviewJalur)
+   128→
+   129→  // When a prestasi jalur is selected, always sort by the appropriate prestasi score
+   130→  const sortedFiltered = isPrestasiJalur(rankingPreviewJalur)
+   131→    ? reSortByPrestasiJalur(baseFiltered)
+   132→    : baseFiltered
+   133→
+   134→  const filteredPreviewData = sortedFiltered.slice(0, 15)
+   135→
+   136→  // Stats
+   137→  const allFiltered = sortedFiltered
+   138→  const totalVerified = allFiltered.filter(r => r.verificationStatus === 'VERIFIED').length
+   139→  const totalRejected = allFiltered.filter(r => r.verificationStatus === 'REJECTED').length
+   140→  const totalPending = allFiltered.length - totalVerified - totalRejected
+   141→
+   142→  return (
+   143→    <Dialog open={open} onOpenChange={onOpenChange}>
+   144→      <DialogContent className="sm:max-w-7xl max-h-[90vh] flex flex-col">
+   145→        <DialogHeader>
+   146→          <DialogTitle className="flex items-center gap-2">
+   147→            {rankingPreviewType === 'pdf' ? (
+   148→              <><Printer className="w-5 h-5 text-red-600" /> Preview Cetak PDF — Detail Verifikasi</>
+   149→            ) : (
+   150→              <><FileSpreadsheet className="w-5 h-5 text-emerald-600" /> Preview Cetak Excel — Detail Verifikasi</>
+   151→            )}
+   152→          </DialogTitle>
+   153→          <DialogDescription>
+   154→            {rankingPreviewType === 'pdf'
+   155→              ? 'Pratinjau hasil cetak perangkingan lengkap (sesuai Lembar Verifikasi). Klik "Cetak PDF" untuk membuka dialog cetak.'
+   156→              : 'Pratinjau data lengkap yang akan diekspor ke Excel. Klik "Unduh Excel" untuk mengunduh file.'}
+   157→          </DialogDescription>
+   158→        </DialogHeader>
+   159→
+   160→        {/* Jalur Selector */}
+   161→        <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg p-3 border border-amber-200">
+   162→          <div className="flex items-center gap-2 mb-2">
+   163→            <Filter className="w-4 h-4 text-amber-600" />
+   164→            <span className="text-sm font-semibold text-amber-800">Pilih Jalur untuk Dicetak</span>
+   165→          </div>
+   166→          <div className="flex flex-wrap gap-2">
+   167→            <button
+   168→              className={`px-3 py-1.5 rounded-lg text-xs font-medium border-2 transition-all ${
+   169→                rankingPreviewJalur === 'all'
+   170→                  ? 'bg-amber-600 text-white border-amber-600 shadow-md'
+   171→                  : 'bg-white text-amber-700 border-amber-300 hover:border-amber-500 hover:bg-amber-50'
+   172→              }`}
+   173→              onClick={() => setRankingPreviewJalur('all')}
+   174→            >
+   175→              🏆 Semua Jalur ({rankingData.length})
+   176→            </button>
+   177→            {rankingFilters.jalurOptions.filter((j: string) => j && j.trim() !== '').map((j: string, jIdx: number) => {
+   178→              const count = rankingData.filter((r: Record<string, unknown>) => (r.subJalur as string) === j).length
+   179→              return (
+   180→                <button
+   181→                  key={`rp-jalur-${j}-${jIdx}`}
+   182→                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border-2 transition-all ${
+   183→                    rankingPreviewJalur === j
+   184→                      ? 'bg-amber-600 text-white border-amber-600 shadow-md'
+   185→                      : 'bg-white text-gray-700 border-gray-200 hover:border-amber-400 hover:bg-amber-50'
+   186→                  }`}
+   187→                  onClick={() => setRankingPreviewJalur(j)}
+   188→                >
+   189→                  {j} ({count})
+   190→                </button>
+   191→              )
+   192→            })}
+   193→          </div>
+   194→        </div>
+   195→
+   196→        {/* Preview Content */}
+   197→        <div className="flex-1 min-h-0 overflow-auto border rounded-lg bg-white">
+   198→          <div className="p-4">
+   199→            {/* Header Preview */}
+   200→            <div className="text-center mb-4 pb-3 border-b-4 border-double border-gray-300">
+   201→              <h2 className="text-lg font-bold tracking-wider">LAPORAN PERANGKINGAN PESERTA SPMB</h2>
+   202→              <p className="text-sm text-gray-500">{appName}{schoolName ? ` — ${schoolName}` : ''} — {appSubtitle.split('\n')[0]}</p>
+   203→              <p className="text-xs text-gray-400 mt-1">
+   204→                Diurutkan berdasarkan: <strong>{rankingTampilan === 'jarak' ? 'Jarak Terdekat' : rankingTampilan === 'nilai' ? 'Nilai Tertinggi' : rankingTampilan === 'komposit' ? 'Skor Komposit' : rankingTampilan === 'prestasi' ? 'Skor Prestasi' : 'Jarak Terdekat'}{isPrestasiJalur(rankingPreviewJalur) ? ' (otomatis diurutkan ulang berdasarkan Skor Prestasi sesuai jalur)' : ''}</strong>
+   205→                {' · '}Dicetak pada: {new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+   206→              </p>
+   207→            </div>
+   208→
+   209→            {/* Stats Row Preview */}
+   210→            <div className="flex justify-center gap-3 mb-3">
+   211→              <div className="text-center px-4 py-1.5 rounded-lg border border-sky-200 bg-sky-50">
+   212→                <div className="text-lg font-bold text-sky-700">{allFiltered.length}</div>
+   213→                <div className="text-[9px] text-sky-500">Total Pendaftar</div>
+   214→              </div>
+   215→              <div className="text-center px-4 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50">
+   216→                <div className="text-lg font-bold text-emerald-700">{totalVerified}</div>
+   217→                <div className="text-[9px] text-emerald-500">Diterima</div>
+   218→              </div>
+   219→              <div className="text-center px-4 py-1.5 rounded-lg border border-red-200 bg-red-50">
+   220→                <div className="text-lg font-bold text-red-700">{totalRejected}</div>
+   221→                <div className="text-[9px] text-red-500">Ditolak</div>
+   222→              </div>
+   223→              <div className="text-center px-4 py-1.5 rounded-lg border border-amber-200 bg-amber-50">
+   224→                <div className="text-lg font-bold text-amber-700">{totalPending}</div>
+   225→                <div className="text-[9px] text-amber-500">Menunggu</div>
+   226→              </div>
+   227→              {rankingKuota > 0 && (
+   228→                <div className="text-center px-4 py-1.5 rounded-lg border border-blue-200 bg-blue-50">
+   229→                  <div className="text-lg font-bold text-blue-700">{rankingKuota}</div>
+   230→                  <div className="text-[9px] text-blue-500">Total Kuota</div>
+   231→                </div>
+   232→              )}
+   233→            </div>
+   234→
+   235→            {/* Filters Preview */}
+   236→            <div className="flex flex-wrap gap-2 justify-center mb-3">
+   237→              <span className="text-xs bg-gray-100 px-2 py-1 rounded border">Jalur: {rankingPreviewJalur !== 'all' ? rankingPreviewJalur : 'Semua'}</span>
+   238→              <span className="text-xs bg-gray-100 px-2 py-1 rounded border">Sekolah: {rankingSekolah !== 'all' ? rankingSekolah : 'Semua'}</span>
+   239→              <span className="text-xs bg-gray-100 px-2 py-1 rounded border">Jurusan: {rankingJurusan !== 'all' ? rankingJurusan : 'Semua'}</span>
+   240→              <span className="text-xs bg-gray-100 px-2 py-1 rounded border">Status: {rankingStatus !== 'all' ? (rankingStatus === 'VERIFIED' ? 'Diterima' : rankingStatus === 'REJECTED' ? 'Ditolak' : 'Menunggu') : 'Semua'}</span>
+   241→            </div>
+   242→
+   243→            {/* Kuota Preview */}
+   244→            {rankingKuota > 0 && (
+   245→              <div className="text-center mb-3 text-xs">
+   246→                <span className="bg-sky-100 text-sky-700 px-3 py-1 rounded mr-2">Total Kuota: <strong>{rankingKuota}</strong></span>
+   247→                {rankingKuotaPerJalur.map((kj, kjIdx) => (
+   248→                  <span key={`rp-kquota-${kj.nama}-${kjIdx}`} className="bg-sky-50 text-sky-600 px-2 py-1 rounded mr-1">{kj.nama}: {kj.kuota} ({kj.persentase}%)</span>
+   249→                ))}
+   250→              </div>
+   251→            )}
+   252→
+   253→            {/* Detailed Table Preview */}
+   254→            <div className="overflow-x-auto border rounded">
+   255→              <Table className="text-[10px]">
+   256→                <TableHeader>
+   257→                  {/* Group header row */}
+   258→                  <TableRow className="bg-slate-800 text-white">
+   259→                    <TableHead rowSpan={2} className="w-8 text-center font-semibold text-white bg-slate-800">No</TableHead>
+   260→                    <TableHead rowSpan={2} className="w-16 text-center font-semibold text-white bg-slate-800">Jalur</TableHead>
+   261→                    <TableHead colSpan={2} className="text-center font-semibold text-white bg-slate-700">Data Pendaftar</TableHead>
+   262→                    <TableHead rowSpan={2} className="font-semibold text-white bg-slate-800">Sekolah Asal</TableHead>
+   263→                    <TableHead rowSpan={2} className="w-12 text-center font-semibold text-white bg-slate-800">Jurusan</TableHead>
+   264→                    <TableHead colSpan={2} className={`text-center font-semibold ${rankingTampilan === 'jarak' ? 'bg-sky-900 text-sky-100' : 'bg-slate-700 text-white'}`}>Jarak</TableHead>
+   265→                    <TableHead colSpan={2} className={`text-center font-semibold ${rankingTampilan === 'nilai' ? 'bg-emerald-900 text-emerald-100' : 'bg-slate-700 text-white'}`}>Nilai Raport</TableHead>
+   266→                    <TableHead colSpan={3} className="text-center font-semibold text-white bg-purple-900">Detail Portal</TableHead>
+   267→                    <TableHead colSpan={2} className={`text-center font-semibold ${rankingTampilan === 'komposit' ? 'bg-amber-900 text-amber-100' : 'bg-slate-700 text-white'}`}>Skor</TableHead>
+   268→                    <TableHead colSpan={5} className="text-center font-semibold text-white bg-slate-700">Verifikasi</TableHead>
+   269→                    <TableHead rowSpan={2} className="w-12 text-center font-semibold text-white bg-slate-800">Status</TableHead>
+   270→                    <TableHead rowSpan={2} className="w-10 text-center font-semibold text-white bg-slate-800">Kuota</TableHead>
+   271→                  </TableRow>
+   272→                  <TableRow className="bg-slate-100">
+   273→                    <TableHead className="font-semibold">Nama/NISN</TableHead>
+   274→                    <TableHead className="font-semibold w-16">No. Reg</TableHead>
+   275→                    <TableHead className={`font-semibold ${rankingTampilan === 'jarak' ? 'bg-sky-50' : ''}`}>Jarak</TableHead>
+   276→                    <TableHead className={`font-semibold ${rankingTampilan === 'jarak' ? 'bg-sky-50' : ''}`}>Skor</TableHead>
+   277→                    <TableHead className={`font-semibold ${rankingTampilan === 'nilai' ? 'bg-emerald-50' : ''}`}>Rata²</TableHead>
+   278→                    <TableHead className={`font-semibold ${rankingTampilan === 'nilai' ? 'bg-emerald-50' : ''}`}>Skor</TableHead>
+   279→                    <TableHead className="font-semibold bg-purple-50 text-purple-700">Skor Lomba</TableHead>
+   280→                    <TableHead className="font-semibold bg-purple-50 text-purple-700">Nilai TKA</TableHead>
+   281→                    <TableHead className="font-semibold bg-purple-50 text-purple-700">Skor Pres. Akd</TableHead>
+   282→                    <TableHead className="font-semibold bg-teal-50 text-teal-700">Skor Pres. Non-Akd</TableHead>
+   283→                    <TableHead className="font-semibold">Total</TableHead>
+   284→                    <TableHead className={`font-semibold ${rankingTampilan === 'komposit' ? 'bg-amber-50' : ''}`}>Komposit</TableHead>
+   285→                    <TableHead className="font-semibold">Kekurangan</TableHead>
+   286→                    <TableHead className="font-semibold w-16">Tgl Verif</TableHead>
+   287→                    <TableHead className="font-semibold w-12">Jam</TableHead>
+   288→                    <TableHead className="font-semibold w-16">Terbit KK</TableHead>
+   289→                    <TableHead className="font-semibold w-12">Lama KK</TableHead>
+   290→                  </TableRow>
+   291→                </TableHeader>
+   292→                <TableBody>
+   293→                  {filteredPreviewData.map((r: Record<string, unknown>, idx: number) => {
+   294→                    const rankNum = idx + 1
+   295→                    const jalurRank = (r._jalurRank as number) || -1
+   296→                    const jarakNum = r._jarakNum as number
+   297→                    const nilaiNum = r._nilaiNum as number
+   298→                    const skorNum = r._skorNum as number
+   299→
+   300→                    const currentKuota = rankingKuotaPerJalur.find(k => {
+   301→                      const jalurName = (r.subJalur as string || '').toLowerCase()
+   302→                      return k.nama.toLowerCase().includes(jalurName) || jalurName.includes(k.nama.toLowerCase())
+   303→                        || (k.nama.toLowerCase().includes('prestasi') && jalurName.includes('prestasi'))
+   304→                        || (k.nama.toLowerCase().includes('domisili') && jalurName.includes('domisili'))
+   305→                        || (k.nama.toLowerCase().includes('mutasi') && jalurName.includes('mutasi'))
+   306→                        || (k.nama.toLowerCase().includes('afirmasi') && (jalurName.includes('keluarga') || jalurName.includes('ktm')))
+   307→                    })?.kuota || 0
+   308→
+   309→                    const sameJalurAbove = allFiltered
+   310→                      .filter((other: Record<string, unknown>) =>
+   311→                        (other.subJalur as string) === (r.subJalur as string) &&
+   312→                        ((other._ranking as number) || 0) < rankNum
+   313→                      ).length
+   314→
+   315→                    const withinKuota = currentKuota > 0 && sameJalurAbove < currentKuota
+   316→                    const isVerified = r.verificationStatus === 'VERIFIED'
+   317→
+   318→                    // Kekurangan verifikasi display
+   319→                    const kekurangan = v(r, 'kekuranganVerifikasi')
+   320→                    const kekuranganDisplay = kekurangan !== '-'
+   321→                      ? kekurangan.split(' | ').map((k, i) => <span key={i} className="block text-[8px] text-red-600 leading-tight">{k}</span>)
+   322→                      : <span className="text-gray-300">-</span>
+   323→
+   324→                    return (
+   325→                      <TableRow key={`print-rank-${r.id}-${idx}`} className={`${withinKuota && !isVerified ? 'bg-emerald-50/50' : ''} ${isVerified ? 'bg-emerald-50' : ''} ${r.verificationStatus === 'REJECTED' ? 'bg-red-50/30' : ''}`}>
+   326→                        <TableCell className="text-center p-1">
+   327→                          <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[8px] font-bold ${
+   328→                            rankNum === 1 ? 'bg-amber-400 text-white' :
+   329→                            rankNum === 2 ? 'bg-gray-300 text-gray-700' :
+   330→                            rankNum === 3 ? 'bg-amber-700 text-white' :
+   331→                            withinKuota ? 'bg-emerald-100 text-emerald-700' :
+   332→                            'bg-gray-100 text-gray-500'
+   333→                          }`}>{rankNum}</span>
+   334→                        </TableCell>
+   335→                        <TableCell className="text-center p-0.5">
+   336→                          <Badge variant="outline" className={`text-[8px] px-1 py-0 ${SUB_JALUR_COLORS[r.subJalur as string] || 'bg-gray-100 text-gray-700 border-gray-200'}`}>
+   337→                            {r.subJalur as string}
+   338→                          </Badge>
+   339→                          {jalurRank > 0 && <span className="block text-[7px] text-sky-600">#{jalurRank}</span>}
+   340→                        </TableCell>
+   341→                        <TableCell className="p-0.5">
+   342→                          <p className="text-[10px] font-medium leading-tight">{v(r, 'nama')}</p>
+   343→                          <p className="text-[8px] text-gray-400">NISN: {v(r, 'nisn')}</p>
+   344→                        </TableCell>
+   345→                        <TableCell className="p-0.5 text-[8px] text-center text-gray-500">{v(r, 'noRegistrasi')}</TableCell>
+   346→                        <TableCell className="p-0.5 text-[9px]">{v(r, 'namaSekolahAsal')}</TableCell>
+   347→                        <TableCell className="p-0.5 text-[8px] text-center text-gray-500">{v(r, 'jurusan')}</TableCell>
+   348→                        <TableCell className={`text-right p-0.5 ${rankingTampilan === 'jarak' ? 'bg-sky-50/50 font-bold' : ''}`}>
+   349→                          <span className={`text-[9px] ${jarakNum > 0 ? 'text-sky-700' : 'text-gray-300'}`}>{v(r, 'lokasiJarak')}</span>
+   350→                        </TableCell>
+   351→                        <TableCell className={`text-center p-0.5 ${rankingTampilan === 'jarak' ? 'bg-sky-50/50' : ''}`}>
+   352→                          <span className={`text-[9px] ${jarakNum > 0 ? 'text-sky-700' : 'text-gray-300'}`}>{v(r, 'skorJarak')}</span>
+   353→                        </TableCell>
+   354→                        <TableCell className={`text-right p-0.5 ${rankingTampilan === 'nilai' ? 'bg-emerald-50/50 font-bold' : ''}`}>
+   355→                          <span className={`text-[9px] ${nilaiNum > 0 ? 'text-emerald-700' : 'text-gray-300'}`}>{v(r, 'nilaiRataRata')}</span>
+   356→                        </TableCell>
+   357→                        <TableCell className={`text-center p-0.5 ${rankingTampilan === 'nilai' ? 'bg-emerald-50/50' : ''}`}>
+   358→                          <span className={`text-[9px] ${nilaiNum > 0 ? 'text-emerald-700' : 'text-gray-300'}`}>{v(r, 'skorNilaiRaport')}</span>
+   359→                        </TableCell>
+   360→                        <TableCell className="text-center p-0.5 bg-purple-50/50">
+   361→                          <span className={`text-[9px] ${v(r, 'skorLomba') !== '-' ? 'text-purple-700' : 'text-gray-300'}`}>{v(r, 'skorLomba')}</span>
+   362→                        </TableCell>
+   363→                        <TableCell className="text-center p-0.5 bg-purple-50/50">
+   364→                          <span className={`text-[9px] ${v(r, 'nilaiRataRataTKA') !== '-' ? 'text-purple-700' : 'text-gray-300'}`}>{v(r, 'nilaiRataRataTKA')}</span>
+   365→                        </TableCell>
+   366→                        <TableCell className="text-center p-0.5 bg-purple-50/50">
+   367→                          <span className={`text-[9px] ${v(r, 'skorPrestasiAkademik') !== '-' ? 'text-purple-700' : 'text-gray-300'}`}>{v(r, 'skorPrestasiAkademik')}</span>
+   368→                        </TableCell>
+   369→                        <TableCell className="text-center p-0.5 bg-teal-50/50">
+   370→                          <span className={`text-[9px] ${v(r, 'skorPrestasiNonAkademik') !== '-' ? 'text-teal-700' : 'text-gray-300'}`}>{v(r, 'skorPrestasiNonAkademik')}</span>
+   371→                        </TableCell>
+   372→                        <TableCell className="text-center p-0.5">
+   373→                          <span className={`text-[9px] ${skorNum > 0 ? 'text-amber-700' : 'text-gray-300'}`}>{v(r, 'totalNilai')}</span>
+   374→                        </TableCell>
+   375→                        <TableCell className={`text-center p-0.5 ${rankingTampilan === 'komposit' ? 'bg-amber-50/50 font-bold' : ''}`}>
+   376→                          <span className={`text-[9px] ${skorNum > 0 ? 'text-amber-700' : 'text-gray-300'}`}>{v(r, 'skor')}</span>
+   377→                        </TableCell>
+   378→                        <TableCell className="p-0.5" style={{ maxWidth: '100px' }}>
+   379→                          {kekuranganDisplay}
+   380→                        </TableCell>
+   381→                        <TableCell className="p-0.5 text-[8px] text-center text-gray-500">{v(r, 'tanggalVerif')}</TableCell>
+   382→                        <TableCell className="p-0.5 text-[8px] text-center text-gray-500">{v(r, 'jamVerif')}</TableCell>
+   383→                        <TableCell className="p-0.5 text-[8px] text-center text-gray-500">{v(r, 'terbitKK')}</TableCell>
+   384→                        <TableCell className="p-0.5 text-[8px] text-center text-gray-500">{v(r, 'lamaKK')}</TableCell>
+   385→                        <TableCell className="text-center p-0.5">
+   386→                          <Badge className={`text-[8px] px-1 py-0 ${STATUS_COLORS[r.verificationStatus as string] || 'bg-gray-100 text-gray-700'}`}>
+   387→                            {r.verificationStatus === 'VERIFIED' ? 'Diterima' : r.verificationStatus === 'REJECTED' ? 'Ditolak' : 'Menunggu'}
+   388→                          </Badge>
+   389→                        </TableCell>
+   390→                        <TableCell className="text-center p-0.5">
+   391→                          {withinKuota ? <span className="text-emerald-600 font-bold text-xs">&#10003;</span> : <span className="text-gray-300">-</span>}
+   392→                        </TableCell>
+   393→                      </TableRow>
+   394→                    )
+   395→                  })}
+   396→                </TableBody>
+   397→              </Table>
+   398→              {(() => {
+   399→                const filteredCount = getFilteredCount()
+   400→                return filteredCount > 15 ? (
+   401→                  <div className="text-center py-2 text-xs text-gray-400 border-t">
+   402→                    {'... dan '}{filteredCount - 15}{' data lainnya (total: '}{filteredCount}{' pendaftar)'}
+   403→                  </div>
+   404→                ) : null
+   405→              })()}
+   406→            </div>
+   407→
+   408→            {/* Legend */}
+   409→            <div className="text-center mt-3 text-xs text-gray-400">
+   410→              🟡 Rangking 1 · ⚪ Rangking 2 · 🟤 Rangking 3 · 🟢 Masuk Kuota · Total: {getFilteredCount()} pendaftar
+   411→              <span className="ml-3">Diterima: {totalVerified} | Ditolak: {totalRejected} | Menunggu: {totalPending}</span>
+   412→            </div>
+   413→
+   414→            {/* Excel Data Preview */}
+   415→            {rankingPreviewType === 'excel' && (
+   416→              <div className="mt-4 p-3 bg-emerald-50 rounded-lg border border-emerald-200">
+   417→                <h4 className="text-xs font-semibold text-emerald-800 mb-2">📋 Data yang akan diekspor ke Excel:</h4>
+   418→                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px]">
+   419→                  <div className="bg-white rounded p-2 border">
+   420→                    <span className="text-gray-500">Kolom Data</span>
+   421→                    <p className="font-bold text-gray-800">27 kolom</p>
+   422→                  </div>
+   423→                  <div className="bg-white rounded p-2 border">
+   424→                    <span className="text-gray-500">Baris Data</span>
+   425→                    <p className="font-bold text-gray-800">{getFilteredCount()} baris</p>
+   426→                  </div>
+   427→                  <div className="bg-white rounded p-2 border">
+   428→                    <span className="text-gray-500">Sheet</span>
+   429→                    <p className="font-bold text-gray-800">2 sheet</p>
+   430→                  </div>
+   431→                  <div className="bg-white rounded p-2 border">
+   432→                    <span className="text-gray-500">Format</span>
+   433→                    <p className="font-bold text-gray-800">.xlsx</p>
+   434→                  </div>
+   435→                </div>
+   436→                <p className="text-[10px] text-emerald-600 mt-2">
+   437→                  Sheet 1: Perangkingan (data lengkap termasuk kekurangan verifikasi, tanggal verif, KK) · Sheet 2: Ringkasan (filter, kuota & statistik per jalur)
+   438→                </p>
+   439→              </div>
+   440→            )}
+   441→          </div>
+   442→        </div>
+   443→
+   444→        <DialogFooter className="flex-row gap-2 sm:justify-end">
+   445→          <Button variant="outline" onClick={() => onOpenChange(false)}>
+   446→            Batal
+   447→          </Button>
+   448→          <Button
+   449→            onClick={() => {
+   450→              if (rankingPreviewType === 'pdf') {
+   451→                onPrintPDF()
+   452→              } else {
+   453→                onExportExcel()
+   454→              }
+   455→              onOpenChange(false)
+   456→            }}
+   457→            className={rankingPreviewType === 'pdf' ? 'bg-red-600 hover:bg-red-700' : 'bg-emerald-600 hover:bg-emerald-700'}
+   458→          >
+   459→            {rankingPreviewType === 'pdf' ? (
+   460→              <><Printer className="w-4 h-4 mr-2" /> Cetak PDF</>
+   461→            ) : (
+   462→              <><FileDown className="w-4 h-4 mr-2" /> Unduh Excel</>
+   463→            )}
+   464→          </Button>
+   465→        </DialogFooter>
+   466→      </DialogContent>
+   467→    </Dialog>
+   468→  )
+   469→}
+   470→

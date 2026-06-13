@@ -1,0 +1,584 @@
+     1→import * as XLSX from 'xlsx'
+     2→import { saveAs } from 'file-saver'
+     3→
+     4→/**
+     5→ * Safely get a string value from ranking data record
+     6→ */
+     7→function v(r: Record<string, unknown>, key: string): string {
+     8→  const val = r[key]
+     9→  if (val === null || val === undefined) return '-'
+    10→  return String(val) || '-'
+    11→}
+    12→
+    13→// Helper: check if a jalur name is Non-Akademik variant
+    14→function isNonAkademikJalur(subJalur: string): boolean {
+    15→  const lower = subJalur.toLowerCase().replace(/[^a-z0-9]/g, '')
+    16→  return lower.includes('nonakademik')
+    17→}
+    18→
+    19→// Helper: check if a jalur name is Akademik variant (includes "Prestasi" without "Nonakademik")
+    20→function isAkademikJalur(subJalur: string): boolean {
+    21→  const lower = subJalur.toLowerCase().replace(/[^a-z0-9]/g, '')
+    22→  return (lower.includes('akademik') || lower === 'prestasi') && !lower.includes('nonakademik')
+    23→}
+    24→
+    25→// Helper: check if a jalur is a prestasi type (either Akademik or Non-Akademik)
+    26→function isPrestasiJalur(subJalur: string): boolean {
+    27→  const lower = subJalur.toLowerCase().replace(/[^a-z0-9]/g, '')
+    28→  return lower.includes('prestasi') || lower.includes('akademik')
+    29→}
+    30→
+    31→// Re-sort data by the appropriate prestasi score based on jalur
+    32→// Prestasi Akademik → sort by _skorPrestasiAkademikNum (desc)
+    33→// Prestasi Non Akademik → sort by _skorPrestasiNonAkademikNum (desc)
+    34→function reSortByPrestasiJalur(data: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
+    35→  return [...data].sort((a, b) => {
+    36→    const subJalurA = (a.subJalur as string) || ''
+    37→    const subJalurB = (b.subJalur as string) || ''
+    38→
+    39→    // Get the appropriate score for each record based on its jalur
+    40→    const getScore = (r: Record<string, unknown>, subJalur: string): number => {
+    41→      if (isNonAkademikJalur(subJalur)) {
+    42→        return (r._skorPrestasiNonAkademikNum as number) || -1
+    43→      }
+    44→      if (isAkademikJalur(subJalur)) {
+    45→        return (r._skorPrestasiAkademikNum as number) || -1
+    46→      }
+    47→      // Fallback for other jalur: use the jalur-aware prestasi score
+    48→      return getPrestasiNumValue(r)
+    49→    }
+    50→
+    51→    const scoreA = getScore(a, subJalurA)
+    52→    const scoreB = getScore(b, subJalurB)
+    53→
+    54→    // Both have data: sort descending (highest first)
+    55→    if (scoreA > 0 && scoreB > 0) return scoreB - scoreA
+    56→    // Only one has data: data comes first
+    57→    if (scoreA > 0) return -1
+    58→    if (scoreB > 0) return 1
+    59→    return 0
+    60→  })
+    61→}
+    62→
+    63→// Helper: get prestasi score for display from a record
+    64→function getPrestasiDisplayValue(r: Record<string, unknown>): string {
+    65→  const subJalur = (r.subJalur as string) || ''
+    66→  if (isNonAkademikJalur(subJalur)) {
+    67→    return v(r, 'skorPrestasiNonAkademik') !== '-' ? v(r, 'skorPrestasiNonAkademik') : v(r, 'skorPrestasiAkademik')
+    68→  }
+    69→  return v(r, 'skorPrestasiAkademik') !== '-' ? v(r, 'skorPrestasiAkademik') : v(r, 'skorPrestasiNonAkademik')
+    70→}
+    71→
+    72→// Helper: get numeric prestasi score from a record
+    73→function getPrestasiNumValue(r: Record<string, unknown>): number {
+    74→  const subJalur = (r.subJalur as string) || ''
+    75→  const akdNum = (r._skorPrestasiAkademikNum as number) || -1
+    76→  const nonAkdNum = (r._skorPrestasiNonAkademikNum as number) || -1
+    77→  if (isNonAkademikJalur(subJalur)) {
+    78→    return nonAkdNum > 0 ? nonAkdNum : akdNum
+    79→  }
+    80→  return akdNum > 0 ? akdNum : nonAkdNum
+    81→}
+    82→
+    83→/**
+    84→ * Generate print HTML content for ranking report.
+    85→ * Designed to match the detail level of Lembar Verifikasi.
+    86→ */
+    87→export function getRankingPrintHTML(params: {
+    88→  selectedJalur: string
+    89→  rankingTampilan: string
+    90→  rankingSekolah: string
+    91→  rankingJurusan: string
+    92→  rankingStatus: string
+    93→  rankingData: Array<Record<string, unknown>>
+    94→  rankingKuota: number
+    95→  rankingKuotaPerJalur: Array<{ nama: string; persentase: number; kuota: number }>
+    96→  appName: string
+    97→  schoolName: string
+    98→}): string {
+    99→  const {
+   100→    selectedJalur,
+   101→    rankingTampilan,
+   102→    rankingSekolah,
+   103→    rankingJurusan,
+   104→    rankingStatus,
+   105→    rankingData,
+   106→    rankingKuota,
+   107→    rankingKuotaPerJalur,
+   108→    appName,
+   109→    schoolName,
+   110→  } = params
+   111→
+   112→  const sortLabel = rankingTampilan === 'jarak' ? 'Jarak Terdekat' : rankingTampilan === 'nilai' ? 'Nilai Tertinggi' : rankingTampilan === 'komposit' ? 'Skor Komposit' : 'Skor Prestasi'
+   113→  const prestasiNote = isPrestasiJalur(selectedJalur) ? ' (diurutkan berdasarkan Skor Prestasi sesuai jalur)' : ''
+   114→  const jalurLabel = selectedJalur !== 'all' ? selectedJalur : 'Semua Jalur'
+   115→  const sekolahLabel = rankingSekolah !== 'all' ? rankingSekolah : 'Semua Sekolah'
+   116→  const jurusanLabel = rankingJurusan !== 'all' ? rankingJurusan : 'Semua Jurusan'
+   117→  const statusLabel = rankingStatus !== 'all' ? (rankingStatus === 'VERIFIED' ? 'Diterima' : rankingStatus === 'REJECTED' ? 'Ditolak' : 'Menunggu') : 'Semua Status'
+   118→
+   119→  // Filter data by selected jalur
+   120→  const filteredData = selectedJalur === 'all'
+   121→    ? rankingData
+   122→    : rankingData.filter((r: Record<string, unknown>) => (r.subJalur as string) === selectedJalur)
+   123→
+   124→  // Re-sort by appropriate prestasi score based on jalur for printing
+   125→  // This ensures the print always ranks by the correct prestasi score
+   126→  // regardless of the current tampilan mode
+   127→  const sortedForPrint = isPrestasiJalur(selectedJalur)
+   128→    ? reSortByPrestasiJalur(filteredData)
+   129→    : filteredData
+   130→
+   131→  // Re-rank within selected jalur
+   132→  const jalurRankCounters: Record<string, number> = {}
+   133→  const reRanked = sortedForPrint.map((r: Record<string, unknown>, idx: number) => {
+   134→    const jalur = r.subJalur as string
+   135→    if (!jalurRankCounters[jalur]) jalurRankCounters[jalur] = 0
+   136→    jalurRankCounters[jalur]++
+   137→    return { ...r, _newRank: idx + 1, _newJalurRank: jalurRankCounters[jalur] }
+   138→  })
+   139→
+   140→  // Helper to find kuota for a jalur
+   141→  function findKuota(subJalur: string): number {
+   142→    return rankingKuotaPerJalur.find(k => {
+   143→      const jalurName = subJalur.toLowerCase()
+   144→      return k.nama.toLowerCase().includes(jalurName) || jalurName.includes(k.nama.toLowerCase())
+   145→        || (k.nama.toLowerCase().includes('prestasi') && jalurName.includes('prestasi'))
+   146→        || (k.nama.toLowerCase().includes('domisili') && jalurName.includes('domisili'))
+   147→        || (k.nama.toLowerCase().includes('mutasi') && jalurName.includes('mutasi'))
+   148→        || (k.nama.toLowerCase().includes('afirmasi') && (jalurName.includes('keluarga') || jalurName.includes('ktm')))
+   149→    })?.kuota || 0
+   150→  }
+   151→
+   152→  // Build per-jalur summary stats
+   153→  const jalurGroups: Record<string, { total: number; verified: number; rejected: number; pending: number; kuota: number }> = {}
+   154→  for (const r of reRanked) {
+   155→    const jalur = r.subJalur as string
+   156→    if (!jalurGroups[jalur]) {
+   157→      jalurGroups[jalur] = { total: 0, verified: 0, rejected: 0, pending: 0, kuota: findKuota(jalur) }
+   158→    }
+   159→    jalurGroups[jalur].total++
+   160→    if (r.verificationStatus === 'VERIFIED') jalurGroups[jalur].verified++
+   161→    else if (r.verificationStatus === 'REJECTED') jalurGroups[jalur].rejected++
+   162→    else jalurGroups[jalur].pending++
+   163→  }
+   164→
+   165→  // Generate rows
+   166→  const rows = reRanked.map((r: Record<string, unknown> & { _newRank: number; _newJalurRank: number }) => {
+   167→    const rankNum = r._newRank
+   168→    const jalurRank = r._newJalurRank
+   169→    const jarakNum = r._jarakNum as number
+   170→    const nilaiNum = r._nilaiNum as number
+   171→    const skorNum = r._skorNum as number
+   172→    const skorPrestasiNum = getPrestasiNumValue(r)
+   173→    const prestasiDisplay = getPrestasiDisplayValue(r)
+   174→
+   175→    // Determine kuota cutoff
+   176→    const currentKuota = findKuota(r.subJalur as string)
+   177→
+   178→    const sameJalurAbove = reRanked
+   179→      .filter((other: Record<string, unknown> & { _newRank: number; _newJalurRank: number }) =>
+   180→        (other.subJalur as string) === (r.subJalur as string) &&
+   181→        other._newJalurRank < jalurRank
+   182→      ).length
+   183→
+   184→    const withinKuota = currentKuota > 0 && sameJalurAbove < currentKuota
+   185→    const isVerified = r.verificationStatus === 'VERIFIED'
+   186→
+   187→    const rowBg = withinKuota && !isVerified ? '#f0fdf4' : isVerified ? '#f0fdf4' : r.verificationStatus === 'REJECTED' ? '#fef2f2' : ''
+   188→    const rankBg = rankNum === 1 ? '#fbbf24' : rankNum === 2 ? '#d1d5db' : rankNum === 3 ? '#b45309' : withinKuota ? '#d1fae5' : '#f3f4f6'
+   189→    const rankColor = rankNum <= 3 ? '#fff' : withinKuota ? '#047857' : '#6b7280'
+   190→
+   191→    // Status badge
+   192→    const statusBadge = r.verificationStatus === 'VERIFIED'
+   193→      ? '<span style="background:#d1fae5;color:#047857;padding:1px 6px;border-radius:8px;font-size:9px">Diterima</span>'
+   194→      : r.verificationStatus === 'REJECTED'
+   195→        ? '<span style="background:#fee2e2;color:#b91c1c;padding:1px 6px;border-radius:8px;font-size:9px">Ditolak</span>'
+   196→        : '<span style="background:#fef3c7;color:#b45309;padding:1px 6px;border-radius:8px;font-size:9px">Menunggu</span>'
+   197→
+   198→    // Kekurangan verifikasi
+   199→    const kekurangan = v(r, 'kekuranganVerifikasi')
+   200→    const kekuranganText = kekurangan !== '-'
+   201→      ? kekurangan.split(' | ').map(k => `<span style="display:block;font-size:8px;color:#b91c1c;line-height:1.2">${k}</span>`).join('')
+   202→      : '<span style="color:#ccc">-</span>'
+   203→
+   204→    // Detail Portal values
+   205→    const skorLomba = v(r, 'skorLomba')
+   206→    const nilaiRataRataTKA = v(r, 'nilaiRataRataTKA')
+   207→    const skorPrestasiAkademik = v(r, 'skorPrestasiAkademik')
+   208→
+   209→    return `<tr style="background:${rowBg}">
+   210→      <td style="padding:4px 3px;border:1px solid #ddd;text-align:center"><span style="display:inline-block;width:22px;height:22px;line-height:22px;border-radius:50%;background:${rankBg};color:${rankColor};font-size:9px;font-weight:bold">${rankNum}</span></td>
+   211→      <td style="padding:4px 3px;border:1px solid #ddd;text-align:center;font-size:9px;line-height:1.2">${r.subJalur as string}<br><span style="font-size:8px;color:#0369a1">#${jalurRank}</span></td>
+   212→      <td style="padding:4px 3px;border:1px solid #ddd;font-size:9px;line-height:1.3"><strong>${v(r, 'nama')}</strong><br><span style="font-size:8px;color:#666">NISN: ${v(r, 'nisn')}</span></td>
+   213→      <td style="padding:4px 3px;border:1px solid #ddd;font-size:8px;text-align:center">${v(r, 'noRegistrasi')}</td>
+   214→      <td style="padding:4px 3px;border:1px solid #ddd;font-size:9px;line-height:1.2">${v(r, 'namaSekolahAsal')}</td>
+   215→      <td style="padding:4px 3px;border:1px solid #ddd;font-size:8px;text-align:center">${v(r, 'jurusan')}</td>
+   216→      <td style="padding:4px 3px;border:1px solid #ddd;text-align:right;font-size:9px;font-weight:${rankingTampilan === 'jarak' ? 'bold' : 'normal'};color:${jarakNum > 0 ? '#0369a1' : '#ccc'}">${v(r, 'lokasiJarak')}</td>
+   217→      <td style="padding:4px 3px;border:1px solid #ddd;text-align:center;font-size:9px;color:${jarakNum > 0 ? '#0369a1' : '#ccc'}">${v(r, 'skorJarak')}</td>
+   218→      <td style="padding:4px 3px;border:1px solid #ddd;text-align:right;font-size:9px;font-weight:${rankingTampilan === 'nilai' ? 'bold' : 'normal'};color:${nilaiNum > 0 ? '#047857' : '#ccc'}">${v(r, 'nilaiRataRata')}</td>
+   219→      <td style="padding:4px 3px;border:1px solid #ddd;text-align:center;font-size:9px;color:${nilaiNum > 0 ? '#047857' : '#ccc'}">${v(r, 'skorNilaiRaport')}</td>
+   220→      <td style="padding:4px 3px;border:1px solid #ddd;text-align:center;font-size:9px;color:#7c3aed">${skorLomba}</td>
+   221→      <td style="padding:4px 3px;border:1px solid #ddd;text-align:center;font-size:9px;color:#7c3aed">${nilaiRataRataTKA}</td>
+   222→      <td style="padding:4px 3px;border:1px solid #ddd;text-align:center;font-size:9px;color:#7c3aed">${skorPrestasiAkademik}</td>
+   223→      <td style="padding:4px 3px;border:1px solid #ddd;text-align:center;font-size:9px;color:${skorNum > 0 ? '#b45309' : '#ccc'}">${v(r, 'totalNilai')}</td>
+   224→      <td style="padding:4px 3px;border:1px solid #ddd;text-align:center;font-size:9px;font-weight:${rankingTampilan === 'komposit' ? 'bold' : 'normal'};color:${skorNum > 0 ? '#b45309' : '#ccc'}">${v(r, 'skor')}</td>
+   225→      <td style="padding:4px 6px;border:1px solid #ddd;text-align:right;font-size:10px;font-weight:${rankingTampilan === 'prestasi' ? 'bold' : 'normal'};color:${skorPrestasiNum > 0 ? '#0d9488' : '#ccc'}">${prestasiDisplay}</td>
+   226→      <td style="padding:4px 3px;border:1px solid #ddd;font-size:8px;line-height:1.2;max-width:120px;overflow:hidden">${kekuranganText}</td>
+   227→      <td style="padding:4px 3px;border:1px solid #ddd;font-size:8px;text-align:center">${v(r, 'tanggalVerif')}</td>
+   228→      <td style="padding:4px 3px;border:1px solid #ddd;font-size:8px;text-align:center">${v(r, 'jamVerif')}</td>
+   229→      <td style="padding:4px 3px;border:1px solid #ddd;font-size:8px;text-align:center">${v(r, 'terbitKK')}</td>
+   230→      <td style="padding:4px 3px;border:1px solid #ddd;font-size:8px;text-align:center">${v(r, 'lamaKK')}</td>
+   231→      <td style="padding:4px 3px;border:1px solid #ddd;text-align:center;font-size:9px">${statusBadge}</td>
+   232→      <td style="padding:4px 3px;border:1px solid #ddd;text-align:center;font-size:8px">${withinKuota ? '<span style="color:#047857;font-weight:bold">&#10003;</span>' : '<span style="color:#ccc">-</span>'}</td>
+   233→    </tr>`
+   234→  }).join('')
+   235→
+   236→  // Build jalur summary table
+   237→  const jalurSummaryRows = Object.entries(jalurGroups).map(([jalur, s]) => {
+   238→    const kuotaText = s.kuota > 0 ? String(s.kuota) : '-'
+   239→    const pct = s.total > 0 ? Math.round((s.verified / s.total) * 100) : 0
+   240→    return `<tr>
+   241→      <td style="padding:4px 8px;border:1px solid #ddd;font-size:10px;font-weight:500">${jalur}</td>
+   242→      <td style="padding:4px 8px;border:1px solid #ddd;text-align:center;font-size:10px">${kuotaText}</td>
+   243→      <td style="padding:4px 8px;border:1px solid #ddd;text-align:center;font-size:10px">${s.total}</td>
+   244→      <td style="padding:4px 8px;border:1px solid #ddd;text-align:center;font-size:10px;color:#047857">${s.verified}</td>
+   245→      <td style="padding:4px 8px;border:1px solid #ddd;text-align:center;font-size:10px;color:#b91c1c">${s.rejected}</td>
+   246→      <td style="padding:4px 8px;border:1px solid #ddd;text-align:center;font-size:10px;color:#b45309">${s.pending}</td>
+   247→      <td style="padding:4px 8px;border:1px solid #ddd;text-align:center;font-size:10px">${pct}%</td>
+   248→    </tr>`
+   249→  }).join('')
+   250→
+   251→  // Total verified / rejected / pending counts
+   252→  const totalVerified = reRanked.filter(r => r.verificationStatus === 'VERIFIED').length
+   253→  const totalRejected = reRanked.filter(r => r.verificationStatus === 'REJECTED').length
+   254→  const totalPending = reRanked.filter(r => r.verificationStatus !== 'VERIFIED' && r.verificationStatus !== 'REJECTED').length
+   255→
+   256→  return `<!DOCTYPE html><html><head><title>Perangkingan ${appName} - ${sortLabel}</title>
+   257→    <style>
+   258→      @page { size: A3 landscape; margin: 10mm; }
+   259→      body { font-family: Arial, sans-serif; margin: 0; padding: 10px; font-size: 10px; }
+   260→      .header { text-align: center; margin-bottom: 10px; border-bottom: 3px double #333; padding-bottom: 8px; }
+   261→      .header h1 { font-size: 16px; margin: 0 0 2px 0; letter-spacing: 2px; }
+   262→      .header h2 { font-size: 13px; margin: 0 0 2px 0; color: #555; }
+   263→      .header h3 { font-size: 11px; margin: 0 0 2px 0; color: #777; }
+   264→      .header p { font-size: 9px; color: #888; margin: 2px 0; }
+   265→      .filters { display: flex; gap: 10px; justify-content: center; margin-bottom: 8px; font-size: 9px; color: #666; }
+   266→      .filters span { background: #f5f5f5; padding: 2px 6px; border-radius: 4px; border: 1px solid #ddd; }
+   267→      .summary-section { margin-bottom: 8px; }
+   268→      .summary-section h4 { font-size: 11px; margin: 0 0 4px 0; color: #333; }
+   269→      .kuota-info { text-align: center; margin-bottom: 8px; font-size: 10px; }
+   270→      .kuota-info span { background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 4px; margin: 0 3px; }
+   271→      .stats-row { display: flex; gap: 8px; justify-content: center; margin-bottom: 8px; }
+   272→      .stat-box { text-align: center; padding: 4px 12px; border-radius: 6px; border: 1px solid #ddd; }
+   273→      .stat-box .stat-val { font-size: 16px; font-weight: bold; }
+   274→      .stat-box .stat-label { font-size: 8px; color: #666; }
+   275→      table { width: 100%; border-collapse: collapse; font-size: 9px; }
+   276→      th { background: #f0f4f8; padding: 4px 3px; border: 1px solid #cbd5e1; text-align: center; font-size: 8px; font-weight: 600; color: #334155; }
+   277→      th.active { background: #fef3c7; color: #92400e; }
+   278→      th.group-header { background: #1e293b; color: #fff; font-size: 9px; padding: 3px 5px; letter-spacing: 0.5px; }
+   279→      .legend { margin-top: 8px; font-size: 9px; color: #888; text-align: center; }
+   280→      .legend span { margin: 0 6px; }
+   281→      .footer-note { margin-top: 10px; font-size: 8px; color: #999; text-align: center; border-top: 1px solid #eee; padding-top: 6px; }
+   282→      @media print { body { padding: 0; } .page-break { page-break-before: always; } }
+   283→    </style>
+   284→  </head>
+   285→  <body>
+   286→    <div class="header">
+   287→      <h1>LAPORAN PERANGKINGAN PESERTA SPMB</h1>
+   288→      <h2>${appName}</h2>
+   289→      ${schoolName ? `<h3>${schoolName}</h3>` : ''}
+   290→      <p>Diurutkan berdasarkan: <strong>${sortLabel}${prestasiNote}</strong> &middot; Dicetak pada: ${new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+   291→    </div>
+   292→
+   293→    <div class="filters">
+   294→      <span>Jalur: ${jalurLabel}</span>
+   295→      <span>Sekolah: ${sekolahLabel}</span>
+   296→      <span>Jurusan: ${jurusanLabel}</span>
+   297→      <span>Status: ${statusLabel}</span>
+   298→    </div>
+   299→
+   300→    <!-- Stats Overview -->
+   301→    <div class="stats-row">
+   302→      <div class="stat-box" style="background:#f0f9ff;border-color:#bae6fd">
+   303→        <div class="stat-val" style="color:#0369a1">${reRanked.length}</div>
+   304→        <div class="stat-label">Total Pendaftar</div>
+   305→      </div>
+   306→      <div class="stat-box" style="background:#f0fdf4;border-color:#bbf7d0">
+   307→        <div class="stat-val" style="color:#047857">${totalVerified}</div>
+   308→        <div class="stat-label">Diterima</div>
+   309→      </div>
+   310→      <div class="stat-box" style="background:#fef2f2;border-color:#fecaca">
+   311→        <div class="stat-val" style="color:#b91c1c">${totalRejected}</div>
+   312→        <div class="stat-label">Ditolak</div>
+   313→      </div>
+   314→      <div class="stat-box" style="background:#fffbeb;border-color:#fde68a">
+   315→        <div class="stat-val" style="color:#b45309">${totalPending}</div>
+   316→        <div class="stat-label">Menunggu</div>
+   317→      </div>
+   318→      ${rankingKuota > 0 ? `<div class="stat-box" style="background:#eff6ff;border-color:#bfdbfe">
+   319→        <div class="stat-val" style="color:#1e40af">${rankingKuota}</div>
+   320→        <div class="stat-label">Total Kuota</div>
+   321→      </div>` : ''}
+   322→    </div>
+   323→
+   324→    ${rankingKuota > 0 ? `<div class="kuota-info">${rankingKuotaPerJalur.map(kj => `<span>${kj.nama}: ${kj.kuota} (${kj.persentase}%)</span>`).join('')}</div>` : ''}
+   325→
+   326→    <!-- Per-Jalur Summary -->
+   327→    <div class="summary-section">
+   328→      <h4>Ringkasan Per Jalur</h4>
+   329→      <table style="width:auto;min-width:500px">
+   330→        <thead>
+   331→          <tr>
+   332→            <th style="text-align:left">Jalur</th>
+   333→            <th>Kuota</th>
+   334→            <th>Total</th>
+   335→            <th style="color:#047857">Diterima</th>
+   336→            <th style="color:#b91c1c">Ditolak</th>
+   337→            <th style="color:#b45309">Menunggu</th>
+   338→            <th>Progres</th>
+   339→          </tr>
+   340→        </thead>
+   341→        <tbody>${jalurSummaryRows}</tbody>
+   342→      </table>
+   343→    </div>
+   344→
+   345→    <!-- Detailed Ranking Table -->
+   346→    <div style="margin-top:8px">
+   347→      <table>
+   348→        <thead>
+   349→          <!-- Group Headers -->
+   350→          <tr>
+   351→            <th class="group-header" rowspan="2" style="width:32px">No</th>
+   352→            <th class="group-header" rowspan="2" style="width:70px">Jalur</th>
+   353→            <th class="group-header" colspan="2">Data Pendaftar</th>
+   354→            <th class="group-header" rowspan="2" style="width:100px">Sekolah Asal</th>
+   355→            <th class="group-header" rowspan="2" style="width:55px">Jurusan</th>
+   356→            <th class="group-header" colspan="2" style="${rankingTampilan === 'jarak' ? 'background:#0c4a6e' : ''}">Jarak</th>
+   357→            <th class="group-header" colspan="2" style="${rankingTampilan === 'nilai' ? 'background:#064e3b' : ''}">Nilai Raport</th>
+   358→            <th class="group-header" colspan="3" style="background:#4c1d95">Detail Portal</th>
+   359→            <th class="group-header" colspan="3" style="${rankingTampilan === 'komposit' || rankingTampilan === 'prestasi' ? 'background:#78350f' : ''}">Skor</th>
+   360→            <th class="group-header" colspan="5">Verifikasi</th>
+   361→            <th class="group-header" rowspan="2" style="width:45px">Status</th>
+   362→            <th class="group-header" rowspan="2" style="width:30px">Kuota</th>
+   363→          </tr>
+   364→          <tr>
+   365→            <!-- Data Pendaftar -->
+   366→            <th style="min-width:100px">Nama / NISN</th>
+   367→            <th style="width:65px">No. Reg</th>
+   368→            <!-- Jarak -->
+   369→            <th class="${rankingTampilan === 'jarak' ? 'active' : ''}" style="width:60px">Jarak</th>
+   370→            <th class="${rankingTampilan === 'jarak' ? 'active' : ''}" style="width:45px">Skor</th>
+   371→            <!-- Nilai Raport -->
+   372→            <th class="${rankingTampilan === 'nilai' ? 'active' : ''}" style="width:50px">Rata²</th>
+   373→            <th class="${rankingTampilan === 'nilai' ? 'active' : ''}" style="width:45px">Skor</th>
+   374→            <!-- Detail Portal -->
+   375→            <th style="width:45px;background:#f5f3ff;color:#6d28d9">Skor Lomba</th>
+   376→            <th style="width:50px;background:#f5f3ff;color:#6d28d9">Nilai TKA</th>
+   377→            <th style="width:55px;background:#f5f3ff;color:#6d28d9">Skor Prestasi</th>
+   378→            <!-- Skor -->
+   379→            <th style="width:45px">Total</th>
+   380→            <th class="${rankingTampilan === 'komposit' ? 'active' : ''}" style="width:45px">Komposit</th>
+   381→            <th class="${rankingTampilan === 'prestasi' ? 'active' : ''}" style="width:80px">Skor Prestasi</th>
+   382→            <!-- Verifikasi -->
+   383→            <th style="width:90px">Kekurangan</th>
+   384→            <th style="width:55px">Tgl Verif</th>
+   385→            <th style="width:40px">Jam</th>
+   386→            <th style="width:55px">Terbit KK</th>
+   387→            <th style="width:45px">Lama KK</th>
+   388→          </tr>
+   389→        </thead>
+   390→        <tbody>${rows}</tbody>
+   391→      </table>
+   392→    </div>
+   393→
+   394→    <div class="legend">
+   395→      <span>&#x1F7E1; Rangking 1</span> <span>&#x26AA; Rangking 2</span> <span>&#x1F7E4; Rangking 3</span> <span>&#x1F7E2; Masuk Kuota</span>
+   396→      <span style="margin-left:15px">Total: ${reRanked.length} pendaftar</span>
+   397→      <span style="margin-left:15px">Diterima: ${totalVerified} | Ditolak: ${totalRejected} | Menunggu: ${totalPending}</span>
+   398→    </div>
+   399→
+   400→    <div class="footer-note">
+   401→      Dokumen ini dihasilkan secara otomatis oleh ${appName}${schoolName ? ' — ' + schoolName : ''} &middot; Halaman ini bersifat rahasia dan hanya untuk keperluan internal panitia SPMB
+   402→    </div>
+   403→  </body></html>`
+   404→}
+   405→
+   406→/**
+   407→ * Handle ranking export to Excel.
+   408→ * Enhanced to match the detail level of Lembar Verifikasi.
+   409→ */
+   410→export function handleRankingExportExcel(params: {
+   411→  rankingPreviewJalur: string
+   412→  rankingTampilan: string
+   413→  rankingSekolah: string
+   414→  rankingJurusan: string
+   415→  rankingStatus: string
+   416→  rankingData: Array<Record<string, unknown>>
+   417→  rankingKuota: number
+   418→  rankingKuotaPerJalur: Array<{ nama: string; persentase: number; kuota: number }>
+   419→  appName: string
+   420→  schoolName: string
+   421→}): void {
+   422→  const {
+   423→    rankingPreviewJalur: selectedJalur,
+   424→    rankingTampilan,
+   425→    rankingSekolah,
+   426→    rankingJurusan,
+   427→    rankingStatus,
+   428→    rankingData,
+   429→    rankingKuota,
+   430→    rankingKuotaPerJalur,
+   431→    appName,
+   432→    schoolName,
+   433→  } = params
+   434→
+   435→  const sortLabel = rankingTampilan === 'jarak' ? 'Jarak Terdekat' : rankingTampilan === 'nilai' ? 'Nilai Tertinggi' : rankingTampilan === 'komposit' ? 'Skor Komposit' : 'Skor Prestasi'
+   436→  const prestasiNote = isPrestasiJalur(selectedJalur) ? ' (diurutkan berdasarkan Skor Prestasi sesuai jalur)' : ''
+   437→  const jalurLabel = selectedJalur !== 'all' ? selectedJalur : 'Semua Jalur'
+   438→
+   439→  // Filter data by selected jalur
+   440→  const filteredData = selectedJalur === 'all'
+   441→    ? rankingData
+   442→    : rankingData.filter((r: Record<string, unknown>) => (r.subJalur as string) === selectedJalur)
+   443→
+   444→  // Re-sort by appropriate prestasi score based on jalur for export
+   445→  // This ensures the Excel export always ranks by the correct prestasi score
+   446→  // regardless of the current tampilan mode
+   447→  const sortedForExport = isPrestasiJalur(selectedJalur)
+   448→    ? reSortByPrestasiJalur(filteredData)
+   449→    : filteredData
+   450→
+   451→  // Re-rank
+   452→  const jalurRankCounters: Record<string, number> = {}
+   453→  const reRanked = sortedForExport.map((r: Record<string, unknown>, idx: number) => {
+   454→    const jalur = r.subJalur as string
+   455→    if (!jalurRankCounters[jalur]) jalurRankCounters[jalur] = 0
+   456→    jalurRankCounters[jalur]++
+   457→    return { ...r, _newRank: idx + 1, _newJalurRank: jalurRankCounters[jalur] }
+   458→  })
+   459→
+   460→  const excelData = reRanked.map((r: Record<string, unknown> & { _newRank: number; _newJalurRank: number }) => {
+   461→    const rankNum = r._newRank
+   462→    const jalurRank = r._newJalurRank
+   463→
+   464→    const currentKuota = rankingKuotaPerJalur.find(k => {
+   465→      const jalurName = (r.subJalur as string || '').toLowerCase()
+   466→      return k.nama.toLowerCase().includes(jalurName) || jalurName.includes(k.nama.toLowerCase())
+   467→        || (k.nama.toLowerCase().includes('prestasi') && jalurName.includes('prestasi'))
+   468→        || (k.nama.toLowerCase().includes('domisili') && jalurName.includes('domisili'))
+   469→        || (k.nama.toLowerCase().includes('mutasi') && jalurName.includes('mutasi'))
+   470→        || (k.nama.toLowerCase().includes('afirmasi') && (jalurName.includes('keluarga') || jalurName.includes('ktm')))
+   471→    })?.kuota || 0
+   472→
+   473→    const sameJalurAbove = reRanked
+   474→      .filter((other: Record<string, unknown> & { _newRank: number; _newJalurRank: number }) =>
+   475→        (other.subJalur as string) === (r.subJalur as string) &&
+   476→        other._newJalurRank < jalurRank
+   477→      ).length
+   478→
+   479→    const withinKuota = currentKuota > 0 && sameJalurAbove < currentKuota
+   480→
+   481→    return {
+   482→      'Rangking': rankNum,
+   483→      'Rangking Jalur': jalurRank > 0 ? jalurRank : '-',
+   484→      'Jalur': r.subJalur as string,
+   485→      'No. Registrasi': v(r, 'noRegistrasi'),
+   486→      'Nama': v(r, 'nama'),
+   487→      'NISN': v(r, 'nisn'),
+   488→      'NIK': v(r, 'nik'),
+   489→      'Tanggal Lahir': v(r, 'tanggalLahir'),
+   490→      'Sekolah Asal': v(r, 'namaSekolahAsal'),
+   491→      'Jurusan': v(r, 'jurusan'),
+   492→      'Jarak': v(r, 'lokasiJarak'),
+   493→      'Skor Jarak': v(r, 'skorJarak'),
+   494→      'Nilai Rata-Rata': v(r, 'nilaiRataRata'),
+   495→      'Skor Nilai Raport': v(r, 'skorNilaiRaport'),
+   496→      'Skor Lomba': v(r, 'skorLomba'),
+   497→      'Nilai Rata-Rata TKA': v(r, 'nilaiRataRataTKA'),
+   498→      'Skor Prestasi': v(r, 'skorPrestasiAkademik'),
+   499→      'Skor Prestasi Akademik': (r.skorPrestasiAkademik as string) || '-',
+   500→      'Skor Prestasi Non Akademik': (r.skorPrestasiNonAkademik as string) || '-',
+   501→      'Skor Komposit': v(r, 'skor'),
+   502→      'Kekurangan Verifikasi': v(r, 'kekuranganVerifikasi'),
+   503→      'Tanggal Verif': v(r, 'tanggalVerif'),
+   504→      'Jam Verif': v(r, 'jamVerif'),
+   505→      'Terbit KK': v(r, 'terbitKK'),
+   506→      'Lama KK': v(r, 'lamaKK'),
+   507→      'Status Verifikasi': r.verificationStatus === 'VERIFIED' ? 'Diterima' : r.verificationStatus === 'REJECTED' ? 'Ditolak' : 'Menunggu',
+   508→      'Masuk Kuota': withinKuota ? 'Ya' : 'Tidak',
+   509→    }
+   510→  })
+   511→
+   512→  const ws = XLSX.utils.json_to_sheet(excelData)
+   513→
+   514→  // Set column widths
+   515→  ws['!cols'] = [
+   516→    { wch: 10 }, { wch: 14 }, { wch: 20 }, { wch: 18 }, { wch: 25 },
+   517→    { wch: 16 }, { wch: 18 }, { wch: 18 }, { wch: 14 }, { wch: 22 },
+   518→    { wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 18 }, { wch: 18 }, { wch: 20 },
+   519→    { wch: 14 }, { wch: 14 }, { wch: 28 }, { wch: 14 }, { wch: 10 }, { wch: 14 },
+   520→    { wch: 12 }, { wch: 14 }, { wch: 10 },
+   521→  ]
+   522→
+   523→  const wb = XLSX.utils.book_new()
+   524→  XLSX.utils.book_append_sheet(wb, ws, 'Perangkingan')
+   525→
+   526→  // Build per-jalur summary for Excel
+   527→  const jalurGroups: Record<string, { total: number; verified: number; rejected: number; pending: number; kuota: number }> = {}
+   528→  for (const r of reRanked) {
+   529→    const jalur = r.subJalur as string
+   530→    if (!jalurGroups[jalur]) {
+   531→      const kuota = rankingKuotaPerJalur.find(k => {
+   532→        const jalurName = jalur.toLowerCase()
+   533→        return k.nama.toLowerCase().includes(jalurName) || jalurName.includes(k.nama.toLowerCase())
+   534→          || (k.nama.toLowerCase().includes('prestasi') && jalurName.includes('prestasi'))
+   535→          || (k.nama.toLowerCase().includes('domisili') && jalurName.includes('domisili'))
+   536→          || (k.nama.toLowerCase().includes('mutasi') && jalurName.includes('mutasi'))
+   537→          || (k.nama.toLowerCase().includes('afirmasi') && (jalurName.includes('keluarga') || jalurName.includes('ktm')))
+   538→      })?.kuota || 0
+   539→      jalurGroups[jalur] = { total: 0, verified: 0, rejected: 0, pending: 0, kuota }
+   540→    }
+   541→    jalurGroups[jalur].total++
+   542→    if (r.verificationStatus === 'VERIFIED') jalurGroups[jalur].verified++
+   543→    else if (r.verificationStatus === 'REJECTED') jalurGroups[jalur].rejected++
+   544→    else jalurGroups[jalur].pending++
+   545→  }
+   546→
+   547→  const totalVerified = reRanked.filter(r => r.verificationStatus === 'VERIFIED').length
+   548→  const totalRejected = reRanked.filter(r => r.verificationStatus === 'REJECTED').length
+   549→  const totalPending = reRanked.length - totalVerified - totalRejected
+   550→
+   551→  // Add a summary sheet
+   552→  const summaryData = [
+   553→    { 'Keterangan': `LAPORAN PERANGKINGAN ${appName}${schoolName ? ' — ' + schoolName : ''}`, 'Nilai': '' },
+   554→    { 'Keterangan': 'Diurutkan Berdasarkan', 'Nilai': `${sortLabel}${prestasiNote}` },
+   555→    { 'Keterangan': 'Jalur', 'Nilai': jalurLabel },
+   556→    { 'Keterangan': 'Sekolah Asal', 'Nilai': rankingSekolah !== 'all' ? rankingSekolah : 'Semua Sekolah' },
+   557→    { 'Keterangan': 'Jurusan', 'Nilai': rankingJurusan !== 'all' ? rankingJurusan : 'Semua Jurusan' },
+   558→    { 'Keterangan': 'Status Verifikasi', 'Nilai': rankingStatus !== 'all' ? (rankingStatus === 'VERIFIED' ? 'Diterima' : rankingStatus === 'REJECTED' ? 'Ditolak' : 'Menunggu') : 'Semua Status' },
+   559→    { 'Keterangan': '', 'Nilai': '' },
+   560→    { 'Keterangan': 'Total Pendaftar', 'Nilai': reRanked.length.toString() },
+   561→    { 'Keterangan': 'Diterima', 'Nilai': totalVerified.toString() },
+   562→    { 'Keterangan': 'Ditolak', 'Nilai': totalRejected.toString() },
+   563→    { 'Keterangan': 'Menunggu', 'Nilai': totalPending.toString() },
+   564→    { 'Keterangan': 'Total Kuota', 'Nilai': rankingKuota.toString() },
+   565→    { 'Keterangan': '', 'Nilai': '' },
+   566→    { 'Keterangan': 'Ringkasan Per Jalur', 'Nilai': '' },
+   567→    ...Object.entries(jalurGroups).map(([jalur, s]) => ({ 'Keterangan': `  ${jalur}`, 'Nilai': `Total: ${s.total} | Diterima: ${s.verified} | Ditolak: ${s.rejected} | Menunggu: ${s.pending} | Kuota: ${s.kuota}` })),
+   568→    { 'Keterangan': '', 'Nilai': '' },
+   569→    { 'Keterangan': 'Kuota Per Jalur', 'Nilai': '' },
+   570→    ...rankingKuotaPerJalur.map(kj => ({ 'Keterangan': `  ${kj.nama}`, 'Nilai': `${kj.kuota} (${kj.persentase}%)` })),
+   571→    { 'Keterangan': '', 'Nilai': '' },
+   572→    { 'Keterangan': 'Dicetak pada', 'Nilai': new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) },
+   573→  ]
+   574→  const ws2 = XLSX.utils.json_to_sheet(summaryData)
+   575→  ws2['!cols'] = [{ wch: 30 }, { wch: 60 }]
+   576→  XLSX.utils.book_append_sheet(wb, ws2, 'Ringkasan')
+   577→
+   578→  const jalurSuffix = selectedJalur !== 'all' ? `_${selectedJalur.replace(/\s+/g, '_')}` : '_Semua_Jalur'
+   579→  const fileName = `Perangkingan_SPMB2026${jalurSuffix}_${sortLabel.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`
+   580→  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+   581→  const blob = new Blob([wbout], { type: 'application/octet-stream' })
+   582→  saveAs(blob, fileName)
+   583→}
+   584→

@@ -1,5 +1,6 @@
 'use client'
 
+import { matchKuotaForJalur, isNonAkademikJalur, isAkademikJalur } from '@/lib/kuota-matching'
 import {
   Dialog,
   DialogContent,
@@ -27,17 +28,7 @@ function v(r: Record<string, unknown>, key: string): string {
   return String(val) || '-'
 }
 
-// Helper: check if a jalur name is Non-Akademik variant
-function isNonAkademikJalur(subJalur: string): boolean {
-  const lower = subJalur.toLowerCase().replace(/[^a-z0-9]/g, '')
-  return lower.includes('nonakademik')
-}
-
-// Helper: check if a jalur name is Akademik variant (includes "Prestasi" without "Nonakademik")
-function isAkademikJalur(subJalur: string): boolean {
-  const lower = subJalur.toLowerCase().replace(/[^a-z0-9]/g, '')
-  return (lower.includes('akademik') || lower === 'prestasi') && !lower.includes('nonakademik')
-}
+// isNonAkademikJalur and isAkademikJalur are imported from @/lib/kuota-matching
 
 // Helper: check if a jalur is a prestasi type (either Akademik or Non-Akademik)
 function isPrestasiJalur(subJalur: string): boolean {
@@ -297,14 +288,7 @@ export default function RankingPreviewDialog({
                     const nilaiNum = r._nilaiNum as number
                     const skorNum = r._skorNum as number
 
-                    const currentKuota = rankingKuotaPerJalur.find(k => {
-                      const jalurName = (r.subJalur as string || '').toLowerCase()
-                      return k.nama.toLowerCase().includes(jalurName) || jalurName.includes(k.nama.toLowerCase())
-                        || (k.nama.toLowerCase().includes('prestasi') && jalurName.includes('prestasi'))
-                        || (k.nama.toLowerCase().includes('domisili') && jalurName.includes('domisili'))
-                        || (k.nama.toLowerCase().includes('mutasi') && jalurName.includes('mutasi'))
-                        || (k.nama.toLowerCase().includes('afirmasi') && (jalurName.includes('keluarga') || jalurName.includes('ktm')))
-                    })?.kuota || 0
+                    const currentKuota = matchKuotaForJalur((r.subJalur as string) || '', rankingKuotaPerJalur)
 
                     const sameJalurAbove = allFiltered
                       .filter((other: Record<string, unknown>) =>

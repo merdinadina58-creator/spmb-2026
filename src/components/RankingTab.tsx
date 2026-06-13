@@ -1,5 +1,6 @@
 'use client'
 
+import { matchKuotaForJalur, isNonAkademikJalur } from '@/lib/kuota-matching'
 import {
   Card,
   CardContent,
@@ -242,11 +243,7 @@ export default function RankingTab(props: RankingTabProps) {
               <h4 className="font-semibold text-sm text-emerald-900">Prestasi — Skor Tertinggi</h4>
             </div>
             {(() => {
-              // Helper: check if a jalur name is Non-Akademik variant
-              const isNonAkademikJalur = (sj: string) => {
-                const lower = sj.toLowerCase().replace(/[^a-z0-9]/g, '')
-                return lower.includes('nonakademik')
-              }
+              // isNonAkademikJalur is imported from @/lib/kuota-matching
               // Helper: get prestasi score for display from a record
               const getPrestasiDisplayValue = (r: Record<string, unknown>) => {
                 const sj = (r.subJalur as string) || ''
@@ -273,7 +270,9 @@ export default function RankingTab(props: RankingTabProps) {
                 .sort((a: Record<string, unknown>, b: Record<string, unknown>) => getPrestasiNumValue(b) - getPrestasiNumValue(a))
                 .slice(0, 5)
               if (prestasiData.length === 0) return <p className="text-xs text-gray-400 text-center py-3">Belum ada data skor prestasi</p>
-              const presKuota = rankingKuotaPerJalur.find(k => k.nama.toLowerCase().includes('prestasi'))?.kuota || 0
+              // Compute per-record kuota for the prestasi top-5 preview
+              // (was: generic includes('prestasi') always matched Akademik kuota=54)
+              const getPrestasiKuota = (r: Record<string, unknown>) => matchKuotaForJalur((r.subJalur as string) || '', rankingKuotaPerJalur)
               return (
                 <div className="space-y-1.5">
                   {prestasiData.map((r: Record<string, unknown>, idx: number) => {
@@ -281,8 +280,8 @@ export default function RankingTab(props: RankingTabProps) {
                     const isNonAkd = isNonAkademikJalur(sj)
                     const prestasiDisplay = getPrestasiDisplayValue(r)
                     return (
-                      <div key={`rank-pres-${r.id}-${idx}`} className={`flex items-center gap-2 p-2 rounded-lg ${idx < presKuota && presKuota > 0 ? 'bg-emerald-50 border border-emerald-200' : 'bg-gray-50 border border-gray-100'}`}>
-                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${idx < presKuota && presKuota > 0 ? 'bg-emerald-500 text-white' : isNonAkd ? 'bg-teal-400 text-white' : 'bg-gray-300 text-white'}`}>
+                      <div key={`rank-pres-${r.id}-${idx}`} className={`flex items-center gap-2 p-2 rounded-lg ${idx < getPrestasiKuota(r) && getPrestasiKuota(r) > 0 ? 'bg-emerald-50 border border-emerald-200' : 'bg-gray-50 border border-gray-100'}`}>
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${idx < getPrestasiKuota(r) && getPrestasiKuota(r) > 0 ? 'bg-emerald-500 text-white' : isNonAkd ? 'bg-teal-400 text-white' : 'bg-gray-300 text-white'}`}>
                           {idx + 1}
                         </span>
                         <div className="flex-1 min-w-0">
@@ -411,14 +410,7 @@ export default function RankingTab(props: RankingTabProps) {
                       ? ((r.skorPrestasiNonAkademik as string) || (r.skorPrestasiAkademik as string) || '-')
                       : ((r.skorPrestasiAkademik as string) || (r.skorPrestasiNonAkademik as string) || '-')
 
-                    const currentKuota = rankingKuotaPerJalur.find(k => {
-                      const jalurName = (r.subJalur as string || '').toLowerCase()
-                      return k.nama.toLowerCase().includes(jalurName) || jalurName.includes(k.nama.toLowerCase())
-                        || (k.nama.toLowerCase().includes('prestasi') && jalurName.includes('prestasi'))
-                        || (k.nama.toLowerCase().includes('domisili') && jalurName.includes('domisili'))
-                        || (k.nama.toLowerCase().includes('mutasi') && jalurName.includes('mutasi'))
-                        || (k.nama.toLowerCase().includes('afirmasi') && (jalurName.includes('keluarga') || jalurName.includes('ktm')))
-                    })?.kuota || 0
+                    const currentKuota = matchKuotaForJalur((r.subJalur as string) || '', rankingKuotaPerJalur)
 
                     const sameJalurAbove = rankingData
                       .filter((other: Record<string, unknown>) =>

@@ -1,5 +1,6 @@
 'use client'
 
+import { matchKuotaForJalur, isNonAkademikJalur, isAkademikJalur } from '@/lib/kuota-matching'
 import { useState, useEffect, useCallback } from 'react'
 import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
@@ -59,17 +60,7 @@ interface RankingTabProps {
   rankingTampilan?: string
 }
 
-// Helper: check if a jalur name is Non-Akademik variant
-function isNonAkademikJalur(subJalur: string): boolean {
-  const lower = subJalur.toLowerCase().replace(/[^a-z0-9]/g, '')
-  return lower.includes('nonakademik')
-}
-
-// Helper: check if a jalur name is Prestasi Akademik variant
-function isAkademikJalur(subJalur: string): boolean {
-  const lower = subJalur.toLowerCase()
-  return lower.includes('prestasi') && !lower.includes('non')
-}
+// isNonAkademikJalur and isAkademikJalur are imported from @/lib/kuota-matching
 
 // Helper: get the display label for the prestasi score column
 function getPrestasiScoreLabel(subJalur: string): string {
@@ -190,14 +181,7 @@ export default function RankingTab({ authUser, toast, subJalurOptions, rankingTa
       const skorPrestasiNum = getPrestasiNumValue(r)
 
       // Determine kuota cutoff
-      const currentKuota = rankingKuotaPerJalur.find(k => {
-        const jalurName = (r.subJalur as string || '').toLowerCase()
-        return k.nama.toLowerCase().includes(jalurName) || jalurName.includes(k.nama.toLowerCase())
-          || (k.nama.toLowerCase().includes('prestasi') && jalurName.includes('prestasi'))
-          || (k.nama.toLowerCase().includes('domisili') && jalurName.includes('domisili'))
-          || (k.nama.toLowerCase().includes('mutasi') && jalurName.includes('mutasi'))
-          || (k.nama.toLowerCase().includes('afirmasi') && (jalurName.includes('keluarga') || jalurName.includes('ktm')))
-      })?.kuota || 0
+      const currentKuota = matchKuotaForJalur((r.subJalur as string) || '', rankingKuotaPerJalur)
 
       const sameJalurAbove = reRanked
         .filter((other: Record<string, unknown> & { _newRank: number; _newJalurRank: number }) =>
@@ -327,14 +311,7 @@ export default function RankingTab({ authUser, toast, subJalurOptions, rankingTa
       const rankNum = r._newRank
       const jalurRank = r._newJalurRank
 
-      const currentKuota = rankingKuotaPerJalur.find(k => {
-        const jalurName = (r.subJalur as string || '').toLowerCase()
-        return k.nama.toLowerCase().includes(jalurName) || jalurName.includes(k.nama.toLowerCase())
-          || (k.nama.toLowerCase().includes('prestasi') && jalurName.includes('prestasi'))
-          || (k.nama.toLowerCase().includes('domisili') && jalurName.includes('domisili'))
-          || (k.nama.toLowerCase().includes('mutasi') && jalurName.includes('mutasi'))
-          || (k.nama.toLowerCase().includes('afirmasi') && (jalurName.includes('keluarga') || jalurName.includes('ktm')))
-      })?.kuota || 0
+      const currentKuota = matchKuotaForJalur((r.subJalur as string) || '', rankingKuotaPerJalur)
 
       const sameJalurAbove = reRanked
         .filter((other: Record<string, unknown> & { _newRank: number; _newJalurRank: number }) =>
@@ -750,14 +727,7 @@ export default function RankingTab({ authUser, toast, subJalurOptions, rankingTa
                     const isVerified = r.verificationStatus === 'VERIFIED'
 
                     // Determine kuota cutoff for current jalur
-                    const currentKuota = rankingKuotaPerJalur.find(k => {
-                      const jalurName = (r.subJalur as string || '').toLowerCase()
-                      return k.nama.toLowerCase().includes(jalurName) || jalurName.includes(k.nama.toLowerCase())
-                        || (k.nama.toLowerCase().includes('prestasi') && jalurName.includes('prestasi'))
-                        || (k.nama.toLowerCase().includes('domisili') && jalurName.includes('domisili'))
-                        || (k.nama.toLowerCase().includes('mutasi') && jalurName.includes('mutasi'))
-                        || (k.nama.toLowerCase().includes('afirmasi') && (jalurName.includes('keluarga') || jalurName.includes('ktm')))
-                    })?.kuota || 0
+                    const currentKuota = matchKuotaForJalur((r.subJalur as string) || '', rankingKuotaPerJalur)
 
                     // Count how many of the same jalur are above this rank
                     const sameJalurAbove = rankingData
@@ -948,14 +918,7 @@ export default function RankingTab({ authUser, toast, subJalurOptions, rankingTa
                       const skorPrestasiNum = getPrestasiNumValue(r)
                       const prestasiDisplay = getPrestasiDisplayValue(r)
 
-                      const currentKuota = rankingKuotaPerJalur.find(k => {
-                        const jalurName = (r.subJalur as string || '').toLowerCase()
-                        return k.nama.toLowerCase().includes(jalurName) || jalurName.includes(k.nama.toLowerCase())
-                          || (k.nama.toLowerCase().includes('prestasi') && jalurName.includes('prestasi'))
-                          || (k.nama.toLowerCase().includes('domisili') && jalurName.includes('domisili'))
-                          || (k.nama.toLowerCase().includes('mutasi') && jalurName.includes('mutasi'))
-                          || (k.nama.toLowerCase().includes('afirmasi') && (jalurName.includes('keluarga') || jalurName.includes('ktm')))
-                      })?.kuota || 0
+                      const currentKuota = matchKuotaForJalur((r.subJalur as string) || '', rankingKuotaPerJalur)
 
                       const sameJalurAbove = rankingData
                         .filter((other: Record<string, unknown>) =>
@@ -967,8 +930,7 @@ export default function RankingTab({ authUser, toast, subJalurOptions, rankingTa
                       const isVerified = r.verificationStatus === 'VERIFIED'
 
                       return (
-                        <TableRow key={r.id as string} className={`${withinKuota && !isVerified ? 'bg-emerald-50/50' : ''} ${isVerified ? 'bg-emerald-50' : ''}`}>
-                          <TableCell className="text-center p-1">
+                        <TableRow key={r.id as string} className={`${withinKuota && !isVerified ? 'bg-emerald-50/50' : ''} ${isVerified ? 'bg-emerald-50' : ''}`}>                          <TableCell className="text-center p-1">
                             <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold ${
                               rankNum === 1 ? 'bg-amber-400 text-white' :
                               rankNum === 2 ? 'bg-gray-300 text-gray-700' :

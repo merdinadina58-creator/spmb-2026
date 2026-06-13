@@ -1,26 +1,55 @@
----
-Task ID: 1
-Agent: Main Agent
-Task: Implement pathway-specific ranking sort logic for ranking printing/export
+# Worklog - Task 2: Fix Kuota Matching Bug for Prestasi Nonakademik
 
-Work Log:
-- Explored the codebase to understand the ranking system architecture
-- Found 3 key files: ranking API route, ranking-print.ts, RankingPreviewDialog.tsx
-- Identified that the API already correctly routes prestasi scores based on jalur, but print/export functions didn't re-sort by prestasi score
-- Added `isAkademikJalur()`, `isPrestasiJalur()`, and `reSortByPrestasiJalur()` helper functions to ranking-print.ts
-- Added same helper functions to RankingPreviewDialog.tsx
-- Modified `getRankingPrintHTML()` to re-sort data by appropriate prestasi score when selected jalur is a prestasi type
-- Modified `handleRankingExportExcel()` to re-sort data by appropriate prestasi score when selected jalur is a prestasi type
-- Modified `RankingPreviewDialog` to re-sort preview data by appropriate prestasi score
-- Fixed `isAkademikJalur()` to also match "Prestasi" (not just "Prestasi Akademik") since the database stores it as "Prestasi"
-- Added `prestasiNote` to print HTML and Excel summary showing "(diurutkan berdasarkan Skor Prestasi sesuai jalur)"
-- Added visual indicator in preview dialog showing auto re-sorting note
-- Verified API ranking data is correctly sorted for both Prestasi and Prestasi Nonakademik
-- Lint check passes (only pre-existing seed.cjs errors)
+## Task ID: 2
+## Agent: Code Agent
+## Date: 2026-06-13
 
-Stage Summary:
-- Ranking print/export now automatically re-sorts by the correct prestasi score when a prestasi jalur is selected
-- Prestasi (Akademik) → sorted by _skorPrestasiAkademikNum (descending)
-- Prestasi Nonakademik → sorted by _skorPrestasiNonAkademikNum (descending)
-- This applies regardless of the current tampilan mode (jarak/nilai/komposit/prestasi)
-- Print HTML, Excel export, and preview dialog all updated
+## Summary
+Fixed critical bug where "Prestasi Nonakademik" kuota incorrectly showed 54 (Prestasi Akademik's kuota) instead of 9. The root cause was fuzzy `.includes('prestasi')` matching that couldn't distinguish between Akademik and Nonakademik prestasi jalur types.
+
+## Root Cause
+The fuzzy kuota matching logic used `.includes('prestasi')` which matched BOTH "Prestasi Akademik" (kuota=54) AND "Prestasi Nonakademik" (kuota=9) against any jalur containing "prestasi". Since `.find()` returns the first match, "Prestasi Nonakademik" subJalur records always got matched to "Prestasi Akademik" kuota (54).
+
+## Changes Made
+
+### 1. NEW: `/home/z/my-project/src/lib/kuota-matching.ts`
+Created shared module with:
+- `isNonAkademikJalur()` - checks if a jalur name is Non-Akademik variant
+- `isAkademikJalur()` - checks if a jalur name is Akademik variant (including plain "Prestasi")
+- `matchKuotaForJalur()` - shared kuota matching function with 3-step strategy:
+  1. **Exact normalized match** first (e.g., "prestasinonakademik" ↔ "prestasinonakademik")
+  2. **Specific Prestasi matching** using isAkademikJalur/isNonAkademikJalur to distinguish
+  3. **Fallback fuzzy matching** for other jalur types (domisili, mutasi, afirmasi)
+
+### 2. FIXED: `/home/z/my-project/src/components/RankingTab.tsx` (ACTIVE)
+- Added import for `matchKuotaForJalur` and `isNonAkademikJalur`
+- Replaced local `isNonAkademikJalur` with imported version
+- Replaced `presKuota` single-threshold (line ~276) with per-record `getPrestasiKuota()` using `matchKuotaForJalur`
+- Replaced fuzzy matching at line ~414-421 with `matchKuotaForJalur`
+
+### 3. FIXED: `/home/z/my-project/src/components/RankingPreviewDialog.tsx` (ACTIVE)
+- Added import for `matchKuotaForJalur`, `isNonAkademikJalur`, `isAkademikJalur`
+- Replaced local `isNonAkademikJalur`/`isAkademikJalur` with imported versions
+- Replaced fuzzy matching at line ~300-307 with `matchKuotaForJalur`
+
+### 4. FIXED: `/home/z/my-project/src/lib/ranking-print.ts` (ACTIVE - print/export)
+- Added import for `matchKuotaForJalur`, `isNonAkademikJalur`, `isAkademikJalur`
+- Replaced local `isNonAkademikJalur`/`isAkademikJalur` with imported versions
+- Replaced `findKuota` function (line ~140-150) to delegate to `matchKuotaForJalur`
+- Replaced inline fuzzy matching at line ~464-471 with `matchKuotaForJalur`
+- Replaced inline fuzzy matching at line ~531-538 with `matchKuotaForJalur`
+
+### 5. FIXED: `/home/z/my-project/src/components/tabs/RankingTab.tsx` (DEPRECATED)
+- Added import for `matchKuotaForJalur`, `isNonAkademikJalur`, `isAkademikJalur`
+- Replaced local `isNonAkademikJalur`/`isAkademikJalur` with imported versions
+- Replaced fuzzy matching at 4 locations (lines ~193, ~330, ~753, ~951)
+
+## Verification
+- `npx eslint` on all 5 modified/new files: **PASSED** (0 errors)
+- `bun run build`: **PASSED** (all routes compiled successfully)
+
+## Impact
+- "Prestasi Nonakademik" records now correctly show kuota=9 instead of 54
+- "Prestasi" (Akademik) records continue to show kuota=54 correctly
+- All other jalur types (Domisili, Mutasi, Afirmasi) continue to work with fallback matching
+- PDF export, Excel export, ranking table, and preview dialog all use the same consistent logic

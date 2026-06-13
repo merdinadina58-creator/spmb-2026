@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
+import { matchKuotaForJalur, isNonAkademikJalur, isAkademikJalur } from '@/lib/kuota-matching'
 
 /**
  * Safely get a string value from ranking data record
@@ -10,17 +11,7 @@ function v(r: Record<string, unknown>, key: string): string {
   return String(val) || '-'
 }
 
-// Helper: check if a jalur name is Non-Akademik variant
-function isNonAkademikJalur(subJalur: string): boolean {
-  const lower = subJalur.toLowerCase().replace(/[^a-z0-9]/g, '')
-  return lower.includes('nonakademik')
-}
-
-// Helper: check if a jalur name is Akademik variant (includes "Prestasi" without "Nonakademik")
-function isAkademikJalur(subJalur: string): boolean {
-  const lower = subJalur.toLowerCase().replace(/[^a-z0-9]/g, '')
-  return (lower.includes('akademik') || lower === 'prestasi') && !lower.includes('nonakademik')
-}
+// isNonAkademikJalur and isAkademikJalur are imported from @/lib/kuota-matching
 
 // Helper: check if a jalur is a prestasi type (either Akademik or Non-Akademik)
 function isPrestasiJalur(subJalur: string): boolean {
@@ -137,16 +128,9 @@ export function getRankingPrintHTML(params: {
     return { ...r, _newRank: idx + 1, _newJalurRank: jalurRankCounters[jalur] }
   })
 
-  // Helper to find kuota for a jalur
+  // Helper to find kuota for a jalur (uses shared matchKuotaForJalur)
   function findKuota(subJalur: string): number {
-    return rankingKuotaPerJalur.find(k => {
-      const jalurName = subJalur.toLowerCase()
-      return k.nama.toLowerCase().includes(jalurName) || jalurName.includes(k.nama.toLowerCase())
-        || (k.nama.toLowerCase().includes('prestasi') && jalurName.includes('prestasi'))
-        || (k.nama.toLowerCase().includes('domisili') && jalurName.includes('domisili'))
-        || (k.nama.toLowerCase().includes('mutasi') && jalurName.includes('mutasi'))
-        || (k.nama.toLowerCase().includes('afirmasi') && (jalurName.includes('keluarga') || jalurName.includes('ktm')))
-    })?.kuota || 0
+    return matchKuotaForJalur(subJalur, rankingKuotaPerJalur)
   }
 
   // Build per-jalur summary stats
@@ -461,14 +445,7 @@ export function handleRankingExportExcel(params: {
     const rankNum = r._newRank
     const jalurRank = r._newJalurRank
 
-    const currentKuota = rankingKuotaPerJalur.find(k => {
-      const jalurName = (r.subJalur as string || '').toLowerCase()
-      return k.nama.toLowerCase().includes(jalurName) || jalurName.includes(k.nama.toLowerCase())
-        || (k.nama.toLowerCase().includes('prestasi') && jalurName.includes('prestasi'))
-        || (k.nama.toLowerCase().includes('domisili') && jalurName.includes('domisili'))
-        || (k.nama.toLowerCase().includes('mutasi') && jalurName.includes('mutasi'))
-        || (k.nama.toLowerCase().includes('afirmasi') && (jalurName.includes('keluarga') || jalurName.includes('ktm')))
-    })?.kuota || 0
+    const currentKuota = matchKuotaForJalur((r.subJalur as string) || '', rankingKuotaPerJalur)
 
     const sameJalurAbove = reRanked
       .filter((other: Record<string, unknown> & { _newRank: number; _newJalurRank: number }) =>
@@ -528,14 +505,7 @@ export function handleRankingExportExcel(params: {
   for (const r of reRanked) {
     const jalur = r.subJalur as string
     if (!jalurGroups[jalur]) {
-      const kuota = rankingKuotaPerJalur.find(k => {
-        const jalurName = jalur.toLowerCase()
-        return k.nama.toLowerCase().includes(jalurName) || jalurName.includes(k.nama.toLowerCase())
-          || (k.nama.toLowerCase().includes('prestasi') && jalurName.includes('prestasi'))
-          || (k.nama.toLowerCase().includes('domisili') && jalurName.includes('domisili'))
-          || (k.nama.toLowerCase().includes('mutasi') && jalurName.includes('mutasi'))
-          || (k.nama.toLowerCase().includes('afirmasi') && (jalurName.includes('keluarga') || jalurName.includes('ktm')))
-      })?.kuota || 0
+      const kuota = matchKuotaForJalur(jalur, rankingKuotaPerJalur)
       jalurGroups[jalur] = { total: 0, verified: 0, rejected: 0, pending: 0, kuota }
     }
     jalurGroups[jalur].total++
